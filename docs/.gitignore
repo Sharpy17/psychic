@@ -1,0 +1,11 @@
+# Obsidian user-specific files (prevents Git merge conflicts on window layouts)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/appearance.json
+.obsidian/cache
+.trash/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
