@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mind Meter</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body>
+  <div id="app"></div>
+  <aside id="dev" class="dev" hidden></aside>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Order matters: app.js uses MockServer and createBoard. -->
+  <script src="mock-server.js"></script>
+  <script src="board.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

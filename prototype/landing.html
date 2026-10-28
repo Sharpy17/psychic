@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mind Meter</title>
+  <link rel="stylesheet" href="board.css">
+  <style>
+    :root {
+      --bg: #15122e;
+      --bg-2: #1d1940;
+      --panel: #241f4d;
+      --line: #3a3470;
+      --text: #f5f2ff;
+      --muted: #a9a3d6;
+      --team-A: #3fd8c7;
+      --team-B: #ff7b8c;
+      --accent: #ffd35c;
+      --accent-shadow: #b88d1f;
+      --zone-2: #ffd35c;
+      --zone-3: #ff9e45;
+      --zone-4: #ff5c8d;
+      --face: #f7efdf;
+      --face-edge: #e2d6bd;
+      --needle: #e5413b;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      background: radial-gradient(1400px 700px at 70% -10%, #2f2870 0%, var(--bg) 60%) fixed;
+      background-color: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1, h2, h3, p { margin: 0; }
+    a { color: inherit; }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      position: relative;
+      overflow: hidden;
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font: inherit;
+      font-weight: 800;
+      text-decoration: none;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #120f2a;
+      transition: transform 0.08s, box-shadow 0.08s, filter 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover { filter: brightness(1.12); }
+    .btn:active, .btn.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #120f2a; }
+    .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .btn.primary { background: var(--accent); color: #2a1d00; border-color: transparent; box-shadow: 0 4px 0 var(--accent-shadow); }
+    .btn.primary:active { box-shadow: 0 1px 0 var(--accent-shadow); }
+    .btn.ghost { background: transparent; box-shadow: none; }
+    .btn.ghost:active { transform: translateY(1px); }
+    .btn.big { padding: 16px 26px; font-size: 1.1rem; }
+    .btn .ripple {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      background: currentColor;
+      opacity: 0.25;
+      animation: ripple 0.55s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+    /* ---------- Nav ---------- */
+    nav {
+      position: sticky;
+      top: env(safe-area-inset-top, 0px);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-block: 14px;
+      background: linear-gradient(var(--bg) 70%, transparent);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.25rem; text-decoration: none; }
+    .logo svg { width: 34px; }
+    .nav-links { display: flex; gap: 4px; margin-left: auto; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-weight: 700; padding: 8px 12px; border-radius: 10px; }
+    .nav-links a:hover { color: var(--text); background: var(--panel); }
+    .nav-actions { display: flex; gap: 8px; }
+    .icon-btn { padding: 10px 12px; }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 48px;
+      align-items: center;
+      padding-block: 48px 72px;
+    }
+    .eyebrow {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--team-A);
+      background: #3fd8c71f;
+      padding: 6px 12px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+    }
+    .hero h1 { font-size: clamp(2.4rem, 5.5vw, 4rem); line-height: 1.02; letter-spacing: -0.03em; }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero p.lead { margin-top: 18px; font-size: 1.15rem; color: var(--muted); max-width: 30em; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .facts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 22px; color: var(--muted); font-size: 0.9rem; font-weight: 700; }
+    .facts span::before { content: "●"; color: var(--team-A); margin-right: 6px; font-size: 0.7em; vertical-align: 2px; }
+
+    /* ---------- Demo board ---------- */
+    .demo {
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 30px 80px #0006;
+      transform: rotate(1.5deg);
+    }
+    .demo-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .demo-head small { color: var(--muted); font-weight: 700; }
+    .demo-clue { font-size: 1.5rem; font-weight: 900; }
+    .demo-clue::before { content: "“"; color: var(--accent); }
+    .demo-clue::after { content: "”"; color: var(--accent); }
+    .pill { font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: #ffd35c26; color: var(--accent); }
+
+    .demo .board-wrap { margin-top: 6px; }
+    .demo-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .demo-foot .btn { flex: 1; }
+    .demo-result { min-height: 1.5em; margin-top: 10px; text-align: center; font-weight: 800; color: var(--muted); }
+    .demo-result b { font-size: 1.3rem; }
+    .demo-result.pts-4 b { color: var(--zone-4); }
+    .demo-result.pts-3 b { color: var(--zone-3); }
+    .demo-result.pts-2 b { color: var(--zone-2); }
+    .hint { font-size: 0.85rem; color: var(--muted); text-align: center; margin-top: 4px; }
+
+    /* ---------- Sections ---------- */
+    section { padding-block: 64px; }
+    .section-head { text-align: center; max-width: 36em; margin: 0 auto 36px; }
+    .section-head h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -0.02em; }
+    .section-head p { color: var(--muted); margin-top: 10px; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: step; }
+    .step, .feature {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 24px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .step:hover, .feature:hover { transform: translateY(-4px); border-color: #5a52a8; }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #2a1d00;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+    .step h3, .feature h3 { font-size: 1.15rem; margin-bottom: 6px; }
+    .step p, .feature p { color: var(--muted); }
+
+    .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .feature .ico { font-size: 1.8rem; margin-bottom: 10px; }
+
+    .cta {
+      text-align: center;
+      background: linear-gradient(135deg, #3fd8c72b, #ff7b8c2b);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 48px 24px;
+      margin-block: 32px 64px;
+    }
+    .cta h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+    .cta p { color: var(--muted); margin: 10px 0 24px; }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-block: 24px 40px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    footer nav { position: static; padding: 0; background: none; gap: 16px; }
+    footer a { text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ---------- Modal ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #07061acc;
+      backdrop-filter: blur(4px);
+      animation: fade 0.2s ease;
+    }
+    @keyframes fade { from { opacity: 0; } }
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: rise 0.3s cubic-bezier(0.2, 1.3, 0.4, 1);
+    }
+    @keyframes rise { from { transform: translateY(20px) scale(0.96); opacity: 0; } }
+    .modal h2 { font-size: 1.6rem; }
+    .modal p { color: var(--muted); }
+    .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .modal-actions .btn { flex: 1; }
+    .field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+    input {
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      min-width: 0;
+    }
+    input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+    .code-boxes { display: flex; gap: 10px; justify-content: center; }
+    .code-boxes input {
+      width: 58px;
+      height: 68px;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 0;
+    }
+    .room-code {
+      font: 900 2.6rem/1 ui-monospace, "Cascadia Code", Consolas, monospace;
+      letter-spacing: 0.25em;
+      padding-left: 0.25em;
+      color: var(--accent);
+      text-align: center;
+    }
+    .shake { animation: shake 0.35s; }
+    @keyframes shake { 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-4px); } }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      transform: translate(-50%, 160%);
+      max-width: calc(100vw - 32px);
+      background: var(--text);
+      color: var(--bg);
+      font-weight: 800;
+      padding: 12px 18px;
+      border-radius: 14px;
+      transition: transform 0.25s ease;
+      z-index: 30;
+    }
+    .toast.show { transform: translate(-50%, 0); }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 24px; }
+      .demo { transform: none; }
+      .features { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .ghost { display: none; }
+      .steps, .features { grid-template-columns: 1fr; }
+      .hero-ctas .btn { flex: 1 1 100%; }
+      section { padding-block: 44px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="logo" href="#top" aria-label="Mind Meter home">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="2" y="2" width="60" height="60" rx="12" fill="var(--face)"/>
+          <path d="M32 7 V57 M7 32 H57" stroke="#b9aa8a" stroke-width="2" stroke-dasharray="4 3"/>
+          <circle cx="42" cy="22" r="12" fill="var(--zone-2)"/>
+          <circle cx="42" cy="22" r="7.5" fill="var(--zone-3)"/>
+          <circle cx="42" cy="22" r="3.5" fill="var(--zone-4)"/>
+          <circle cx="21" cy="41" r="5" fill="var(--needle)" stroke="#fff" stroke-width="2"/>
+        </svg>
+        Mind Meter
+      </a>
+      <div class="nav-links">
+        <a href="#how">How to play</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost icon-btn" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn ghost" data-action="join">Join room</button>
+        <button class="btn primary" data-action="create">Play now</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">A party game for 3–8 players</span>
+          <h1>Can you read your <em>friends' minds?</em></h1>
+          <p class="lead">One psychic. One hidden target on a four-way board. One clue.
+            Drop the dot, lock in your guess, and find out who really gets you.</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Create a room</button>
+            <button class="btn big" data-action="join">Join with a code</button>
+          </div>
+          <div class="facts">
+            <span>Free to play</span><span>No downloads</span><span>Works on phones</span>
+          </div>
+        </div>
+
+        <div class="demo" aria-label="Try the board">
+          <div class="demo-head">
+            <div>
+              <small>Ari's clue</small>
+              <div class="demo-clue" id="demo-clue"></div>
+            </div>
+            <span class="pill">Try it</span>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Tap or drag the dot (arrow keys work too), then reveal.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal target</button>
+            <button class="btn" data-action="shuffle">New card</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <div class="section-head">
+          <h2>How to play</h2>
+          <p>Takes 30 seconds to learn, and a few minutes before someone is yelling "how is that a 9?!"</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <h3>The psychic peeks</h3>
+            <p>Each round one player secretly sees where the target sits on a board with four labels, like <i>Funny ↕ Unfunny</i> and <i>Ugly ↔ Cute</i>.</p>
+          </div>
+          <div class="step">
+            <h3>They give one clue</h3>
+            <p>Something that lands on that spot. "A pug in a hot dog costume" is pretty cute and kind of funny... right?</p>
+          </div>
+          <div class="step">
+            <h3>Everyone places a dot</h3>
+            <p>In secret. Then the reveal shows every dot at once. Bullseye is 4 points, and the highest score wins.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="section-head">
+          <h2>Built for game night</h2>
+          <p>Everyone joins from their own device. No accounts, no app store.</p>
+        </div>
+        <div class="features">
+          <div class="feature"><div class="ico">⚡</div><h3>Every player for themselves</h3><p>No teams. Everyone guesses in secret, and live scores sit right beside the board.</p></div>
+          <div class="feature"><div class="ico">📱</div><h3>Phone-friendly</h3><p>Big touch targets and a board that's easy to tap and drag with a thumb.</p></div>
+          <div class="feature"><div class="ico">🃏</div><h3>Endless combos</h3><p>Mix any two axes: <i>Cheap ↔ Fancy</i> with <i>Boring ↔ Exciting</i>. Or write your own.</p></div>
+          <div class="feature"><div class="ico">🔗</div><h3>4-letter rooms</h3><p>Share a code, friends join in seconds. Works over a video call too.</p></div>
+        </div>
+      </section>
+
+      <div class="cta">
+        <h2>Gather your crew</h2>
+        <p>Start a room and send the code to your friends.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Mind Meter, a student project</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="board.js"></script>
+  <script>
+    // ---------- Helpers ----------
+    const $ = sel => document.querySelector(sel);
+    const esc = s => String(s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const rand = (min, max) => Math.random() * (max - min) + min;
+
+    function toast(msg) {
+      const el = $('#toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    // ---------- Sound (tiny Web Audio blips, no files needed) ----------
+    let soundOn = true;
+    let audio = null;
+    function blip(freq = 520, dur = 0.07, type = 'triangle', vol = 0.08) {
+      if (!soundOn) return;
+      try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + dur);
+        osc.connect(gain).connect(audio.destination);
+        osc.start();
+        osc.stop(audio.currentTime + dur);
+      } catch (e) { /* audio unavailable; stay silent */ }
+    }
+
+    // Ripple + click sound on every .btn
+    document.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('.btn');
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      const size = Math.max(r.width, r.height);
+      const dot = document.createElement('span');
+      dot.className = 'ripple';
+      dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+      btn.appendChild(dot);
+      setTimeout(() => dot.remove(), 600);
+      blip(btn.classList.contains('primary') ? 660 : 480);
+    });
+
+    // ---------- Demo board ----------
+    const CARDS = [
+      { top: 'Funny', bottom: 'Unfunny', left: 'Ugly', right: 'Cute', clue: 'A pug in a hot dog costume' },
+      { top: 'Expensive', bottom: 'Cheap', left: 'Gross', right: 'Delicious', clue: 'Airport sushi' },
+      { top: 'Scary', bottom: 'Not scary', left: 'Tiny', right: 'Huge', clue: 'A goose' },
+      { top: 'Cool', bottom: 'Cringe', left: 'Useless', right: 'Useful', clue: 'A fanny pack' },
+      { top: 'Exciting', bottom: 'Boring', left: 'Easy', right: 'Hard', clue: 'Learning to juggle' },
+      { top: 'Healthy', bottom: 'Unhealthy', left: 'Bland', right: 'Tasty', clue: 'Kale chips' },
+    ];
+    let marker = { x: 50, y: 50 }, lastTick = marker, target = null, revealed = false, cardIndex = 0;
+
+    const board = createBoard($('#board-slot'), {
+      onInput(pos) {
+        marker = pos;
+        if (Math.hypot(pos.x - lastTick.x, pos.y - lastTick.y) >= 6) { lastTick = pos; blip(900, 0.02, 'square', 0.02); }
+      },
+    });
+    const draw = () => board.update({ marker, target: revealed ? target : null, interactive: !revealed, revealed });
+
+    $('#board-slot').addEventListener('keydown', e => { if (e.key === 'Enter') reveal(); });
+    $('#board-slot').addEventListener('pointerdown', () => {
+      if (revealed) toast('Press "Play again" to try another card');
+    });
+
+    function newCard(first) {
+      if (!first) cardIndex = (cardIndex + 1) % CARDS.length;
+      const c = CARDS[cardIndex];
+      for (const side of ['top', 'bottom', 'left', 'right']) $('#demo-' + side).textContent = c[side];
+      $('#demo-clue').textContent = c.clue;
+      target = { x: Math.round(rand(14, 86)), y: Math.round(rand(14, 86)) };
+      marker = lastTick = { x: 50, y: 50 };
+      revealed = false;
+      $('#reveal-btn').textContent = 'Reveal target';
+      $('#demo-result').textContent = '';
+      $('#demo-result').className = 'demo-result';
+      draw();
+    }
+    function reveal() {
+      if (revealed) return newCard();
+      marker = board.position();
+      revealed = true;
+      draw();
+      const pts = scoreForDistance(Math.hypot(marker.x - target.x, marker.y - target.y));
+      const msg = { 4: 'Bullseye! You two share a brain.', 3: 'So close!', 2: 'In the zone.', 0: 'Way off. Awkward.' }[pts];
+      const res = $('#demo-result');
+      res.className = `demo-result pts-${pts}`;
+      res.innerHTML = `<b>+${pts}</b> ${esc(msg)}`;
+      $('#reveal-btn').textContent = 'Play again';
+      if (pts) [523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.12), i * 90));
+      else blip(200, 0.25, 'sawtooth', 0.05);
+    }
+
+    newCard(true);
+
+    // ---------- Modals ----------
+    const modalRoot = $('#modal-root');
+    let lastFocus = null;
+
+    function openModal(html, onMount) {
+      lastFocus = document.activeElement;
+      modalRoot.innerHTML = `<div class="modal-backdrop" data-close><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+      onMount?.(modalRoot.querySelector('.modal'));
+      modalRoot.querySelector('input, .btn')?.focus();
+    }
+    function closeModal() {
+      modalRoot.innerHTML = '';
+      lastFocus?.focus();
+    }
+    modalRoot.addEventListener('click', e => {
+      if (e.target.matches('[data-close]')) closeModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modalRoot.innerHTML) closeModal();
+    });
+
+    function createModal() {
+      openModal(`
+        <h2>Create a room</h2>
+        <p>Pick a name your friends will recognise.</p>
+        <form id="create-form" class="field" style="gap:16px">
+          <label class="field"><span>Your name</span>
+            <input id="create-name" maxlength="16" placeholder="e.g. Sam" autocomplete="nickname"></label>
+          <div class="modal-actions">
+            <button type="button" class="btn" data-close>Cancel</button>
+            <button type="submit" class="btn primary">Create room</button>
+          </div>
+        </form>`, modal => {
+        modal.querySelector('#create-form').addEventListener('submit', e => {
+          e.preventDefault();
+          const name = modal.querySelector('#create-name').value.trim();
+          if (!name) return shake(modal, 'Enter your name first');
+          const code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
+          modal.innerHTML = `
+            <h2>You're in, ${esc(name)}!</h2>
+            <p>Share this code with your friends:</p>
+            <div class="room-code">${code}</div>
+            <div class="modal-actions">
+              <button class="btn" data-copy="${code}">Copy code</button>
+              <a class="btn primary" href="index.html">Go to lobby</a>
+            </div>`;
+          modal.querySelector('[data-copy]').addEventListener('click', ev => {
+            navigator.clipboard?.writeText(ev.currentTarget.dataset.copy)
+              .then(() => toast('Code copied'), () => toast('Copy not available here'));
+          });
+          [523, 784].forEach((f, i) => setTimeout(() => blip(f, 0.12), i * 100));
+        });
+      });
+    }
+
+    function joinModal() {
+      openModal(`
+        <h2>Join a room</h2>
+        <p>Enter the 4-letter code from your host.</p>
+        <form id="join-form" style="display:flex;flex-direction:column;gap:16px">
+          <div class="code-boxes">
+            ${[0, 1, 2, 3].map(i => `<input maxlength="1" inputmode="text" autocapitalize="characters" aria-label="Letter ${i + 1}">`).join('')}
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" data-close>Cancel</button>
+            <button type="submit" class="btn primary">Join</button>
+          </div>
+        </form>`, modal => {
+        const boxes = [...modal.querySelectorAll('.code-boxes input')];
+        boxes.forEach((box, i) => {
+          box.addEventListener('input', () => {
+            box.value = box.value.replace(/[^a-z]/gi, '').toUpperCase();
+            if (box.value && boxes[i + 1]) boxes[i + 1].focus();
+          });
+          box.addEventListener('keydown', e => {
+            if (e.key === 'Backspace' && !box.value && boxes[i - 1]) boxes[i - 1].focus();
+          });
+          box.addEventListener('paste', e => {
+            e.preventDefault();
+            const text = (e.clipboardData.getData('text') || '').replace(/[^a-z]/gi, '').toUpperCase().slice(0, 4);
+            [...text].forEach((ch, j) => { if (boxes[j]) boxes[j].value = ch; });
+            boxes[Math.min(text.length, 3)].focus();
+          });
+        });
+        modal.querySelector('#join-form').addEventListener('submit', e => {
+          e.preventDefault();
+          const code = boxes.map(b => b.value).join('');
+          if (code.length < 4) return shake(modal, 'Room codes are 4 letters');
+          toast(`Joining room ${code}...`);
+          setTimeout(() => { location.href = 'index.html'; }, 700);
+        });
+      });
+    }
+
+    function shake(el, msg) {
+      el.classList.remove('shake');
+      void el.offsetWidth; // restart the animation
+      el.classList.add('shake');
+      blip(180, 0.18, 'sawtooth', 0.05);
+      toast(msg);
+    }
+
+    // ---------- Button actions ----------
+    document.addEventListener('click', e => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const action = el.dataset.action;
+      if (action === 'create') createModal();
+      else if (action === 'join') joinModal();
+      else if (action === 'reveal') reveal();
+      else if (action === 'shuffle') newCard();
+      else if (action === 'sound') {
+        soundOn = !soundOn;
+        el.textContent = soundOn ? '🔊' : '🔇';
+        el.setAttribute('aria-pressed', soundOn);
+        toast(soundOn ? 'Sound on' : 'Sound off');
+      } else if (action === 'soon') {
+        e.preventDefault();
+        toast('Coming soon');
+      }
+    });
+  </script>
+</body>
+</html>
