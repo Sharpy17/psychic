@@ -5,14 +5,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Sparkles,
   Trophy,
   Send,
-  Eye,
-  CheckCircle2,
   Clock,
   ArrowRight,
-  RotateCcw,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -20,7 +16,6 @@ import {
   RoomState,
   Point2D,
   RevealPayload,
-  RevealGuess,
 } from '../../../shared/types';
 import { socket } from '../services/socket';
 import { sound } from '../services/sound';

@@ -3,8 +3,8 @@
  * Features playable interactive demo board, Web Audio sound effects, and room entry modals.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Users, HelpCircle, Volume2, VolumeX, ArrowRight, RefreshCw, Eye } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Sparkles, Volume2, VolumeX, ArrowRight, RefreshCw, Eye } from 'lucide-react';
 import { socket } from '../services/socket';
 import { sound } from '../services/sound';
 
