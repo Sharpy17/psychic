@@ -4,7 +4,115 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mind Meter</title>
-  <link rel="stylesheet" href="board.css">
+  <style>
+/* The square board and its four labels.
+   Uses the colour variables (--face, --zone-*, --needle, --accent) each page defines. */
+
+.board-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    ".    top    .    "
+    "left board  right"
+    ".    bottom .    ";
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+}
+.board-slot { grid-area: board; width: 100%; max-width: 440px; }
+
+.axis-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  text-align: center;
+  line-height: 1.2;
+}
+.axis-label.top { grid-area: top; background: #ff5c8d26; color: #ffadc6; }
+.axis-label.bottom { grid-area: bottom; background: #ffd35c22; color: #ffe28f; }
+.axis-label.left { grid-area: left; writing-mode: vertical-rl; transform: rotate(180deg); background: #9b7bff29; color: #cdbdff; padding: 12px 6px; }
+.axis-label.right { grid-area: right; writing-mode: vertical-rl; background: #3fd8c726; color: #9ff0e6; padding: 12px 6px; }
+
+.board {
+  width: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(0 6px 18px #0005);
+}
+.board.interactive { cursor: crosshair; touch-action: none; }
+.board.dragging { cursor: grabbing; }
+.board:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+
+.board-face { fill: var(--face); }
+.q { opacity: 0.13; }
+.q-tl { fill: #ff5c8d; }
+.q-tr { fill: #ff9e45; }
+.q-bl { fill: #9b7bff; }
+.q-br { fill: #3fd8c7; }
+.axis-line { stroke: #b9aa8a; stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+
+.target, .marker { transform-box: view-box; }
+.rings {
+  opacity: 0;
+  transform: scale(0.3);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.3s, transform 0.55s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.rings.show { opacity: 1; transform: scale(1); }
+.ring.r2 { fill: var(--zone-2); }
+.ring.r3 { fill: var(--zone-3); }
+.ring.r4 { fill: var(--zone-4); }
+.rings text { font-size: 3.6px; font-weight: 800; fill: #3a1630; text-anchor: middle; }
+
+.miss-line {
+  stroke: #2b2550;
+  stroke-width: 0.7;
+  stroke-dasharray: 1.5 1.2;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.3s 0.35s;
+}
+.miss-line.show { opacity: 0.75; }
+
+.shield { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.shield rect { fill: #2b2560; }
+.shield text { font-size: 30px; font-weight: 800; fill: #4a4290; text-anchor: middle; }
+.board.shielded .shield { opacity: 1; }
+
+.marker { transition: transform 0.15s ease-out, opacity 0.2s; }
+.board.dragging .marker { transition: opacity 0.2s; }
+.marker.hidden { opacity: 0; }
+.marker-dot { fill: var(--marker, var(--needle)); stroke: #fff; stroke-width: 1.2; }
+.marker-halo { fill: var(--marker, var(--needle)); opacity: 0.25; transform-box: fill-box; transform-origin: center; }
+
+/* Everyone's dots on reveal */
+.other { transform-box: view-box; }
+.other-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes dot-pop { from { transform: scale(0); opacity: 0; } }
+.other circle { stroke: #fff; stroke-width: 0.9; }
+.other text {
+  font-size: 3.2px;
+  font-weight: 800;
+  text-anchor: middle;
+  fill: #fff;
+  stroke: #1d1940;
+  stroke-width: 0.9px;
+  paint-order: stroke;
+}
+.board.interactive .marker-halo { animation: halo 1.4s ease-in-out infinite; }
+@keyframes halo { 50% { transform: scale(1.6); opacity: 0.05; } }
+
+@media (max-width: 420px) {
+  .axis-label { font-size: 0.85rem; }
+}
+  </style>
   <style>
     :root {
       --bg: #15122e;
@@ -426,7 +534,152 @@
   <div id="modal-root"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="board.js"></script>
+  <script>
+// The square board. Positions are { x, y } from 0 to 100:
+// x runs from the left label to the right label, y from the top label to the bottom label.
+// createBoard(container, { onInput }) returns { update(opts), position() }.
+
+// [radius, points], largest first. The server's scoring must use the same radii.
+const BOARD_RINGS = [[18, 2], [11, 3], [5, 4]];
+
+function scoreForDistance(d) {
+  for (const [r, pts] of [...BOARD_RINGS].reverse()) if (d <= r) return pts;
+  return 0;
+}
+
+let boardCount = 0;
+const boardEsc = s => String(s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function createBoard(container, { onInput = () => {} } = {}) {
+  const clipId = `board-clip-${++boardCount}`;
+  const clamp = v => Math.max(0, Math.min(100, v));
+
+  const rings = BOARD_RINGS.map(([r, pts]) => `<circle class="ring r${pts}" r="${r}"/>`).join('');
+  const ringLabels = BOARD_RINGS.map(([r, pts], i) => {
+    const inner = BOARD_RINGS[i + 1]?.[0] ?? 0;
+    return `<text y="${-(r + inner) / 2 + 1.3}">${pts}</text>`;
+  }).join('');
+
+  container.innerHTML = `
+    <svg class="board" viewBox="0 0 100 100" role="application" aria-label="Board: drag the dot">
+      <defs><clipPath id="${clipId}"><rect width="100" height="100" rx="6"/></clipPath></defs>
+      <g clip-path="url(#${clipId})">
+        <rect class="board-face" width="100" height="100"/>
+        <rect class="q q-tl" width="50" height="50"/>
+        <rect class="q q-tr" x="50" width="50" height="50"/>
+        <rect class="q q-bl" y="50" width="50" height="50"/>
+        <rect class="q q-br" x="50" y="50" width="50" height="50"/>
+        <line class="axis-line" x1="50" y1="3" x2="50" y2="97"/>
+        <line class="axis-line" x1="3" y1="50" x2="97" y2="50"/>
+        <g class="target"><g class="rings">${rings}${ringLabels}</g></g>
+      </g>
+      <line class="miss-line"/>
+      <g class="shield">
+        <rect width="100" height="100" rx="6"/>
+        <text x="50" y="60">?</text>
+      </g>
+      <g class="others"></g>
+      <g class="marker">
+        <circle class="marker-halo" r="5.5"/>
+        <circle class="marker-dot" r="3.2"/>
+      </g>
+    </svg>`;
+
+  const svg = container.querySelector('svg');
+  const marker = svg.querySelector('.marker');
+  const othersEl = svg.querySelector('.others');
+  let othersKey = '';
+  const target = svg.querySelector('.target');
+  const ringsEl = svg.querySelector('.rings');
+  const missLine = svg.querySelector('.miss-line');
+
+  let current = { x: 50, y: 50 };
+  let interactive = false;
+  let dragging = false;
+
+  function setMarker(pos) {
+    current = { x: clamp(pos.x), y: clamp(pos.y) };
+    marker.style.transform = `translate(${current.x}px, ${current.y}px)`;
+    svg.setAttribute('aria-valuetext', `${Math.round(current.x)} across, ${Math.round(current.y)} down`);
+  }
+
+  function posFromEvent(e) {
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    const s = p.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: s.x, y: s.y };
+  }
+
+  function input(pos) {
+    setMarker(pos);
+    onInput({ ...current });
+  }
+
+  svg.addEventListener('pointerdown', e => {
+    if (!interactive) return;
+    dragging = true;
+    svg.classList.add('dragging');
+    svg.setPointerCapture(e.pointerId);
+    input(posFromEvent(e)); // tapping anywhere jumps the dot there
+  });
+  svg.addEventListener('pointermove', e => {
+    if (dragging) input(posFromEvent(e));
+  });
+  const endDrag = () => {
+    dragging = false;
+    svg.classList.remove('dragging');
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  svg.addEventListener('keydown', e => {
+    if (!interactive) return;
+    const step = e.shiftKey ? 10 : 2;
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (!moves[e.key]) return;
+    e.preventDefault();
+    input({ x: current.x + moves[e.key][0], y: current.y + moves[e.key][1] });
+  });
+
+  return {
+    position: () => ({ ...current }),
+    // others: extra labelled dots, e.g. every player's guess on reveal: [{ x, y, color, label }]
+    update({ marker: pos, target: t, interactive: canMove, showMarker = true, shielded = false,
+      revealed = false, markerColor = null, others = [] }) {
+      interactive = canMove;
+      marker.style.setProperty('--marker', markerColor || 'var(--needle)');
+      const key = JSON.stringify(others);
+      if (key !== othersKey) {
+        othersKey = key;
+        othersEl.innerHTML = others.map((o, i) => `
+          <g class="other" style="transform: translate(${clamp(o.x)}px, ${clamp(o.y)}px)">
+            <g class="other-pop" style="animation-delay:${i * 90}ms">
+              <circle r="2.8" fill="${o.color}"/>
+              <text y="${o.y < 9 ? 7.4 : -4.2}">${boardEsc(o.label)}</text>
+            </g>
+          </g>`).join('');
+      }
+      svg.classList.toggle('interactive', canMove);
+      svg.setAttribute('tabindex', canMove ? '0' : '-1');
+      if (!dragging) setMarker(pos); // while dragging, local input wins over server echoes
+      marker.classList.toggle('hidden', !showMarker);
+      svg.classList.toggle('shielded', shielded);
+      if (t) target.style.transform = `translate(${t.x}px, ${t.y}px)`;
+      ringsEl.classList.toggle('show', !!t);
+      const showMiss = revealed && !!t;
+      if (showMiss) {
+        missLine.setAttribute('x1', current.x);
+        missLine.setAttribute('y1', current.y);
+        missLine.setAttribute('x2', t.x);
+        missLine.setAttribute('y2', t.y);
+      }
+      missLine.classList.toggle('show', showMiss);
+    },
+  };
+}
+  </script>
   <script>
     // ---------- Helpers ----------
     const $ = sel => document.querySelector(sel);
@@ -573,8 +826,12 @@
             <div class="room-code">${code}</div>
             <div class="modal-actions">
               <button class="btn" data-copy="${code}">Copy code</button>
-              <a class="btn primary" href="index.html">Go to lobby</a>
+              <button class="btn primary" data-lobby>Go to lobby</button>
             </div>`;
+          modal.querySelector('[data-lobby]').addEventListener('click', () => {
+            closeModal();
+            toast("The lobby isn't built yet");
+          });
           modal.querySelector('[data-copy]').addEventListener('click', ev => {
             navigator.clipboard?.writeText(ev.currentTarget.dataset.copy)
               .then(() => toast('Code copied'), () => toast('Copy not available here'));
@@ -617,8 +874,8 @@
           e.preventDefault();
           const code = boxes.map(b => b.value).join('');
           if (code.length < 4) return shake(modal, 'Room codes are 4 letters');
-          toast(`Joining room ${code}...`);
-          setTimeout(() => { location.href = 'index.html'; }, 700);
+          closeModal();
+          toast(`Room ${code}: the lobby isn't built yet`);
         });
       });
     }
