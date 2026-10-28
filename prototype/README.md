@@ -1,4 +1,4 @@
-﻿# `frontend` branch: landing page prototype
+﻿# `landingpage` branch: landing page prototype
 
 **Owner:** Azim (Landing Page & UI Shell)
 **Based on:** `main` at `d4dac08` (the team scaffold), plus one folder: `prototype/`
@@ -21,7 +21,7 @@ No install, no build, no internet needed.
 ```bash
 git clone https://github.com/Sharpy17/psychic.git
 cd psychic
-git checkout frontend
+git checkout landingpage
 ```
 
 Then double-click `prototype/landing.html`, or drag it into a browser.
@@ -144,5 +144,5 @@ const fromShared = (c: { x: number; y: number }) => ({ x: (c.x + 100) / 2, y: (1
 | Branch | Purpose |
 |---|---|
 | `main` | Team scaffold (React client, Socket.IO server, shared types, Prisma). Nobody commits directly |
-| `frontend` | **This branch.** Landing page prototype only |
+| `landingpage` | **This branch.** Landing page prototype only |
 | `demo` | First full variant to refer to: landing page plus the whole clickable game prototype with bots |
