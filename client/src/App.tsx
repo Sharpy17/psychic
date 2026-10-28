@@ -10,7 +10,6 @@ export function App() {
   const [socketId, setSocketId] = useState<string>('');
 
   useEffect(() => {
-    // Keep track of our own socket ID
     if (socket.id) {
       setSocketId(socket.id);
     }
@@ -23,32 +22,32 @@ export function App() {
       setRoomState(updatedRoom);
     };
 
+    const onRoomJoined = ({ playerId }: { playerId: string }) => {
+      setSocketId(playerId);
+    };
+
     socket.on('connect', onConnect);
     socket.on('room:updated', onRoomUpdated);
+    socket.on('room:joined', onRoomJoined);
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('room:updated', onRoomUpdated);
+      socket.off('room:joined', onRoomJoined);
     };
   }, []);
 
-  // 1. Landing Page (Not in a room yet)
+  // 1. Landing Page (Not in room)
   if (!roomState) {
-    return (
-      <LandingPage
-        onJoinedRoom={(roomCode, name) => {
-          // Socket events will deliver roomState update
-        }}
-      />
-    );
+    return <LandingPage onJoinedRoom={() => {}} />;
   }
 
-  // 2. Waiting Lobby
+  // 2. Lobby (Waiting room)
   if (roomState.phase === 'LOBBY') {
     return <Lobby roomState={roomState} currentPlayerId={socket.id || socketId} />;
   }
 
-  // 3. Game Board (Playing, Guessing, or Reveal)
+  // 3. Active Game Board (Psychic Turn, Guessing, Reveal, Round End, Game Over)
   return <GameBoard roomState={roomState} currentPlayerId={socket.id || socketId} />;
 }
 

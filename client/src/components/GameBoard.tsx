@@ -1,12 +1,29 @@
 /**
- * 2D GAME BOARD (Dosia & Isa's Domain)
- * Interactive Cartesian coordinate plane with draggable pins, axes, secret target, and reveal mechanics.
+ * 2D GAME BOARD COMPONENT (Dosia & Isa's Domain)
+ * Authoritative SVG unit square implementation adhering to docs/04 - Modules & UI/2D Coordinate Board Component.md
  */
 
-import React, { useState, useRef } from 'react';
-import { Target, Send, Eye, Award, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, HelpCircle } from 'lucide-react';
-import { RoomState, Coordinates, PlayerGuess } from '../../../shared/types';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Sparkles,
+  Trophy,
+  Send,
+  Eye,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
+import {
+  RoomState,
+  Point2D,
+  RevealPayload,
+  RevealGuess,
+} from '../../../shared/types';
 import { socket } from '../services/socket';
+import { sound } from '../services/sound';
 
 interface GameBoardProps {
   roomState: RoomState;
@@ -18,327 +35,466 @@ export const GameBoard: React.FC<GameBoardProps> = ({ roomState, currentPlayerId
   if (!round) return null;
 
   const isPsychic = round.psychicId === currentPlayerId;
-  const isHost = roomState.hostId === currentPlayerId;
+  const isHost = roomState.players.find((p) => p.id === currentPlayerId)?.isHost || false;
   const phase = roomState.phase;
 
   // Local state
   const [clueInput, setClueInput] = useState('');
-  const [myGuess, setMyGuess] = useState<Coordinates>({ x: 0, y: 0 });
-  const [hasSubmittedGuess, setHasSubmittedGuess] = useState(false);
+  const [myGuess, setMyGuess] = useState<Point2D>({ x: 0, y: 0 }); // [-1, 1]
+  const [hasLocked, setHasLocked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [secretTargetOverride, setSecretTargetOverride] = useState<Point2D | null>(null);
+  const [revealData, setRevealData] = useState<RevealPayload | null>(null);
+  const [soundOn, setSoundOn] = useState(sound.isEnabled());
 
-  const planeRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  // Convert board normalized coordinates (-100 to 100) to percentage (0% to 100%) for CSS positioning
-  const toPercent = (coord: Coordinates) => ({
-    left: `${((coord.x + 100) / 200) * 100}%`,
-    top: `${((100 - coord.y) / 200) * 100}%`, // Inverted because CSS top: 0 is top
+  // Listen for socket events
+  useEffect(() => {
+    const onPsychicSecret = ({ targetX, targetY }: { targetX: number; targetY: number }) => {
+      setSecretTargetOverride({ x: targetX, y: targetY });
+    };
+
+    const onReveal = (payload: RevealPayload) => {
+      setRevealData(payload);
+      sound.reveal();
+      // Check for bullseyes
+      if (payload.guesses.some((g) => g.tier === 'Bullseye')) {
+        setTimeout(() => sound.bullseye(), 400);
+      }
+    };
+
+    const onGuessLocked = ({ playerId }: { playerId: string }) => {
+      if (playerId === currentPlayerId) {
+        setHasLocked(true);
+      }
+      sound.click();
+    };
+
+    socket.on('psychic:secret_data', onPsychicSecret);
+    socket.on('game:reveal', onReveal);
+    socket.on('player:guess_locked', onGuessLocked);
+
+    return () => {
+      socket.off('psychic:secret_data', onPsychicSecret);
+      socket.off('game:reveal', onReveal);
+      socket.off('player:guess_locked', onGuessLocked);
+    };
+  }, [currentPlayerId]);
+
+  // Reset local guess & lock when round changes
+  useEffect(() => {
+    if (phase === 'PSYCHIC_TURN') {
+      setHasLocked(false);
+      setMyGuess({ x: 0, y: 0 });
+      setClueInput('');
+      setRevealData(null);
+    }
+  }, [round.roundNumber, phase]);
+
+  // Coordinate Conversion: [-1, 1] Cartesian -> [0, 1000] SVG viewBox
+  const toSvg = (coord: Point2D) => ({
+    cx: ((coord.x + 1) / 2) * 1000,
+    cy: ((1 - coord.y) / 2) * 1000, // Inverted because SVG 0 is at top
   });
 
-  // Handle click on plane to place guess
-  const handlePlaneClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isPsychic || phase !== 'GUESSING' || hasSubmittedGuess) return;
-    if (!planeRef.current) return;
+  // Pointer drag/tap handling on the SVG plane
+  const handlePointerEvent = (clientX: number, clientY: number) => {
+    if (isPsychic || phase !== 'GUESSING' || hasLocked) return;
+    if (!svgRef.current) return;
 
-    const rect = planeRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const rect = svgRef.current.getBoundingClientRect();
+    const normX = (clientX - rect.left) / rect.width;
+    const normY = (clientY - rect.top) / rect.height;
 
-    // Convert pixel to [-100, 100]
-    const normX = Math.round(((clickX / rect.width) * 200) - 100);
-    const normY = Math.round(100 - ((clickY / rect.height) * 200));
+    // Convert [0, 1] to [-1, 1], flipping Y so up is positive
+    const gameX = Math.max(-0.95, Math.min(0.95, normX * 2 - 1));
+    const gameY = Math.max(-0.95, Math.min(0.95, (1 - normY) * 2 - 1));
 
-    // Clamp
-    const clampedX = Math.max(-100, Math.min(100, normX));
-    const clampedY = Math.max(-100, Math.min(100, normY));
-
-    setMyGuess({ x: clampedX, y: clampedY });
+    setMyGuess({
+      x: Math.round(gameX * 1000) / 1000,
+      y: Math.round(gameY * 1000) / 1000,
+    });
+    sound.drag();
   };
 
-  // Psychic submit clue
+  // Submit Clue (Psychic)
   const handleClueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clueInput.trim()) return;
 
+    sound.click();
     setIsSubmitting(true);
-    socket.emit('psychic:submit_clue', { clue: clueInput.trim() }, (res) => {
+    socket.emit('psychic:submit_clue', { clue: clueInput.trim() }, () => {
       setIsSubmitting(false);
+      sound.lockIn();
     });
   };
 
-  // Guesser lock in guess
+  // Lock In Guess (Guesser)
   const handleGuessSubmit = () => {
+    sound.click();
     setIsSubmitting(true);
-    socket.emit('guesser:submit_guess', { coordinates: myGuess }, (res) => {
+    socket.emit('player:submit_guess', { x: myGuess.x, y: myGuess.y }, (res) => {
       setIsSubmitting(false);
-      if (res.success) {
-        setHasSubmittedGuess(true);
+      if (res?.success) {
+        setHasLocked(true);
+        sound.lockIn();
       }
     });
   };
 
+  // Next Round
   const handleNextRound = () => {
-    socket.emit('round:next');
-    setHasSubmittedGuess(false);
-    setClueInput('');
+    sound.click();
+    socket.emit('game:next_round');
   };
 
+  // Target coordinates for psychic view or reveal view
+  const activeTarget: Point2D | null =
+    revealData?.secretTarget ||
+    round.secretTarget ||
+    (isPsychic ? secretTargetOverride : null);
+
+  const targetSvg = activeTarget ? toSvg(activeTarget) : null;
+  const myGuessSvg = toSvg(myGuess);
+
+  // Active guessers who locked in
+  const nonPsychicPlayers = roomState.players.filter((p) => p.id !== round.psychicId);
+  const lockedCount = Object.keys(round.guesses).length;
+
   return (
-    <div className="min-h-screen radial-bg flex flex-col p-4 md:p-8 max-w-6xl mx-auto">
-      {/* Top Bar: Round info & Scores */}
-      <header className="flex justify-between items-center mb-6 bg-slate-900/60 border border-slate-800 p-4 rounded-2xl backdrop-blur-md">
-        <div>
-          <span className="text-xs uppercase font-extrabold tracking-widest text-purple-400">
-            Round {round.roundNumber} / {round.totalRounds}
-          </span>
-          <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-            Topic: <span className="text-indigo-300">{round.topic.name}</span>
-          </h2>
+    <div className="min-h-screen text-slate-100 flex flex-col justify-between p-4 sm:p-6 max-w-6xl mx-auto">
+      {/* Top Header Bar */}
+      <header className="flex items-center justify-between bg-[#1d1940]/80 border border-[#3a3470] rounded-2xl px-5 py-3 backdrop-blur-md shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-amber-400 flex items-center justify-center font-black text-xs text-white shadow-md">
+            R{round.roundNumber}
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-black tracking-widest text-purple-300 block">
+              Round {round.roundNumber} of {round.totalRounds}
+            </span>
+            <span className="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5">
+              Topic: <span className="text-amber-300 font-bold">{round.content.topic}</span>
+            </span>
+          </div>
         </div>
 
-        {/* Psychic indicator */}
-        <div className="flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/60">
-          <Eye className="w-4 h-4 text-purple-400" />
-          <span className="text-xs text-slate-300">
-            Psychic: <strong className="text-white">{round.psychicName}</strong>
-            {isPsychic && ' (You!)'}
-          </span>
+        {/* Psychic & Timer indicator */}
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 bg-[#15122e] px-3 py-1.5 rounded-xl border border-[#3a3470]/60">
+            <span className="text-xs text-slate-400">Psychic:</span>
+            <span className="text-xs font-black text-pink-400">{round.psychicName}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
+            <Clock className="w-3.5 h-3.5" />
+            {round.timeRemaining}s
+          </div>
+
+          <button
+            onClick={() => setSoundOn(sound.toggle())}
+            className="p-2 rounded-xl bg-[#241f4d] border border-[#3a3470] text-purple-200 transition"
+          >
+            {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+          </button>
         </div>
       </header>
 
-      {/* Main Game Arena */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Column: Players & Scores */}
-        <div className="lg:col-span-1 bg-slate-900/70 border border-slate-800 p-4 rounded-2xl">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber-400" />
-            Leaderboard
-          </h3>
-          <div className="space-y-2">
-            {roomState.players
-              .sort((a, b) => b.score - a.score)
-              .map((p) => (
-                <div
-                  key={p.id}
-                  className={`flex items-center justify-between p-2.5 rounded-xl border ${
-                    p.id === round.psychicId
-                      ? 'bg-purple-950/40 border-purple-800/60'
-                      : 'bg-slate-950/50 border-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white"
-                      style={{ backgroundColor: p.avatarColor }}
-                    >
-                      {p.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm font-semibold text-white">
-                      {p.name}
-                      {p.id === currentPlayerId && ' (You)'}
-                    </span>
-                  </div>
-                  <span className="text-sm font-mono font-bold text-purple-300">{p.score} pts</span>
-                </div>
-              ))}
+      {/* Main Play Area */}
+      <div className="flex-1 my-4 flex flex-col items-center justify-center">
+        {/* Banner: Topic & Clue Announcement */}
+        <div className="w-full max-w-xl text-center mb-4">
+          {phase === 'PSYCHIC_TURN' && (
+            <div className="inline-block bg-pink-500/15 border border-pink-500/30 px-5 py-2.5 rounded-2xl animate-pulse">
+              {isPsychic ? (
+                <span className="text-sm font-extrabold text-pink-300">
+                  ✨ You are the Psychic! Inspect the secret point and type a clue.
+                </span>
+              ) : (
+                <span className="text-sm font-extrabold text-purple-200">
+                  🔮 {round.psychicName} is channeling telepathic wavelength...
+                </span>
+              )}
+            </div>
+          )}
+
+          {(phase === 'GUESSING' || phase === 'REVEAL' || phase === 'ROUND_END') && round.clue && (
+            <div className="bg-[#1d1940] border border-[#3a3470] px-6 py-3 rounded-2xl shadow-xl inline-block max-w-lg">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                Psychic Clue ({round.content.topic})
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-amber-300 mt-0.5">
+                "{round.clue}"
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* The 2D Coordinate Board Grid */}
+        <div className="w-full max-w-[480px]">
+          {/* Top Axis Label */}
+          <div className="text-center pb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full text-xs sm:text-sm font-black bg-pink-500/20 text-pink-300 border border-pink-500/30 shadow-md">
+              ▲ {round.content.axisY.positive}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Left Axis Label */}
+            <div className="w-8 text-center">
+              <span className="block -rotate-90 origin-center whitespace-nowrap text-xs sm:text-sm font-black text-purple-300">
+                ◀ {round.content.axisX.negative}
+              </span>
+            </div>
+
+            {/* SVG Canvas Board */}
+            <div className="flex-1 aspect-square relative rounded-3xl overflow-hidden border-2 border-[#3a3470] bg-[#15122e] shadow-2xl">
+              <svg
+                ref={svgRef}
+                viewBox="0 0 1000 1000"
+                className="w-full h-full cursor-crosshair touch-none select-none"
+                onPointerDown={(e) => handlePointerEvent(e.clientX, e.clientY)}
+                onPointerMove={(e) => {
+                  if (e.buttons === 1) handlePointerEvent(e.clientX, e.clientY);
+                }}
+              >
+                {/* Quadrant backgrounds */}
+                <rect x="0" y="0" width="500" height="500" fill="#ff5c8d" opacity="0.05" />
+                <rect x="500" y="0" width="500" height="500" fill="#ffd35c" opacity="0.05" />
+                <rect x="0" y="500" width="500" height="500" fill="#9b7bff" opacity="0.05" />
+                <rect x="500" y="500" width="500" height="500" fill="#3fd8c7" opacity="0.05" />
+
+                {/* Grid guidelines */}
+                <line x1="250" y1="0" x2="250" y2="1000" stroke="#3a3470" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                <line x1="750" y1="0" x2="750" y2="1000" stroke="#3a3470" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                <line x1="0" y1="250" x2="1000" y2="250" stroke="#3a3470" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                <line x1="0" y1="750" x2="1000" y2="750" stroke="#3a3470" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+
+                {/* Center Crosshairs */}
+                <line x1="500" y1="0" x2="500" y2="1000" stroke="#4a4290" strokeWidth="3" strokeDasharray="8 6" />
+                <line x1="0" y1="500" x2="1000" y2="500" stroke="#4a4290" strokeWidth="3" strokeDasharray="8 6" />
+
+                {/* Secret Target for Psychic during PSYCHIC_TURN / GUESSING */}
+                {isPsychic && activeTarget && targetSvg && phase !== 'REVEAL' && phase !== 'ROUND_END' && (
+                  <g transform={`translate(${targetSvg.cx}, ${targetSvg.cy})`}>
+                    <circle r={40} fill="#f59e0b" opacity="0.2" className="animate-pulse-ring" />
+                    <circle r={22} fill="#f59e0b" stroke="#ffffff" strokeWidth="4" />
+                    <text y={38} textAnchor="middle" fill="#ffd35c" fontSize={22} fontWeight="bold">
+                      Secret Target
+                    </text>
+                  </g>
+                )}
+
+                {/* REVEAL: Concentric Target Rings and All Guesses */}
+                {(phase === 'REVEAL' || phase === 'ROUND_END' || phase === 'GAME_OVER') && targetSvg && (
+                  <g className="animate-drop-in">
+                    {/* Edge Ring: r = 450 (0.90 * 500) */}
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={450} fill="#8b5cf6" opacity="0.12" />
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={450} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="4 4" />
+
+                    {/* Warm Ring: r = 300 (0.60 * 500) */}
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={300} fill="#10b981" opacity="0.18" />
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={300} fill="none" stroke="#10b981" strokeWidth="2" strokeDasharray="4 4" />
+
+                    {/* Close Ring: r = 175 (0.35 * 500) */}
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={175} fill="#06b6d4" opacity="0.25" />
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={175} fill="none" stroke="#06b6d4" strokeWidth="2.5" />
+
+                    {/* Bullseye Ring: r = 75 (0.15 * 500) */}
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={75} fill="#f59e0b" opacity="0.45" />
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={75} fill="none" stroke="#ffd35c" strokeWidth="3.5" />
+
+                    {/* Bullseye Center Dot */}
+                    <circle cx={targetSvg.cx} cy={targetSvg.cy} r={16} fill="#ffffff" stroke="#f59e0b" strokeWidth="5" />
+                  </g>
+                )}
+
+                {/* Player Pins during REVEAL */}
+                {(phase === 'REVEAL' || phase === 'ROUND_END' || phase === 'GAME_OVER') &&
+                  revealData?.guesses.map((g) => {
+                    const pos = toSvg(g.coords);
+                    return (
+                      <g key={g.playerId} transform={`translate(${pos.cx}, ${pos.cy})`} className="animate-drop-in">
+                        {/* Connecting dotted line to target */}
+                        {targetSvg && (
+                          <line
+                            x1={0}
+                            y1={0}
+                            x2={targetSvg.cx - pos.cx}
+                            y2={targetSvg.cy - pos.cy}
+                            stroke={g.avatarColor}
+                            strokeWidth={2}
+                            strokeDasharray="4 4"
+                            opacity={0.6}
+                          />
+                        )}
+                        <circle r={20} fill={g.avatarColor} stroke="#ffffff" strokeWidth="3" />
+                        <text y={32} textAnchor="middle" fill="#ffffff" fontSize={22} fontWeight="bold">
+                          {g.playerName} (+{g.scoreAwarded})
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                {/* Guesser's active pin during GUESSING */}
+                {!isPsychic && (phase === 'GUESSING' || phase === 'PSYCHIC_TURN') && (
+                  <g transform={`translate(${myGuessSvg.cx}, ${myGuessSvg.cy})`}>
+                    <circle r={26} fill="#3fd8c7" opacity="0.2" className="animate-pulse-ring" />
+                    <circle r={18} fill="#3fd8c7" stroke="#ffffff" strokeWidth="3.5" />
+                    <text y={34} textAnchor="middle" fill="#ffffff" fontSize={20} fontWeight="bold">
+                      {hasLocked ? 'Locked' : 'Your Pin'}
+                    </text>
+                  </g>
+                )}
+              </svg>
+            </div>
+
+            {/* Right Axis Label */}
+            <div className="w-8 text-center">
+              <span className="block rotate-90 origin-center whitespace-nowrap text-xs sm:text-sm font-black text-teal-300">
+                {round.content.axisX.positive} ▶
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Axis Label */}
+          <div className="text-center pt-2">
+            <span className="inline-block px-4 py-1.5 rounded-full text-xs sm:text-sm font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-md">
+              ▼ {round.content.axisY.negative}
+            </span>
           </div>
         </div>
 
-        {/* Middle Column: The 2D Interactive Plane */}
-        <div className="lg:col-span-3 flex flex-col items-center">
-          {/* Phase Banner */}
-          <div className="w-full text-center mb-4">
-            {phase === 'PSYCHIC_THINKING' && (
-              <div className="p-3 bg-purple-950/40 border border-purple-800/40 rounded-2xl text-purple-200 text-sm">
-                {isPsychic ? (
-                  <span>
-                    🔮 <strong>You are the Psychic!</strong> Look at your secret target point below. Think of a{' '}
-                    <strong>{round.topic.name}</strong> clue that lands right there!
-                  </span>
-                ) : (
-                  <span className="animate-pulse">
-                    🔮 The Psychic (<strong>{round.psychicName}</strong>) is meditating on a secret clue...
-                  </span>
-                )}
-              </div>
-            )}
-
-            {phase === 'GUESSING' && (
-              <div className="p-4 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-700/50 rounded-2xl text-white">
-                <span className="text-xs uppercase font-extrabold tracking-widest text-purple-300 block mb-1">
-                  Psychic Clue Announced:
-                </span>
-                <span className="text-3xl font-black text-transparent bg-gradient-to-r from-purple-200 via-pink-200 to-indigo-100 bg-clip-text">
-                  "{round.clue}"
-                </span>
-                <p className="text-xs text-slate-400 mt-1">
-                  Where does this belong between {round.xAxis.minLabel} $\leftrightarrow$ {round.xAxis.maxLabel} and {round.yAxis.minLabel} $\leftrightarrow$ {round.yAxis.maxLabel}?
-                </p>
-              </div>
-            )}
-
-            {phase === 'REVEAL' && (
-              <div className="p-4 bg-emerald-950/40 border border-emerald-800/50 rounded-2xl text-emerald-200">
-                <span className="text-xs uppercase font-bold tracking-widest block mb-1">Target Revealed!</span>
-                <p className="text-sm">
-                  Clue was <strong>"{round.clue}"</strong>. See how close each guess came to the bullseye!
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* THE 2D PLANE BOARD CONTAINER */}
-          <div className="relative w-full max-w-[500px] aspect-square select-none p-8">
-            {/* Outer Spectrum Labels */}
-            {/* Top Y-Axis Max */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-1 font-bold text-xs uppercase tracking-wider text-pink-400 bg-slate-900 px-3 py-1 rounded-full border border-pink-500/30">
-              <ArrowUp className="w-3.5 h-3.5" />
-              {round.yAxis.maxLabel}
-            </div>
-
-            {/* Bottom Y-Axis Min */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-center gap-1 font-bold text-xs uppercase tracking-wider text-pink-400 bg-slate-900 px-3 py-1 rounded-full border border-pink-500/30">
-              <ArrowDown className="w-3.5 h-3.5" />
-              {round.yAxis.minLabel}
-            </div>
-
-            {/* Left X-Axis Min */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 flex items-center gap-1 font-bold text-xs uppercase tracking-wider text-purple-400 bg-slate-900 px-3 py-1 rounded-full border border-purple-500/30 whitespace-nowrap z-10">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              {round.xAxis.minLabel}
-            </div>
-
-            {/* Right X-Axis Max */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 flex items-center gap-1 font-bold text-xs uppercase tracking-wider text-purple-400 bg-slate-900 px-3 py-1 rounded-full border border-purple-500/30 whitespace-nowrap z-10">
-              {round.xAxis.maxLabel}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-
-            {/* The Clickable Cartesian Canvas Box */}
-            <div
-              ref={planeRef}
-              onClick={handlePlaneClick}
-              className={`relative w-full h-full bg-slate-900/90 border-2 border-slate-700/80 rounded-3xl overflow-hidden shadow-2xl transition ${
-                phase === 'GUESSING' && !isPsychic && !hasSubmittedGuess ? 'cursor-crosshair hover:border-purple-500' : ''
-              }`}
-            >
-              {/* Grid Lines */}
-              <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 divide-x divide-y divide-slate-800/40 pointer-events-none" />
-
-              {/* Major Center X & Y Axes */}
-              <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-700/70 pointer-events-none" />
-              <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-700/70 pointer-events-none" />
-
-              {/* 1. PSYCHIC TARGET POINT (Shown only to Psychic during thinking OR to everyone on reveal) */}
-              {(isPsychic || phase === 'REVEAL') && round.targetPoint && (
-                <div
-                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-700 z-20"
-                  style={toPercent(round.targetPoint)}
-                >
-                  {/* Bullseye Rings */}
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute w-20 h-20 rounded-full border-2 border-dashed border-amber-400/40 animate-spin" />
-                    <div className="absolute w-10 h-10 rounded-full bg-amber-400/20 border border-amber-400/60 animate-ping" />
-                    <div className="w-6 h-6 rounded-full bg-amber-400 border-2 border-white shadow-lg shadow-amber-400/50 flex items-center justify-center text-[10px] font-black text-slate-950">
-                      🎯
-                    </div>
-                  </div>
-                  <div className="absolute top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shadow">
-                    TARGET
-                  </div>
-                </div>
-              )}
-
-              {/* 2. GUESSER'S ACTIVE PIN (While placing guess) */}
-              {!isPsychic && (phase === 'GUESSING' || phase === 'REVEAL') && (
-                <div
-                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 transition-transform"
-                  style={toPercent(myGuess)}
-                >
-                  <div className="w-5 h-5 rounded-full bg-indigo-500 border-2 border-white shadow-lg shadow-indigo-500/50 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  </div>
-                  <span className="absolute top-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-                    You
-                  </span>
-                </div>
-              )}
-
-              {/* 3. REVEALED GUESSES FROM ALL PLAYERS */}
-              {phase === 'REVEAL' &&
-                Object.values(round.guesses).map((guess) => (
-                  <div
-                    key={guess.playerId}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-25"
-                    style={toPercent(guess.coordinates)}
-                  >
-                    <div
-                      className="w-5 h-5 rounded-full border-2 border-white shadow-md flex items-center justify-center"
-                      style={{ backgroundColor: guess.avatarColor }}
-                    />
-                    <div className="absolute top-5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-950/80 border border-slate-700 text-white text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-1">
-                      {guess.playerName}
-                      {guess.scoreEarned !== undefined && (
-                        <span className="text-emerald-400">+{guess.scoreEarned}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Interactive Controls Below Plane */}
-          <div className="w-full max-w-md mt-4">
-            {/* Psychic clue submission form */}
-            {isPsychic && phase === 'PSYCHIC_THINKING' && (
-              <form onSubmit={handleClueSubmit} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={`Clue for ${round.topic.name} (e.g. "Liu Kang")`}
-                  value={clueInput}
-                  onChange={(e) => setClueInput(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!clueInput.trim() || isSubmitting}
-                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-5 py-3 rounded-xl flex items-center gap-1.5 transition disabled:opacity-40"
-                >
-                  <Send className="w-4 h-4" /> Clue
-                </button>
-              </form>
-            )}
-
-            {/* Guesser lock-in button */}
-            {!isPsychic && phase === 'GUESSING' && (
-              <div>
-                {!hasSubmittedGuess ? (
-                  <button
-                    onClick={handleGuessSubmit}
-                    disabled={isSubmitting}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
-                  >
-                    <Target className="w-4 h-4" />
-                    Lock In Guess (X: {myGuess.x}, Y: {myGuess.y})
-                  </button>
-                ) : (
-                  <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl text-center text-slate-300 text-sm">
-                    ✅ Guess locked in! Waiting for other guessers...
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Host Next Round Button on Reveal */}
-            {phase === 'REVEAL' && isHost && (
+        {/* Bottom Control Bar */}
+        <div className="w-full max-w-xl mt-4">
+          {/* 1. Psychic Clue Input Form */}
+          {phase === 'PSYCHIC_TURN' && isPsychic && (
+            <form onSubmit={handleClueSubmit} className="flex gap-2">
+              <input
+                type="text"
+                maxLength={40}
+                value={clueInput}
+                onChange={(e) => setClueInput(e.target.value)}
+                placeholder={`Type a clue fitting topic: ${round.content.topic}`}
+                autoFocus
+                className="flex-1 bg-[#1d1940] border border-[#3a3470] focus:border-amber-400 rounded-2xl px-5 py-3 text-white font-extrabold outline-none shadow-xl"
+              />
               <button
-                onClick={handleNextRound}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl transition shadow-lg shadow-purple-600/30"
+                type="submit"
+                disabled={isSubmitting || !clueInput.trim()}
+                className="px-6 py-3 rounded-2xl font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-300 hover:opacity-90 disabled:opacity-50 shadow-lg shadow-amber-500/20 flex items-center gap-1.5 transition"
               >
-                Continue to Next Round →
+                <Send className="w-4 h-4" />
+                Submit
               </button>
-            )}
-          </div>
+            </form>
+          )}
+
+          {/* 2. Guesser Lock-In Button */}
+          {phase === 'GUESSING' && !isPsychic && (
+            <div className="flex items-center justify-between bg-[#1d1940] border border-[#3a3470] p-4 rounded-2xl">
+              <div>
+                <span className="text-xs text-slate-400 block font-semibold">Your coordinate position</span>
+                <span className="text-sm font-mono font-bold text-teal-300">
+                  X: {myGuess.x.toFixed(2)}, Y: {myGuess.y.toFixed(2)}
+                </span>
+              </div>
+              <button
+                onClick={handleGuessSubmit}
+                disabled={hasLocked || isSubmitting}
+                className="px-8 py-3 rounded-xl font-black text-slate-950 bg-gradient-to-r from-teal-400 to-teal-300 hover:opacity-90 disabled:opacity-50 shadow-lg shadow-teal-500/20 transition"
+              >
+                {hasLocked ? '✓ Guess Locked In!' : 'Lock In Guess'}
+              </button>
+            </div>
+          )}
+
+          {/* 3. Psychic Spectator View during GUESSING */}
+          {phase === 'GUESSING' && isPsychic && (
+            <div className="text-center bg-[#1d1940] border border-[#3a3470] p-4 rounded-2xl">
+              <span className="text-xs text-slate-400 font-bold block mb-1">
+                Waiting for players to lock in ({lockedCount}/{nonPsychicPlayers.length})
+              </span>
+              <div className="flex justify-center gap-2">
+                {nonPsychicPlayers.map((p) => {
+                  const locked = !!round.guesses[p.id];
+                  return (
+                    <span
+                      key={p.id}
+                      className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
+                        locked
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}
+                    >
+                      {locked ? '✓ ' : '⏳ '}
+                      {p.name}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 4. Reveal & Round End Results */}
+          {(phase === 'REVEAL' || phase === 'ROUND_END') && (
+            <div className="space-y-4 animate-drop-in">
+              <div className="bg-[#1d1940] border border-[#3a3470] p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-bold block">Psychic Score Awarded</span>
+                  <span className="text-xl font-black text-amber-300">
+                    +{revealData?.psychicScoreAwarded || 0} pts
+                  </span>
+                </div>
+
+                {isHost && (
+                  <button
+                    onClick={handleNextRound}
+                    className="px-6 py-2.5 rounded-xl font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-300 hover:opacity-90 shadow-lg shadow-amber-500/20 flex items-center gap-2 transition"
+                  >
+                    Next Round
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 5. Game Over Podium */}
+          {phase === 'GAME_OVER' && (
+            <div className="bg-[#1d1940] border border-[#3a3470] p-6 rounded-3xl text-center space-y-4 animate-drop-in">
+              <Trophy className="w-12 h-12 text-amber-400 mx-auto animate-bounce" />
+              <h2 className="text-2xl font-black text-white">Game Over!</h2>
+
+              <div className="space-y-2 max-w-sm mx-auto">
+                {roomState.players
+                  .sort((a, b) => b.score - a.score)
+                  .map((player, idx) => (
+                    <div
+                      key={player.id}
+                      className="flex items-center justify-between bg-[#15122e] px-4 py-2.5 rounded-xl border border-[#3a3470]"
+                    >
+                      <span className="font-extrabold text-sm flex items-center gap-2">
+                        <span>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}</span>
+                        {player.name}
+                      </span>
+                      <span className="font-mono font-black text-amber-300">{player.score} pts</span>
+                    </div>
+                  ))}
+              </div>
+
+              {isHost && (
+                <button
+                  onClick={handleNextRound}
+                  className="px-6 py-3 rounded-2xl font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-300 hover:opacity-90 shadow-lg transition"
+                >
+                  Play Again
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

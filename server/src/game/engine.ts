@@ -1,44 +1,70 @@
 /**
- * GAME ENGINE & LOGIC (Isa's Domain)
- * Contains the pure math, scoring mechanics, and turn transitions.
+ * AUTHORITATIVE GAME ENGINE (Isa's Domain)
+ * Implements Euclidean distance, concentric bullseye scoring, and psychic balance.
+ * Reference: docs/02 - Game Mechanics/Scoring Formula & Balance.md
  */
 
-import { Coordinates, Player, PlayerGuess, RoundData, AxisPair, Topic } from '../../../shared/types.js';
+import {
+  Point2D,
+  ScoreTier,
+  Player,
+  PlayerGuess,
+  RoundState,
+  AxisPair,
+  RevealPayload,
+  RevealGuess,
+} from '../../../shared/types.js';
 
 export class GameEngine {
   /**
-   * Euclidean Distance in 2D Cartesian Space:
-   * d = sqrt((x2 - x1)^2 + (y2 - y1)^2)
-   * Max possible distance in 200x200 box is sqrt(200^2 + 200^2) ≈ 282.8
+   * 2D Euclidean Distance between secret target and player guess:
+   * d = sqrt((x_g - x_s)^2 + (y_g - y_s)^2)
+   * With coordinates in [-1.0, 1.0], max possible diagonal distance is sqrt(8) ≈ 2.828
    */
-  public static calculateDistance(target: Coordinates, guess: Coordinates): number {
-    const dx = target.x - guess.x;
-    const dy = target.y - guess.y;
-    return Math.sqrt(dx * dx + dy * dy);
+  public static calculateDistance(target: Point2D, guess: Point2D): number {
+    const dx = guess.x - target.x;
+    const dy = guess.y - target.y;
+    return Math.round(Math.sqrt(dx * dx + dy * dy) * 1000) / 1000;
   }
 
   /**
-   * Scoring System:
-   * Bullseye (< 15 units): 1000 points
-   * Excellent (< 35 units): 750 points
-   * Great     (< 60 units): 500 points
-   * Close     (< 90 units): 250 points
-   * Miss      (>= 90 units): 50 points (pity score)
+   * Concentric Target Ring Scoring (Isa's Formula):
+   * Bullseye: d <= 0.15 -> 1000 pts
+   * Close:    d <= 0.35 -> 750 pts
+   * Warm:     d <= 0.60 -> 500 pts
+   * Edge:     d <= 0.90 -> 250 pts
+   * Miss:     d >  0.90 -> 0 pts
    */
-  public static calculateScore(distance: number): number {
-    if (distance <= 15) return 1000;
-    if (distance <= 35) return 750;
-    if (distance <= 60) return 500;
-    if (distance <= 90) return 250;
-    return 50;
+  public static calculatePlayerScore(
+    target: Point2D,
+    guess: Point2D
+  ): { distance: number; points: number; tier: ScoreTier } {
+    const distance = this.calculateDistance(target, guess);
+
+    if (distance <= 0.15) {
+      return { distance, points: 1000, tier: 'Bullseye' };
+    }
+    if (distance <= 0.35) {
+      return { distance, points: 750, tier: 'Close' };
+    }
+    if (distance <= 0.60) {
+      return { distance, points: 500, tier: 'Warm' };
+    }
+    if (distance <= 0.90) {
+      return { distance, points: 250, tier: 'Edge' };
+    }
+    return { distance, points: 0, tier: 'Miss' };
   }
 
   /**
-   * Generates a random coordinate target on the plane.
-   * Keeps within [-85, 85] by default so target isn't glued to the extreme edge.
+   * Generates a random coordinate clamped inside [-0.85, +0.85]
+   * so target never overlaps outer axis labels or boundary edges.
    */
-  public static generateRandomTarget(bound: number = 85): Coordinates {
-    const randomCoord = () => Math.round((Math.random() * 2 - 1) * bound);
+  public static generateRandomTarget(bound: number = 0.85): Point2D {
+    const randomCoord = () => {
+      const val = (Math.random() * 2 - 1) * bound;
+      return Math.round(val * 1000) / 1000;
+    };
     return {
       x: randomCoord(),
       y: randomCoord(),
@@ -46,65 +72,104 @@ export class GameEngine {
   }
 
   /**
-   * Initializes a new round
+   * Initializes a new round with a fresh target and spectrum topic.
    */
   public static createRound(
     roundNumber: number,
     totalRounds: number,
     psychic: Player,
-    topic: Topic,
-    xAxis: AxisPair,
-    yAxis: AxisPair
-  ): RoundData {
+    topic: string,
+    axisX: AxisPair,
+    axisY: AxisPair,
+    guessTimeLimit: number = 75
+  ): RoundState {
     return {
       roundNumber,
       totalRounds,
       psychicId: psychic.id,
       psychicName: psychic.name,
-      topic,
-      xAxis,
-      yAxis,
-      targetPoint: this.generateRandomTarget(),
-      clue: null,
+      content: {
+        topic,
+        axisX,
+        axisY,
+      },
+      secretTarget: this.generateRandomTarget(0.85),
+      clue: undefined,
       guesses: {},
-      timeRemainingSec: 60,
+      timeRemaining: guessTimeLimit,
     };
   }
 
   /**
-   * Resolves all guesses and awards scores to both guessers and the psychic.
-   * The psychic also earns bonus points based on how accurate the guessers were!
+   * Resolves round, scores all guessers, awards psychic points and resonance bonus,
+   * and builds the reveal payload.
    */
-  public static resolveRound(round: RoundData): {
-    evaluatedGuesses: PlayerGuess[];
-    psychicScoreBonus: number;
-  } {
-    if (!round.targetPoint) {
-      throw new Error('Cannot resolve round without target coordinates.');
+  public static resolveRound(
+    round: RoundState,
+    players: Player[]
+  ): RevealPayload {
+    if (!round.secretTarget) {
+      throw new Error('Cannot resolve round without secret target.');
     }
 
-    const evaluatedGuesses: PlayerGuess[] = [];
-    let totalGuesserScore = 0;
-    const guessCount = Object.keys(round.guesses).length;
+    const revealGuesses: RevealGuess[] = [];
+    const guesserPoints: number[] = [];
+    let bullseyeCount = 0;
 
-    for (const [playerId, guess] of Object.entries(round.guesses)) {
-      const distance = this.calculateDistance(round.targetPoint, guess.coordinates);
-      const score = this.calculateScore(distance);
+    for (const player of players) {
+      if (player.id === round.psychicId) continue;
 
-      totalGuesserScore += score;
-      evaluatedGuesses.push({
-        ...guess,
-        distanceFromTarget: Math.round(distance * 10) / 10,
-        scoreEarned: score,
+      const guess = round.guesses[player.id];
+      const coords = guess ? guess.coords : { x: 0, y: 0 }; // Default center if didn't lock
+      const evaluation = this.calculatePlayerScore(round.secretTarget, coords);
+
+      guesserPoints.push(evaluation.points);
+      if (evaluation.tier === 'Bullseye') {
+        bullseyeCount++;
+      }
+
+      // Add score to player
+      player.score += evaluation.points;
+
+      revealGuesses.push({
+        playerId: player.id,
+        playerName: player.name,
+        avatarColor: player.avatarColor,
+        coords,
+        distance: evaluation.distance,
+        scoreAwarded: evaluation.points,
+        tier: evaluation.tier,
       });
     }
 
-    // Psychic gets the average of all guessers' scores (rewarding great clues!)
-    const psychicScoreBonus = guessCount > 0 ? Math.round(totalGuesserScore / guessCount) : 0;
+    // Psychic Score = Average of guesser points + 250 bonus if >= 2 bullseyes
+    const avgScore =
+      guesserPoints.length > 0
+        ? Math.round(guesserPoints.reduce((a, b) => a + b, 0) / guesserPoints.length)
+        : 0;
+    const resonanceBonus = bullseyeCount >= 2 ? 250 : 0;
+    const psychicTotalAwarded = avgScore + resonanceBonus;
+
+    const psychic = players.find((p) => p.id === round.psychicId);
+    if (psychic) {
+      psychic.score += psychicTotalAwarded;
+    }
+
+    const updatedLeaderboard = [...players]
+      .sort((a, b) => b.score - a.score)
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        totalScore: p.score,
+      }));
 
     return {
-      evaluatedGuesses,
-      psychicScoreBonus,
+      secretTarget: round.secretTarget,
+      clue: round.clue || 'No clue provided',
+      guesses: revealGuesses,
+      psychicId: round.psychicId,
+      psychicScoreAwarded: psychicTotalAwarded,
+      updatedLeaderboard,
     };
   }
 }

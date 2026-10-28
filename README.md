@@ -104,6 +104,25 @@ Open `http://localhost:3000` in multiple browser tabs (or incognito windows) to 
 
 ---
 
+## 🌐 Production Deployment
+
+The project is pre-configured with a Render blueprint (`render.yaml`) and Vercel routing (`client/vercel.json`):
+
+### 1. Deploy Server to Render (Free Web Service)
+1. Go to **[dashboard.render.com](https://dashboard.render.com)** $\rightarrow$ click **New +** $\rightarrow$ **Blueprint**.
+2. Connect `Sharpy17/psychic` — Render will automatically detect `render.yaml`!
+3. Click **Apply**.
+4. Once deployed, copy your server URL (e.g. `https://psychic-server-xxxx.onrender.com`).
+
+### 2. Deploy Client to Vercel (Free Static SPA)
+1. Go to **[vercel.com/new](https://vercel.com/new)** $\rightarrow$ Import `Sharpy17/psychic`.
+2. Set **Root Directory** to `client`.
+3. Add Environment Variable:
+   - `VITE_SERVER_URL`: `https://psychic-server-xxxx.onrender.com` (your Render URL)
+4. Click **Deploy**. Done!
+
+---
+
 ## 🌿 Git & Team Workflow
 
 ### 1. Dosia's Initial Push

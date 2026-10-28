@@ -2,13 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #15122e;
+  --bg-2: #1d1940;
+  --panel: #241f4d;
+  --line: #3a3470;
+  --text: #f5f2ff;
+  --muted: #a9a3d6;
+  --accent: #ffd35c;
+  --accent-shadow: #b88d1f;
+  --face: #f7efdf;
+  --zone-bullseye: #f59e0b;
+  --zone-close: #06b6d4;
+  --zone-warm: #10b981;
+  --zone-edge: #8b5cf6;
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   overflow-x: hidden;
-  background-color: #090d16;
+  background: radial-gradient(1400px 700px at 70% -10%, #2f2870 0%, var(--bg) 60%) fixed;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, sans-serif;
 }
 
 /* Custom radial glows */
 .radial-bg {
-  background: radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.15) 0%, rgba(9, 13, 22, 1) 70%);
+  background: radial-gradient(circle at 50% 20%, rgba(155, 123, 255, 0.15) 0%, rgba(21, 18, 46, 1) 70%);
+}
+
+/* Animations */
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 0.5; }
+  100% { transform: scale(0.95); opacity: 0.9; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform-origin: center;
+}
+
+@keyframes drop-in {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-drop-in {
+  animation: drop-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  transform-origin: center;
 }

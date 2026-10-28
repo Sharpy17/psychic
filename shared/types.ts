@@ -1,93 +1,125 @@
 /**
- * Shared Type Definitions for Psychic Plane
- * This file serves as the Single Source of Truth (SSOT) between Client, Server, and Database.
+ * CANONICAL SHARED TYPE DEFINITIONS FOR PSYCHIC PLANE (Wavelength 2D)
+ * Single Source of Truth (SSOT) defined in docs/03 - Data Models & Schemas/Data Models (TypeScript).md
  */
 
-// 2D Coordinates normalized between -100 and +100
-// (-100, 0) = Far Left (X Axis Min)
-// (+100, 0) = Far Right (X Axis Max)
-// (0, -100) = Far Bottom (Y Axis Min)
-// (0, +100) = Far Top (Y Axis Max)
-// (0, 0)    = Exact Center
-export interface Coordinates {
-  x: number;
-  y: number;
-}
+// ==========================================
+// GAME PHASES
+// ==========================================
+export type GamePhase =
+  | 'LOBBY'
+  | 'PSYCHIC_TURN'
+  | 'GUESSING'
+  | 'REVEAL'
+  | 'ROUND_END'
+  | 'GAME_OVER';
 
-// Axis pair represents a spectrum from min to max
+// ==========================================
+// COORDINATES & MATH (Strictly [-1.0, +1.0])
+// ==========================================
+export interface Point2D {
+  x: number; // Float between -1.0 and +1.0
+  y: number; // Float between -1.0 and +1.0
+}
+export type Coordinates = Point2D;
+
+// ==========================================
+// CONTENT & AXES
+// ==========================================
 export interface AxisPair {
   id?: string;
-  minLabel: string; // e.g. "Unfunny", "Ugly", "Underrated"
-  maxLabel: string; // e.g. "Funny", "Cute", "Overrated"
+  negative: string; // -1.0 attribute (e.g. "Ugly", "Boring")
+  positive: string; // +1.0 attribute (e.g. "Handsome", "Funny")
 }
 
-// Category or Topic prompt
-export interface Topic {
-  id?: string;
-  name: string; // e.g. "Video Game Characters", "Food & Drink", "Historical Figures"
-  description?: string;
+export interface RoundContent {
+  topic: string; // e.g. "Fictional Characters", "Animals"
+  axisX: AxisPair;
+  axisY: AxisPair;
 }
 
-export type PlayerRole = 'PSYCHIC' | 'GUESSER';
-
-export interface Player {
-  id: string; // Socket ID or Session UUID
-  name: string;
-  avatarColor: string;
-  score: number;
-  isHost: boolean;
-  isReady: boolean;
-  role: PlayerRole;
-}
-
-export type GamePhase =
-  | 'LOBBY'             // Waiting for players to join
-  | 'PSYCHIC_THINKING'  // Psychic sees target point and category, choosing a clue (e.g., "Liu Kang")
-  | 'GUESSING'          // Clue announced. Guessers drag their pins to place their coordinate guesses
-  | 'REVEAL'            // Secret target revealed! Distances calculated, scores animated
-  | 'ROUND_SUMMARY'     // Leaderboard displayed, ready to advance
-  | 'GAME_OVER';        // Final podium and winners
+// ==========================================
+// PLAYERS & GUESSES
+// ==========================================
+export type ScoreTier = 'Bullseye' | 'Close' | 'Warm' | 'Edge' | 'Miss';
 
 export interface PlayerGuess {
   playerId: string;
-  playerName: string;
-  avatarColor: string;
-  coordinates: Coordinates;
-  distanceFromTarget?: number; // Calculated on reveal
-  scoreEarned?: number;        // Points awarded for this round
+  playerName?: string;
+  avatarColor?: string;
+  coords: Point2D;
+  isLocked: boolean;
+  scoreAwarded?: number;
+  distance?: number;
+  tier?: ScoreTier;
 }
 
-export interface RoundData {
+export interface Player {
+  id: string;          // Socket ID or persistent UUID
+  name: string;        // Display name
+  avatarColor: string; // Hex color for pin & UI badge
+  score: number;       // Cumulative score
+  isHost: boolean;
+  isPsychic: boolean;
+  isConnected: boolean;
+}
+
+// ==========================================
+// ROUND & ROOM STATE
+// ==========================================
+export interface RoundState {
   roundNumber: number;
   totalRounds: number;
   psychicId: string;
-  psychicName: string;
-  topic: Topic;
-  xAxis: AxisPair;
-  yAxis: AxisPair;
-  
-  // Target coordinates: ONLY sent to Psychic during thinking phase.
-  // Sent to guessers ONLY when phase transitions to 'REVEAL'.
-  targetPoint: Coordinates | null;
-  
-  clue: string | null;           // Submitted by psychic (e.g. "Liu Kang")
-  guesses: Record<string, PlayerGuess>; // Map of playerId -> PlayerGuess
-  timeRemainingSec?: number;
+  psychicName?: string;
+  content: RoundContent;
+  clue?: string;
+  // NOTE: secretTarget is strictly server-side during PSYCHIC_TURN & GUESSING!
+  secretTarget?: Point2D;
+  guesses: Record<string, PlayerGuess>; // Keyed by playerId
+  timeRemaining: number;
 }
 
 export interface RoomSettings {
-  maxPlayers: number;
-  roundsCount: number;
-  timeLimitSec: number;
+  roundsPerPlayer: number; // Default: 1 or 2
+  clueTimeLimit: number;   // In seconds, default: 90
+  guessTimeLimit: number;  // In seconds, default: 60
 }
 
 export interface RoomState {
-  roomCode: string;
-  hostId: string;
+  roomCode: string; // 4-letter alphanumeric string (e.g. "ABCD")
   phase: GamePhase;
   players: Player[];
-  currentRound: RoundData | null;
+  currentRound: RoundState | null;
   settings: RoomSettings;
+}
+
+// ==========================================
+// REVEAL PAYLOAD (Broadcasted at REVEAL)
+// ==========================================
+export interface RevealGuess {
+  playerId: string;
+  playerName: string;
+  avatarColor: string;
+  coords: Point2D;
+  distance: number;
+  scoreAwarded: number;
+  tier: ScoreTier;
+}
+
+export interface LeaderboardEntry {
+  playerId: string;
+  name: string;
+  totalScore: number;
+}
+
+export interface RevealPayload {
+  secretTarget: Point2D;
+  clue: string;
+  guesses: RevealGuess[];
+  psychicId: string;
+  psychicScoreAwarded: number;
+  updatedLeaderboard: LeaderboardEntry[];
 }
 
 // ==========================================
@@ -95,31 +127,40 @@ export interface RoomState {
 // ==========================================
 
 export interface ClientToServerEvents {
-  // Room setup
-  'room:create': (payload: { playerName: string }, callback: (res: { success: boolean; roomCode?: string; error?: string }) => void) => void;
-  'room:join': (payload: { roomCode: string; playerName: string }, callback: (res: { success: boolean; error?: string }) => void) => void;
-  'room:ready': () => void;
+  // Room entry
+  'room:create': (
+    payload: { playerName: string },
+    callback: (res: { success: boolean; roomCode?: string; error?: string }) => void
+  ) => void;
+  'room:join': (
+    payload: { roomCode: string; playerName: string },
+    callback: (res: { success: boolean; error?: string }) => void
+  ) => void;
+
+  // Game control
   'game:start': () => void;
+  'game:next_round': () => void;
 
   // Psychic submits clue
-  'psychic:submit_clue': (payload: { clue: string }, callback: (res: { success: boolean; error?: string }) => void) => void;
+  'psychic:submit_clue': (
+    payload: { clue: string },
+    callback?: (res: { success: boolean; error?: string }) => void
+  ) => void;
 
-  // Guesser moves / submits guess
-  'guesser:submit_guess': (payload: { coordinates: Coordinates }, callback: (res: { success: boolean; error?: string }) => void) => void;
-
-  // Round progression (host or timer)
-  'round:next': () => void;
+  // Guesser locks in coordinates (x, y in [-1, 1])
+  'player:submit_guess': (
+    payload: { x: number; y: number },
+    callback?: (res: { success: boolean; error?: string }) => void
+  ) => void;
 }
 
 export interface ServerToClientEvents {
+  'room:joined': (payload: { roomCode: string; playerId: string; isHost: boolean }) => void;
   'room:updated': (roomState: RoomState) => void;
-  'room:error': (message: string) => void;
-  'game:phase_change': (payload: { phase: GamePhase; round?: RoundData }) => void;
-  'psychic:clue_announced': (payload: { clue: string; topic: string }) => void;
-  'round:revealed': (payload: {
-    targetPoint: Coordinates;
-    guesses: PlayerGuess[];
-    psychicScoreEarned: number;
-  }) => void;
-  'timer:tick': (secondsLeft: number) => void;
+  'game:phase_change': (payload: { phase: GamePhase; roundData?: RoundState | null }) => void;
+  'psychic:secret_data': (payload: { targetX: number; targetY: number }) => void;
+  'player:guess_locked': (payload: { playerId: string }) => void;
+  'game:reveal': (payload: RevealPayload) => void;
+  'timer:tick': (payload: { secondsRemaining: number }) => void;
+  'error:message': (payload: { code: string; message: string }) => void;
 }
