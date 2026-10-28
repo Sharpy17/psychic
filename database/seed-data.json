@@ -1,0 +1,30 @@
+{
+  "topics": [
+    { "name": "Video Game Characters", "description": "Protagonists, villains, and NPCs from gaming" },
+    { "name": "Fictional Characters", "description": "From movies, series, books, anime, and lore" },
+    { "name": "Foods & Beverages", "description": "Snacks, full meals, drinks, and ingredients" },
+    { "name": "Everyday Objects", "description": "Items found in homes, offices, or streets" },
+    { "name": "Animals & Creatures", "description": "Living, extinct, or mythical creatures" },
+    { "name": "Superheroes & Supervillains", "description": "Marvel, DC, and comic book icons" },
+    { "name": "Jobs & Professions", "description": "Careers, side gigs, and vocations" },
+    { "name": "Historical Figures", "description": "People from world history" },
+    { "name": "Celebrities & Musicians", "description": "Modern icons, singers, actors, athletes" }
+  ],
+  "axisPairs": [
+    { "minLabel": "Unfunny", "maxLabel": "Hilarious" },
+    { "minLabel": "Ugly", "maxLabel": "Cute / Beautiful" },
+    { "minLabel": "Underrated", "maxLabel": "Overrated" },
+    { "minLabel": "Harmless", "maxLabel": "Extremely Lethal" },
+    { "minLabel": "Weak in a fight", "maxLabel": "Unstoppable in a fight" },
+    { "minLabel": "Pure Evil", "maxLabel": "Pure Good" },
+    { "minLabel": "Useless in Zombie Apocalypse", "maxLabel": "Lifesaver in Zombie Apocalypse" },
+    { "minLabel": "Cringe", "maxLabel": "Chad / Based" },
+    { "minLabel": "Horrible Smell", "maxLabel": "Heavenly Scent" },
+    { "minLabel": "Budget / Cheap", "maxLabel": "Luxury / Bougie" },
+    { "minLabel": "Introverted Energy", "maxLabel": "Extroverted Energy" },
+    { "minLabel": "Chaos Gremlin", "maxLabel": "Orderly / Lawful" },
+    { "minLabel": "Forgotten in 10 years", "maxLabel": "Immortalized in History" },
+    { "minLabel": "Great for kids", "maxLabel": "Nightmare for kids" },
+    { "minLabel": "Brainless", "maxLabel": "Gigabrain Genius" }
+  ]
+}

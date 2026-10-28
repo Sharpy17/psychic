@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: #090d16;
+}
+
+/* Custom radial glows */
+.radial-bg {
+  background: radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.15) 0%, rgba(9, 13, 22, 1) 70%);
+}
