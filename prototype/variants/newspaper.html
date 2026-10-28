@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Newspaper</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Newspaper: vintage broadsheet front page, black ink on newsprint, one red accent. */
+    :root {
+      --bg: #f3eee2;
+      --panel: #f8f4ea;
+      --line: #1b1b1b;
+      --text: #1b1b1b;
+      --muted: #55504a;
+      --red: #b3261e;
+      --accent: var(--red);
+      --radius: 2px;
+      --backdrop: #1b1b1b88;
+      --zone-2: #ddd2bb;
+      --zone-3: #b9a98a;
+      --zone-4: #b3261e;
+      --face: #fbf8f0;
+      --needle: #1b1b1b;
+      --q-opacity: 0;
+      --axis-line: #1b1b1b88;
+      --ring-text: #1b1b1b;
+      --miss: #b3261e;
+      --board-shadow: 0 0 0 transparent;
+      --lbl-radius: 0;
+      --lbl-top: var(--text); --lbl-top-bg: transparent;
+      --lbl-bottom: var(--text); --lbl-bottom-bg: transparent;
+      --lbl-left: var(--text); --lbl-left-bg: transparent;
+      --lbl-right: var(--text); --lbl-right-bg: transparent;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background: radial-gradient(#0000000a 1px, transparent 1.2px) 0 0 / 4px 4px, var(--bg);
+      font: 17px/1.55 Georgia, "Times New Roman", Times, serif;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; }
+    .sc { font-variant: small-caps; letter-spacing: 0.06em; }
+
+    .btn {
+      font-family: Georgia, serif;
+      font-weight: 700;
+      font-variant: small-caps;
+      letter-spacing: 0.08em;
+      font-size: 1.05rem;
+      color: var(--text);
+      background: transparent;
+      border: 2px solid var(--text);
+      border-radius: 0;
+      padding: 10px 18px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn:hover { background: var(--text); color: var(--bg); }
+    .btn.primary { background: var(--text); color: var(--bg); }
+    .btn.primary:hover { background: var(--red); border-color: var(--red); }
+    .btn.ghost { border-color: transparent; }
+    .btn.ghost:hover { background: transparent; color: var(--red); }
+    .btn.big { padding: 13px 24px; }
+
+    /* ---------- Masthead ---------- */
+    .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-block: 12px 8px; font-size: 0.85rem; color: var(--muted); border-bottom: 1px solid var(--line); }
+    .topline nav { display: flex; gap: 4px; align-items: center; }
+    .topline a { color: inherit; text-decoration: none; padding: 4px 8px; }
+    .topline a:hover { color: var(--red); }
+    .masthead { text-align: center; padding-block: 18px 10px; }
+    .masthead h1 { font-family: "Old English Text MT", "UnifrakturCook", "Times New Roman", serif; font-weight: 400; font-size: clamp(2.6rem, 9vw, 6rem); line-height: 1; letter-spacing: 0.01em; }
+    .masthead .motto { font-style: italic; color: var(--muted); margin-top: 6px; }
+    .dateline { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; border-top: 3px double var(--line); border-bottom: 3px double var(--line); padding: 6px 2px; font-size: 0.85rem; }
+
+    /* ---------- Front page ---------- */
+    .front { display: grid; grid-template-columns: 1.25fr 1fr; gap: 32px; padding-block: 28px 40px; border-bottom: 1px solid var(--line); }
+    .front > * { min-width: 0; }
+    .kicker { color: var(--red); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.15em; }
+    .headline { font-size: clamp(2.2rem, 5.2vw, 3.8rem); line-height: 1.02; font-weight: 900; letter-spacing: -0.01em; margin-top: 6px; }
+    .deck { font-size: 1.25rem; font-style: italic; margin-top: 12px; color: var(--muted); }
+    .byline { font-size: 0.85rem; margin: 14px 0; padding-block: 6px; border-block: 1px solid var(--line); }
+    .story { columns: 2; column-gap: 26px; column-rule: 1px solid #1b1b1b33; text-align: justify; hyphens: auto; }
+    .story p + p { margin-top: 10px; text-indent: 1.2em; }
+    .story p:first-child::first-letter { float: left; font-size: 3.6rem; line-height: 0.85; font-weight: 900; padding: 4px 8px 0 0; color: var(--red); }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+
+    .puzzle { border: 2px dashed var(--text); padding: 16px; background: var(--panel); position: relative; }
+    .puzzle::before { content: "✂"; position: absolute; top: -14px; left: 18px; background: var(--bg); padding: 0 6px; font-size: 1.1rem; }
+    .puzzle h2 { text-align: center; font-size: 1.15rem; letter-spacing: 0.2em; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    .puzzle .sub { text-align: center; font-style: italic; color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .demo-clue { text-align: center; font-size: 1.45rem; font-weight: 900; margin: 4px 0 10px; }
+    .demo-clue::before { content: "“"; }
+    .demo-clue::after { content: "”"; }
+    .axis-label { font-variant: small-caps; letter-spacing: 0.08em; font-weight: 700; }
+    .board { outline: 2px solid var(--text); }
+    .hint { text-align: center; font-size: 0.85rem; font-style: italic; color: var(--muted); margin-top: 10px; }
+    .demo-foot { display: flex; gap: 10px; margin-top: 12px; }
+    .demo-foot .btn { flex: 1; }
+
+    /* ---------- Inside pages ---------- */
+    section { padding-block: 40px; border-bottom: 1px solid var(--line); }
+    .sec-title { text-align: center; font-size: clamp(1.6rem, 3.6vw, 2.2rem); font-weight: 900; margin-bottom: 24px; }
+    .sec-title small { display: block; font-size: 0.8rem; font-weight: 400; letter-spacing: 0.2em; color: var(--red); }
+    .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .cols3 article { padding: 0 22px; }
+    .cols3 article + article { border-left: 1px solid #1b1b1b55; }
+    .cols3 h3 { font-size: 1.25rem; line-height: 1.2; margin-bottom: 8px; }
+    .cols3 p { text-align: justify; hyphens: auto; color: #2b2925; }
+
+    .classifieds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .ad { border: 1px solid var(--line); padding: 14px; text-align: center; background: var(--panel); }
+    .ad b { display: block; font-size: 1.05rem; letter-spacing: 0.08em; }
+    .ad p { font-size: 0.95rem; margin-top: 6px; color: #2b2925; }
+    .ad .rule { border-top: 1px solid var(--line); margin: 8px 20%; }
+
+    .extra { text-align: center; padding-block: 48px; border-bottom: 3px double var(--line); }
+    .extra h2 { font-size: clamp(2.6rem, 8vw, 5rem); font-weight: 900; line-height: 1; color: var(--red); letter-spacing: 0.02em; }
+    .extra p { font-style: italic; font-size: 1.2rem; margin: 10px 0 22px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 18px 40px; font-size: 0.85rem; color: var(--muted); }
+    footer nav { display: flex; gap: 16px; }
+    footer a { color: inherit; }
+    footer a:hover { color: var(--red); }
+
+    .modal { border: 2px solid var(--text); box-shadow: 8px 8px 0 #1b1b1b33; }
+    .modal h2 { font-weight: 900; }
+    input { border: 2px solid var(--text); background: #fff; }
+    .room-code { color: var(--text); }
+
+    @media (max-width: 900px) {
+      .front { grid-template-columns: 1fr; }
+      .classifieds { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .topline .links { display: none; }
+      .story { columns: 1; }
+      .cols3 { grid-template-columns: 1fr; gap: 20px; }
+      .cols3 article, .cols3 article + article { padding: 0; border: 0; }
+      .dateline span:nth-child(2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topline">
+      <span class="sc">Late Edition</span>
+      <nav>
+        <span class="links"><a href="#how">How to play</a><a href="#features">Classifieds</a></span>
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn primary" data-action="create">Play</button>
+      </nav>
+    </div>
+    <header class="masthead" id="top">
+      <h1>The Psychic Plane</h1>
+      <p class="motto">“All the clues that are fit to guess”</p>
+    </header>
+    <div class="dateline sc"><span>Vol. I · No. 1</span><span>Game Night Edition</span><span>Free · For 3–10 readers</span></div>
+
+    <main>
+      <div class="front">
+        <div>
+          <div class="kicker">MIND-READING · EXCLUSIVE</div>
+          <h2 class="headline">Local Friends Caught Reading Each Other's Minds</h2>
+          <p class="deck">Experts baffled as a single clue leads an entire group to the very same dot</p>
+          <div class="byline sc">By our Party Games Correspondent</div>
+          <div class="story">
+            <p>A new party game is sweeping living rooms and video calls alike. Each round, one player, the "psychic", is shown a secret point on a board marked with two pairs of opposites, such as <i>Funny</i> and <i>Unfunny</i>, or <i>Ugly</i> and <i>Cute</i>.</p>
+            <p>The psychic may offer just one clue. The remaining players then mark, in secret, where they believe the point lies. When the target is revealed, the closest guesses earn the most points.</p>
+            <p>"It took thirty seconds to learn," said one player, "and three hours to stop arguing about whether a goose is scary." No downloads or accounts are required.</p>
+          </div>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Create a room</button>
+            <button class="btn big" data-action="join">Join with a code</button>
+          </div>
+        </div>
+
+        <aside class="puzzle" aria-label="Try the board">
+          <h2 class="sc">Today's Puzzle</h2>
+          <p class="sub">Ari, our resident psychic, offers this clue:</p>
+          <div class="demo-clue" id="demo-clue"></div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Place your mark, then check the answer below.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal answer</button>
+            <button class="btn" data-action="shuffle">Next puzzle</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </aside>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title"><small>RULES OF PLAY</small>How the Game Is Played</h2>
+        <div class="cols3">
+          <article><h3>I. The Psychic Takes a Peek</h3><p>One player privately sees where the target sits between two pairs of opposing words. Nobody else may look.</p></article>
+          <article><h3>II. A Single Clue Is Given</h3><p>Something that belongs at that exact spot. A pug in a hot dog costume, for instance: rather cute, and somewhat funny.</p></article>
+          <article><h3>III. Readers Place Their Marks</h3><p>Every other player marks the board in secret. Then all is revealed. A bullseye earns four points; the highest total wins.</p></article>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2 class="sec-title"><small>CLASSIFIEDS</small>Wanted: Game Night</h2>
+        <div class="classifieds">
+          <div class="ad"><b class="sc">Every Player for Themselves</b><div class="rule"></div><p>No teams. Private guesses. Live scores. Apply within.</p></div>
+          <div class="ad"><b class="sc">Phone Friendly</b><div class="rule"></div><p>Plays on any phone. No app store, no account required.</p></div>
+          <div class="ad"><b class="sc">Endless Cards</b><div class="rule"></div><p>Any two axes may be combined. Write your own, too.</p></div>
+          <div class="ad"><b class="sc">Four-Letter Rooms</b><div class="rule"></div><p>Share one code. Friends join in seconds. Inquire today.</p></div>
+        </div>
+      </section>
+
+      <div class="extra">
+        <h2>EXTRA! EXTRA!</h2>
+        <p>Start a room and read all about your friends.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 The Psychic Plane · A student publication</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'triangle',
+      revealLabel: 'Reveal answer',
+      againLabel: 'Play again',
+      results: { 4: 'Headline news: perfect telepathy!', 3: 'A close call, sources say.', 2: 'Within the margin of error.', 0: 'Correction: that was way off.' },
+      lobbyMsg: 'The lobby goes to print soon',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

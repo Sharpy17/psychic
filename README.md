@@ -124,6 +124,36 @@ To add a button, give it `class="btn"` (plus `primary` / `ghost` / `big`) and a
 
 ---
 
+## Style versions (`prototype/variants/`)
+
+Eleven alternative looks for the same landing page, to compare against `landing.html` and pick a favourite.
+Open **`prototype/variants/index.html`**: it links to all twelve versions.
+
+| Version | File | Idea |
+|---|---|---|
+| 1. Original | `../landing.html` | Dark purple party game |
+| 2. Retro arcade | `arcade.html` | 80s cabinet, neon, CRT scanlines, "INSERT COIN" |
+| 3. Clean & minimal | `minimal.html` | Light, white space, one blue accent |
+| 4. Mystic | `mystic.html` | Fortune-teller night sky, gold, tarot-card steps |
+| 5. Playful cartoon | `cartoon.html` | Board-game box, thick outlines, candy colours |
+| 6. Sonar | `sonar.html` | Submarine radar sweep, live bearing readout, sonar ping on reveal |
+| 7. Newspaper | `newspaper.html` | Vintage front page, cut-out puzzle, classified ads |
+| 8. Synthwave | `synthwave.html` | 80s sunset, chrome title, rolling neon grid floor |
+| 9. Brutalist | `brutalist.html` | Black boxes, giant type, yellow highlights, scrolling ticker |
+| 10. Sketchbook | `notebook.html` | Lined paper, handwriting, sticky notes and tape |
+| 11. Aurora glass | `glass.html` | Frosted-glass panels over drifting colour light |
+| 12. Treasure map | `treasure.html` | Parchment, compass rose, pirate riddles, dig for the gold |
+
+Every version is fully playable (demo board, Create / Join pop-ups, sounds) and works on phones.
+They share one script, `common.js` (the board and pop-up logic from `landing.html`, made configurable),
+plus `board.css` and `base.css`. Each `.html` file holds only its own styles, wording and small extras,
+so changing one version never affects the others.
+
+Unlike `landing.html`, the versions are several files, so open them from the cloned folder
+(double-clicking `index.html` works) rather than copying a single file somewhere else.
+
+---
+
 ## Porting to React (next step)
 
 | From | To |
@@ -147,5 +177,6 @@ const fromShared = (c: { x: number; y: number }) => ({ x: (c.x + 100) / 2, y: (1
 | Branch | Purpose |
 |---|---|
 | `main` | Team scaffold (React client, Socket.IO server, shared types, Prisma). Nobody commits directly |
-| `landingpage` | **This branch.** Landing page prototype only |
+| `landingpage` | Landing page prototype only |
+| `landingpage-variants` | `landingpage` plus eleven alternative style versions in `prototype/variants/` |
 | `demo` | First full variant to refer to: landing page plus the whole clickable game prototype with bots |
