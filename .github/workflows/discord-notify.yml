@@ -1,0 +1,41 @@
+name: Discord Push Notifications
+
+# Posts a short "X just pushed..." notice to the team Discord channel on every push.
+# Setup: repo Settings → Secrets and variables → Actions → New secret
+#   Name: DISCORD_WEBHOOK   Value: the Discord channel's webhook URL
+
+on:
+  push:
+    branches: [ '**' ]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Skip branch deletions (they have no commits to report)
+    if: ${{ !github.event.deleted }}
+
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK secret is not set, skipping."
+            exit 0
+          fi
+
+          # Commit messages are read from the event file with jq (never pasted into the
+          # shell), so quotes or backticks in a message can't break or inject anything.
+          CONTENT=$(jq -r '
+            (.ref | sub("^refs/heads/"; "")) as $branch
+            | (.commits | length) as $n
+            | "🔔 **\(.pusher.name)** just pushed "
+              + (if $n == 1 then "1 change" else "\($n) changes" end)
+              + " to `\($branch)`\n"
+              + ([.commits[-5:][] | "• " + (.message | split("\n")[0] | .[0:150])] | join("\n"))
+              + (if $n > 5 then "\n• …and \($n - 5) more" else "" end)
+              + "\n👉 Please check: <\(.compare)>"
+          ' "$GITHUB_EVENT_PATH")
+
+          jq -n --arg content "$CONTENT" '{content: $content, username: "Psychic Plane Git"}' \
+            | curl -sS -f -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK"
