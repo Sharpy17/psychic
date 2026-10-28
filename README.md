@@ -160,5 +160,14 @@ Nobody commits directly to `main`. Every teammate creates a feature branch:
   git push origin feature/arthur-database
   ```
 
-### 3. Pull Requests
+### 3. Discord Push Notifications
+Every push to any branch posts a short notice in our Discord (who pushed, the branch, and the commit messages), via `.github/workflows/discord-notify.yml`.
+
+One-time setup (repo admin):
+1. In Discord: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**.
+2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, named `DISCORD_WEBHOOK`, with the URL as the value.
+
+Tip: write clear commit messages — they're what the team sees in Discord!
+
+### 4. Pull Requests
 Teammates open a Pull Request on GitHub. **Dosia reviews the PR**, checks that it doesn't break `shared/types.ts`, and merges it into `main`!
