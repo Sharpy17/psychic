@@ -66,8 +66,8 @@ Make sure you have **Node.js (v18+)** and **npm** installed on your machine.
 
 1. Clone your repo:
    ```bash
-   git clone https://github.com/<your-username>/psychic-plane.git
-   cd psychic-plane
+   git clone https://github.com/Sharpy17/psychic.git
+   cd psychic
    ```
 
 2. Install server dependencies:
@@ -112,7 +112,7 @@ git init
 git add .
 git commit -m "feat: initial project scaffold with shared contracts, game engine, and 2D board"
 git branch -M main
-git remote add origin https://github.com/<your-username>/psychic-plane.git
+git remote add origin https://github.com/Sharpy17/psychic.git
 git push -u origin main
 ```
 
