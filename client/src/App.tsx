@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RoomState } from '../../shared/types';
 import { socket } from './services/socket';
 import { LandingPage } from './components/LandingPage';
