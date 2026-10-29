@@ -124,8 +124,8 @@ Any team member or AI agent working on the game should consult this list before 
 
 | # | Topic | Issue | Recommended Fix | Status |
 | :-: | :--- | :--- | :--- | :-: |
-| 1 | **Psychic Clueing** | Analysis paralysis on difficult axes/topics | Add 1 Reroll per psychic turn | 🟡 Open |
-| 2 | **Clue Integrity** | Players using axis words or directional hints | Strict validation: Ban axis roots & spatial words | 🟡 Open |
+| 1 | **Psychic Clueing** | Analysis paralysis on difficult axes/topics | Add 1 Reroll per psychic turn | 🟢 Added to Docs |
+| 2 | **Clue Integrity** | Players using axis words or directional hints | Strict validation: Ban axis roots & spatial words | 🟢 Added to Docs |
 | 3 | **Scoring Security** | 1 troll tanks the psychic's entire score | Use median score or drop lowest guess | 🟡 Open |
 | 4 | **Target Space** | Corners truncate scoring rings outside square | Inscribe target zone inside circle ($r \le 0.85$) | 🟡 Open |
 | 5 | **Mobile Control** | Thumb covers the pin during placement | Add touch vertical offset + nudge arrows | 🟡 Open |

@@ -29,6 +29,7 @@ graph TD
 * [[01 - System Architecture/State Machine & Game Loop|Game State Machine & Lifecycle]]
 
 ## Game Mechanics & Design
+* [[02 - Game Mechanics/Clue & Word Selection Rules|Clue & Word Selection Rules (Reroll & Constraints)]]
 * [[02 - Game Mechanics/Coordinate System & Math|Coordinate System & Math Transformations]]
 * [[02 - Game Mechanics/Scoring Formula & Balance|Scoring Calculation & Balancing]]
 * [[02 - Game Mechanics/Edge Cases & Disconnects|Disconnections, AFK & Fallbacks]]

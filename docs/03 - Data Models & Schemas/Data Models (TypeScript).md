@@ -68,6 +68,7 @@ export interface RoundState {
   totalRounds: number;
   psychicId: string;
   content: RoundContent;
+  rerollsRemaining: number; // Defaults to 1 at start of psychic turn
   clue?: string;
   // NOTE: secretTarget is strictly server-side during PSYCHIC_TURN & GUESSING!
   secretTarget?: Point2D; 

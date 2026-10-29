@@ -16,6 +16,7 @@ Welcome to the central knowledge base and single source of truth for **Wavelengt
 - [[01 - System Architecture/State Machine & Game Loop|State Machine & Game Loop]]: Phase definitions (`LOBBY` ➔ `PSYCHIC_TURN` ➔ `GUESSING` ➔ `REVEAL` ➔ `ROUND_END`).
 
 ### 2. Mechanics & Mathematics
+- [[02 - Game Mechanics/Clue & Word Selection Rules|Clue & Word Selection Rules]]: Explicit constraints, banned terms, and the Psychic 1-time Reroll button.
 - [[02 - Game Mechanics/Coordinate System & Math|Coordinate System & Math]]: Normalized $[-1, 1]$ coordinate space, screen-to-cartesian mapping, touch handling.
 - [[02 - Game Mechanics/Scoring Formula & Balance|Scoring Formula & Balance]]: Euclidean distance equations, concentric target rings, psychic reward incentives.
 - [[02 - Game Mechanics/Edge Cases & Disconnects|Edge Cases & Disconnects]]: Psychic disconnects, timeouts, minimum player handling.

@@ -19,6 +19,7 @@ This document defines the strict Socket.io protocol contracts. Any client-side o
 | `room:create` | `{ playerName: string }` | Host creates a room. Returns `room:joined`. |
 | `room:join` | `{ roomCode: string, playerName: string }` | Player joins an existing 4-letter room code. |
 | `game:start` | `{}` | Host starts the game from the lobby. |
+| `psychic:reroll` | `{}` | Psychic uses their 1-time reroll to get a fresh topic, axes, and secret target. |
 | `psychic:submit_clue` | `{ clue: string }` | Psychic submits clue word/phrase for the axes. |
 | `player:submit_guess` | `{ x: number, y: number }` | Guesser locks in their guess coordinates ($x, y \in [-1, 1]$). |
 | `game:next_round` | `{}` | Host (or automatic timer) advances to the next round. |
@@ -33,6 +34,7 @@ This document defines the strict Socket.io protocol contracts. Any client-side o
 | `room:update` | `RoomState` (excluding hidden secret) | Broadcast whenever players join/leave/ready up. |
 | `game:phase_change` | `{ phase: GamePhase, roundData: RoundPublicData }` | Broadcast to all players on phase transition. |
 | `psychic:secret_data` | `{ targetX: number, targetY: number }` | **Sent ONLY to the psychic socket** during `PSYCHIC_TURN`. |
+| `psychic:rerolled` | `{ targetX: number, targetY: number, rerollsRemaining: number }` | **Sent ONLY to psychic socket** with new secret target coordinates. |
 | `player:guess_locked` | `{ playerId: string }` | Broadcast to all that a player has locked in (hides coordinates). |
 | `game:reveal` | `RevealPayload` | Broadcast at reveal: contains secret target, all player guesses, and round scores. |
 | `error:message` | `{ code: string, message: string }` | Dispatched if a room doesn't exist, name is taken, etc. |

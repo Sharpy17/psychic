@@ -37,12 +37,16 @@ stateDiagram-v2
 * **Server Action:**
   * Selects next psychic in round-robin order.
   * Picks 1 random Topic and 2 random pairs of opposing attributes from deck.
+  * Initializes `rerollsRemaining = 1`.
   * Generates random target point:
     $$x_s \in [-0.85, 0.85], \quad y_s \in [-0.85, 0.85]$$
     *(kept slightly inside borders so targets are never on the absolute pixel boundary)*.
   * Emits `psychic:secret_data` **only to the psychic**.
 * **Client Action:**
-  * **Psychic:** Sees target point on the board, types a single clue (e.g., word or fictional character) that matches the topic, and hits "Send Clue".
+  * **Psychic:**
+    * Sees target point on the board, topic, and axes.
+    * **Reroll Button:** Has a 1-time "Reroll" button per turn to request a fresh topic, axes, and target if the combination is impossible.
+    * Enters a clue following [[02 - Game Mechanics/Clue & Word Selection Rules|Clue & Word Selection Rules]] and hits "Send Clue".
   * **Guessers:** See "Psychic is thinking of a clue..." with a fun waiting spinner.
 * **Transition:** Server receives `psychic:submit_clue`.
 
