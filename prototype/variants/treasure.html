@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Treasure Map</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Treasure map: aged parchment, sepia ink, compass rose, the target is buried treasure. */
+    :root {
+      --bg: #e8d5a3;
+      --panel: #f1e2b8;
+      --line: #5c3d1e;
+      --text: #3b2a1a;
+      --muted: #6e5435;
+      --red: #a4161a;
+      --sea: #4f7c82;
+      --accent: var(--red);
+      --radius: 10px;
+      --backdrop: #2a1a0c99;
+      --zone-2: #d9b77a;
+      --zone-3: #c08a4a;
+      --zone-4: #a4161a;
+      --face: #f3e5bd;
+      --needle: #3b2a1a;
+      --marker-stroke: #f3e5bd;
+      --q-tl: #4f7c82; --q-tr: #7a8f4a; --q-bl: #7a8f4a; --q-br: #4f7c82;
+      --q-opacity: 0.12;
+      --axis-line: #5c3d1e99;
+      --miss: #a4161a;
+      --board-shadow: 0 6px 14px #3b2a1a44;
+      --lbl-radius: 4px;
+      --lbl-top: var(--text); --lbl-top-bg: #d9b77a88;
+      --lbl-bottom: var(--text); --lbl-bottom-bg: #d9b77a88;
+      --lbl-left: var(--text); --lbl-left-bg: #d9b77a88;
+      --lbl-right: var(--text); --lbl-right-bg: #d9b77a88;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at center, transparent 45%, #8a5a2a55 100%) fixed,
+        radial-gradient(400px 260px at 15% 20%, #c9a76a55, transparent),
+        radial-gradient(500px 300px at 85% 70%, #b8925544, transparent),
+        var(--bg);
+      font: 17px/1.6 "Book Antiqua", Palatino, "Palatino Linotype", Georgia, serif;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 700; }
+    .ink-border { border: 2px solid var(--line); box-shadow: 0 0 0 4px var(--panel), 0 0 0 6px var(--line); }
+
+    .btn {
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1.02rem;
+      color: var(--text);
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 20px;
+      box-shadow: 0 3px 0 var(--line);
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+    .btn:hover { background: #f7ecca; }
+    .btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--line); }
+    .btn.primary { background: var(--red); color: #fbeed0; border-color: #5e0b0d; box-shadow: 0 3px 0 #5e0b0d; }
+    .btn.primary:hover { background: #b81d22; }
+    .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+    .btn.big { padding: 13px 26px; font-size: 1.1rem; }
+
+    nav.top { display: flex; align-items: center; gap: 14px; padding-block: 16px; border-bottom: 2px dashed #5c3d1e88; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.3rem; color: var(--text); text-decoration: none; font-style: italic; }
+    .logo svg { width: 34px; }
+    .nav-links { display: flex; gap: 4px; margin-left: auto; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 8px 12px; font-style: italic; }
+    .nav-links a:hover { color: var(--red); }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1.05fr; gap: 48px; align-items: center; padding-block: 48px 72px; }
+    .hero > * { min-width: 0; }
+    .banner { display: inline-block; color: var(--red); font-style: italic; letter-spacing: 0.08em; border-block: 1px solid var(--red); padding: 2px 10px; }
+    .hero h1 { font-size: clamp(2.4rem, 5.4vw, 4rem); line-height: 1.08; margin-top: 16px; }
+    .hero h1 .x { color: var(--red); font-family: "Segoe Script", "Brush Script MT", cursive; font-size: 1.2em; }
+    .lead { margin-top: 18px; color: var(--muted); font-size: 1.15rem; max-width: 28em; font-style: italic; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+
+    .map { position: relative; background: var(--panel); border-radius: 4px; padding: 20px; transform: rotate(0.8deg); }
+    .compass { position: absolute; right: -26px; top: -30px; width: 92px; animation: sway 6s ease-in-out infinite; filter: drop-shadow(0 3px 4px #3b2a1a55); }
+    @keyframes sway { 50% { transform: rotate(14deg); } }
+    .map-head { margin-bottom: 8px; padding-right: 50px; }
+    .map-head small { color: var(--muted); font-style: italic; }
+    .demo-clue { font-size: 1.4rem; font-weight: 700; font-style: italic; }
+    .demo-clue::before { content: "“"; color: var(--red); }
+    .demo-clue::after { content: "”"; color: var(--red); }
+    .axis-label { font-style: italic; font-weight: 700; font-size: 0.9rem; }
+    .board-slot { border: 2px solid var(--line); border-radius: 6px; overflow: hidden; }
+    .axis-line { stroke-dasharray: 1 2; stroke-width: 0.8; }
+    .ring { stroke: #5c3d1e; stroke-width: 0.5; }
+    .rings text { fill: #fbeed0; paint-order: stroke; stroke: #3b2a1a; stroke-width: 0.6px; }
+    .hint { text-align: center; font-style: italic; color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
+    .demo-foot { display: flex; gap: 12px; margin-top: 12px; }
+    .demo-foot .btn { flex: 1; }
+
+    section { padding-block: 56px; }
+    .sec-head { text-align: center; margin-bottom: 34px; }
+    .sec-head h2 { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+    .sec-head p { color: var(--muted); font-style: italic; margin-top: 4px; }
+    .sec-head .rule { color: var(--line); letter-spacing: 0.5em; margin-top: 6px; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; }
+    .step { background: var(--panel); border-radius: 4px; padding: 24px; text-align: center; }
+    .step .ico { font-size: 2.2rem; }
+    .step .n { color: var(--red); font-style: italic; font-size: 0.9rem; letter-spacing: 0.1em; margin-top: 4px; }
+    .step h3 { font-size: 1.25rem; margin: 4px 0 6px; }
+    .step p { color: var(--muted); }
+
+    .log { max-width: 760px; margin: 0 auto; background: var(--panel); padding: 10px 28px; border-radius: 4px; }
+    .entry { display: grid; grid-template-columns: 2.4rem 1fr; gap: 14px; padding: 14px 0; border-bottom: 1px dashed #5c3d1e88; }
+    .entry:last-child { border-bottom: 0; }
+    .entry .ico { font-size: 1.5rem; }
+    .entry h3 { font-size: 1.1rem; font-style: italic; }
+    .entry p { color: var(--muted); }
+
+    .cta { text-align: center; padding: 48px 24px; margin-block: 32px 64px; background: var(--panel); border-radius: 4px; }
+    .cta h2 { font-size: clamp(2rem, 5vw, 3rem); }
+    .cta p { color: var(--muted); font-style: italic; margin: 8px 0 22px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 22px 40px; border-top: 2px dashed #5c3d1e88; color: var(--muted); font-size: 0.9rem; font-style: italic; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: inherit; }
+    footer a:hover { color: var(--red); }
+
+    .modal { background: var(--panel); border: 2px solid var(--line); box-shadow: 0 0 0 4px var(--panel), 0 0 0 6px var(--line), 0 24px 60px #2a1a0c88; }
+    .modal h2 { font-style: italic; }
+    input { background: #fbf3dc; border: 2px solid var(--line); }
+    .room-code { color: var(--red); }
+    .toast { background: var(--text); color: var(--panel); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 24px; }
+      .map { transform: none; }
+    }
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      nav.top { gap: 8px; }
+      .nav-actions .hide-sm { display: none; }
+      .steps { grid-template-columns: 1fr; }
+      .map { padding: 14px; }
+      .compass { right: -6px; top: -26px; width: 70px; }
+      .log { padding: 6px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="6" width="34" height="28" rx="2" fill="#f1e2b8" stroke="#5c3d1e" stroke-width="2"/><path d="M8 28 Q14 18 20 22 T32 12" fill="none" stroke="#5c3d1e" stroke-width="1.6" stroke-dasharray="2 2"/><path d="M28 9 l6 6 M34 9 l-6 6" stroke="#a4161a" stroke-width="2.4" stroke-linecap="round"/></svg>
+        Psychic Plane
+      </a>
+      <div class="nav-links">
+        <a href="#how">The Rules</a>
+        <a href="#features">Ship's Log</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Board ship</button>
+        <button class="btn primary" data-action="create">Set sail</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <span class="banner">A treasure hunt for 3–10 pirates</span>
+          <h1><span class="x">X</span> marks the spot… but only one of ye knows where.</h1>
+          <p class="lead">The captain glimpses the treasure on the map and offers a single riddle. Every pirate digs where they think it's buried. Closest to the gold wins the plunder.</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Chart a room</button>
+            <button class="btn big" data-action="join">Join a crew</button>
+          </div>
+        </div>
+
+        <div class="map ink-border" aria-label="Try the board">
+          <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="44" fill="#f1e2b8" stroke="#5c3d1e" stroke-width="3"/>
+            <circle cx="50" cy="50" r="36" fill="none" stroke="#5c3d1e" stroke-width="1" stroke-dasharray="2 3"/>
+            <path d="M50 8 L58 50 L50 92 L42 50 Z" fill="#5c3d1e"/>
+            <path d="M8 50 L50 42 L92 50 L50 58 Z" fill="#c08a4a"/>
+            <path d="M50 8 L58 50 L50 50 Z" fill="#a4161a"/>
+            <circle cx="50" cy="50" r="5" fill="#f1e2b8" stroke="#5c3d1e" stroke-width="2"/>
+            <text x="50" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#f1e2b8" font-family="Georgia">N</text>
+          </svg>
+          <div class="map-head">
+            <small>Captain Ari's riddle:</small>
+            <div class="demo-clue" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Tap the map or drag yer marker, then dig.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Dig here!</button>
+            <button class="btn" data-action="shuffle">New map</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <div class="sec-head">
+          <h2>The Pirate's Code</h2>
+          <p>Three rules, sworn on the captain's hat.</p>
+          <div class="rule">⚓ ✦ ⚓</div>
+        </div>
+        <div class="steps">
+          <div class="step ink-border"><div class="ico">🗺️</div><div class="n">THE FIRST RULE</div><h3>The captain peeks</h3><p>One player secretly sees where the treasure lies on a map with two pairs of opposites, like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="step ink-border"><div class="ico">🦜</div><div class="n">THE SECOND RULE</div><h3>One riddle</h3><p>They squawk a single clue that belongs at that spot. No more, or it's the plank.</p></div>
+          <div class="step ink-border"><div class="ico">⛏️</div><div class="n">THE THIRD RULE</div><h3>Every pirate digs</h3><p>Each crewmate marks a spot in secret. Then the treasure's revealed. Dig right on it for 4 gold.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="sec-head">
+          <h2>From the Ship's Log</h2>
+          <div class="rule">⚓ ✦ ⚓</div>
+        </div>
+        <div class="log ink-border">
+          <div class="entry"><span class="ico">🏴‍☠️</span><div><h3>Every pirate for themselves</h3><p>No teams, no sharing the loot. Live scores for the whole crew.</p></div></div>
+          <div class="entry"><span class="ico">📱</span><div><h3>Fits in yer pocket</h3><p>Plays on any phone. No app, no account, no parrot required.</p></div></div>
+          <div class="entry"><span class="ico">🧭</span><div><h3>Endless seas</h3><p>Mix any two axes into a new map, or draw your own.</p></div></div>
+          <div class="entry"><span class="ico">🔑</span><div><h3>A four-letter key</h3><p>Share the room code and your crew climbs aboard in seconds.</p></div></div>
+        </div>
+      </section>
+
+      <div class="cta ink-border">
+        <h2>Assemble yer crew!</h2>
+        <p>Chart a room and send the code to your mateys.</p>
+        <button class="btn primary big" data-action="create">Chart a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Psychic Plane · drawn by student cartographers</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'triangle',
+      chime: [392, 494, 587, 784],
+      revealLabel: 'Dig here!',
+      againLabel: 'Sail again',
+      results: { 4: 'X marks the spot! Treasure found! 💰', 3: "Ye be diggin' right beside it!", 2: 'Warm… the gold be near.', 0: 'Arr, nothing but sand.' },
+      lobbyMsg: 'The ship (lobby) is still being built',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

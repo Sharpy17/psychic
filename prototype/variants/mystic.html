@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Mystic</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Mystic: fortune-teller night sky, gold filigree, glowing crystal board, serif type. */
+    :root {
+      --bg: #0a0820;
+      --panel: #15112f;
+      --line: #3b2f5e;
+      --text: #f3ead6;
+      --muted: #b3a7c9;
+      --gold: #e8c36a;
+      --gold-dim: #a8843c;
+      --violet: #8f6bff;
+      --accent: var(--gold);
+      --radius: 18px;
+      --backdrop: #05031099;
+      --zone-2: #5b3fb0;
+      --zone-3: #9c6bff;
+      --zone-4: #e8c36a;
+      --face: #1b1440;
+      --needle: #f3ead6;
+      --marker-stroke: #e8c36a;
+      --q-tl: #8f6bff; --q-tr: #e8c36a; --q-bl: #4bc6ff; --q-br: #ff7ac6;
+      --q-opacity: 0.08;
+      --axis-line: #e8c36a55;
+      --ring-text: #0a0820;
+      --miss: #e8c36a;
+      --board-shadow: 0 0 30px #8f6bff55;
+      --lbl-radius: 999px;
+      --lbl-top: var(--gold); --lbl-top-bg: #e8c36a14;
+      --lbl-bottom: var(--gold); --lbl-bottom-bg: #e8c36a14;
+      --lbl-left: var(--gold); --lbl-left-bg: #e8c36a14;
+      --lbl-right: var(--gold); --lbl-right-bg: #e8c36a14;
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background-color: var(--bg);
+      /* Star field: a few layers of tiny dots plus a nebula glow */
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, #fff9 50%, transparent 51%),
+        radial-gradient(1px 1px at 70% 80%, #fff7 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 40% 70%, #ffe9b3aa 50%, transparent 51%),
+        radial-gradient(1px 1px at 85% 15%, #fff8 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 10% 85%, #fff6 50%, transparent 51%),
+        radial-gradient(900px 600px at 80% -10%, #3a1f7a 0%, transparent 70%),
+        radial-gradient(700px 500px at -10% 40%, #1f2a6e 0%, transparent 70%);
+      background-size: 220px 220px, 300px 300px, 260px 260px, 340px 340px, 280px 280px, auto, auto;
+      background-attachment: fixed;
+      font: 17px/1.6 "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    h1, h2, h3, .logo { font-family: "Cinzel", "Trajan Pro", "Palatino Linotype", Georgia, serif; font-weight: 600; letter-spacing: 0.04em; }
+
+    .btn {
+      font-family: "Palatino Linotype", Georgia, serif;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      border-radius: 999px;
+      padding: 12px 24px;
+      transition: box-shadow 0.25s, background 0.25s;
+    }
+    .btn:hover { box-shadow: 0 0 18px #e8c36a55; background: #e8c36a0f; }
+    .btn.primary { background: linear-gradient(180deg, #f3d68a, #c99a3e); color: #1a1030; border-color: transparent; }
+    .btn.primary:hover { box-shadow: 0 0 26px #e8c36a88; }
+    .btn.ghost { border-color: transparent; }
+    .btn.big { padding: 15px 30px; font-size: 1.05rem; }
+
+    nav.top { display: flex; align-items: center; gap: 16px; padding-block: 18px; }
+    .logo { display: flex; align-items: center; gap: 10px; color: var(--gold); text-decoration: none; font-size: 1.2rem; }
+    .logo .orb { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #b99cff 35%, #4a2a9e 75%); box-shadow: 0 0 14px #9c6bff; }
+    .nav-links { display: flex; gap: 6px; margin-left: auto; }
+    .nav-links a { color: var(--muted); text-decoration: none; padding: 8px 12px; }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding-block: 56px 80px; }
+    .omen { color: var(--gold); letter-spacing: 0.3em; font-size: 0.8rem; text-transform: uppercase; }
+    .omen::before, .omen::after { content: " ✦ "; }
+    .hero h1 { font-size: clamp(2.4rem, 5.5vw, 4.2rem); line-height: 1.08; margin-top: 14px; }
+    .hero h1 em { font-style: italic; color: var(--gold); text-shadow: 0 0 24px #e8c36a66; }
+    .lead { margin-top: 20px; color: var(--muted); font-size: 1.15rem; max-width: 28em; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+
+    /* The crystal: the board sits in a round glowing frame */
+    .crystal {
+      position: relative;
+      padding: 26px;
+      border-radius: 28px;
+      background: linear-gradient(160deg, #241b4f, #120d2b);
+      border: 1px solid var(--line);
+      box-shadow: 0 0 0 1px #e8c36a22 inset, 0 40px 90px #0008, 0 0 80px #6b46ff33;
+    }
+    .crystal::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px solid #e8c36a33;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+    .crystal-head { text-align: center; margin-bottom: 12px; }
+    .crystal-head small { color: var(--muted); font-style: italic; }
+    .demo-clue { font-size: 1.45rem; color: var(--text); font-style: italic; }
+    .demo-clue::before { content: "“"; color: var(--gold); }
+    .demo-clue::after { content: "”"; color: var(--gold); }
+    .axis-label { font-size: 0.85rem; font-weight: 600; }
+    .board { animation: breathe 5s ease-in-out infinite; }
+    @keyframes breathe { 50% { filter: drop-shadow(0 0 42px #9c6bff77); } }
+    .marker-dot { filter: drop-shadow(0 0 2px #fff); }
+    .hint { color: var(--muted); font-size: 0.85rem; text-align: center; font-style: italic; margin-top: 8px; }
+    .demo-foot { display: flex; gap: 10px; margin-top: 14px; }
+    .demo-foot .btn { flex: 1; }
+
+    section { padding-block: 72px; }
+    .sec-head { text-align: center; margin-bottom: 40px; }
+    .sec-head h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--gold); }
+    .sec-head p { color: var(--muted); font-style: italic; margin-top: 8px; }
+    .divider { color: var(--gold-dim); letter-spacing: 0.6em; margin-top: 10px; }
+
+    /* Steps as tarot cards */
+    .tarot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .card {
+      position: relative;
+      text-align: center;
+      padding: 34px 24px 28px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #1d1645, #120d2b);
+      border: 1px solid var(--gold-dim);
+      transition: transform 0.35s, box-shadow 0.35s;
+    }
+    .card::before { content: ""; position: absolute; inset: 8px; border: 1px solid #e8c36a2e; border-radius: 10px; pointer-events: none; }
+    .card:hover { transform: translateY(-6px) rotate(-0.6deg); box-shadow: 0 0 40px #e8c36a2a; }
+    .card .num { font-family: "Cinzel", Georgia, serif; color: var(--gold); font-size: 1.6rem; }
+    .card .sym { font-size: 2.4rem; margin: 10px 0; filter: drop-shadow(0 0 12px #9c6bffaa); }
+    .card h3 { color: var(--text); font-size: 1.15rem; }
+    .card p { color: var(--muted); margin-top: 8px; }
+
+    .gifts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .gift { text-align: center; padding: 10px; }
+    .gift .sym { font-size: 1.6rem; color: var(--gold); }
+    .gift h3 { font-size: 1rem; margin: 8px 0 4px; }
+    .gift p { color: var(--muted); font-size: 0.95rem; }
+
+    .cta { text-align: center; padding: 64px 24px; margin-block: 24px 72px; border-radius: 28px; border: 1px solid var(--gold-dim); background: radial-gradient(500px 220px at 50% 0%, #6b46ff33, transparent), var(--panel); }
+    .cta h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); color: var(--gold); }
+    .cta p { color: var(--muted); font-style: italic; margin: 10px 0 26px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 24px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { color: var(--gold); }
+
+    .modal { border-color: var(--gold-dim); box-shadow: 0 0 60px #6b46ff44; }
+    .modal h2 { color: var(--gold); font-family: "Cinzel", Georgia, serif; }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 28px; }
+      .gifts { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .hide-sm { display: none; }
+      .tarot { grid-template-columns: 1fr; }
+      .crystal { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top"><span class="orb" aria-hidden="true"></span>Psychic Plane</a>
+      <div class="nav-links">
+        <a href="#how">The Ritual</a>
+        <a href="#features">Gifts</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Join a circle</button>
+        <button class="btn primary" data-action="create">Begin</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <div class="omen">A séance for 3–10 friends</div>
+          <h1>The spirits have chosen a point. <em>Can you sense it?</em></h1>
+          <p class="lead">One seer glimpses the hidden mark. One whispered omen. Every guest reaches across the plane to find it. Who among you truly has the sight?</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Summon a room</button>
+            <button class="btn big" data-action="join">Join a circle</button>
+          </div>
+        </div>
+
+        <div class="crystal" aria-label="Try the board">
+          <div class="crystal-head">
+            <small>The seer Ari whispers…</small>
+            <div class="demo-clue" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Touch the plane where your intuition leads you.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal the vision</button>
+            <button class="btn" data-action="shuffle">Draw again</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <div class="sec-head">
+          <h2>The Ritual</h2>
+          <p>Three steps, as old as guessing itself.</p>
+          <div class="divider">✦ ✦ ✦</div>
+        </div>
+        <div class="tarot">
+          <div class="card"><div class="num">I</div><div class="sym">👁️</div><h3>The Seer Gazes</h3><p>One player alone sees where the mark lies between two pairs of opposites: Funny or dull, ugly or cute.</p></div>
+          <div class="card"><div class="num">II</div><div class="sym">🕯️</div><h3>A Single Omen</h3><p>They speak one clue that belongs at that place, and nothing more.</p></div>
+          <div class="card"><div class="num">III</div><div class="sym">🔮</div><h3>The Circle Divines</h3><p>Each guest places a dot in secret. The vision is revealed, and the closest are rewarded.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="sec-head">
+          <h2>Gifts of the Plane</h2>
+          <div class="divider">✦ ✦ ✦</div>
+        </div>
+        <div class="gifts">
+          <div class="gift"><div class="sym">☾</div><h3>Every soul alone</h3><p>No teams. Each guest trusts only their own sight.</p></div>
+          <div class="gift"><div class="sym">✧</div><h3>In the palm of your hand</h3><p>Plays on any phone. Nothing to install.</p></div>
+          <div class="gift"><div class="sym">☉</div><h3>Endless omens</h3><p>Any two axes can be paired, or write your own.</p></div>
+          <div class="gift"><div class="sym">✶</div><h3>Four runes</h3><p>A 4-letter code gathers your circle in seconds.</p></div>
+        </div>
+      </section>
+
+      <div class="cta">
+        <h2>Gather your circle</h2>
+        <p>Light the candles, open a room, and send the runes to your friends.</p>
+        <button class="btn primary big" data-action="create">Summon a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Psychic Plane · foretold by students</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'sine',
+      chime: [659, 880, 988, 1319],
+      revealLabel: 'Reveal the vision',
+      againLabel: 'Seek again',
+      results: { 4: 'The spirits smile upon you.', 3: 'Your third eye flickers.', 2: 'A faint vision…', 0: 'The mists cloud your sight.' },
+      lobbyMsg: 'The circle is still being drawn (lobby coming soon)',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

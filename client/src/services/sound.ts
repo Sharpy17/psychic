@@ -86,3 +86,4 @@ export const sound = {
     this.blip(180, 0.2, 'sawtooth', 0.07);
   },
 };
+

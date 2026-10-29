@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Brutalist</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Brutalist: raw grid of boxes, heavy black borders, giant type, one loud yellow. */
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --line: #000000;
+      --text: #000000;
+      --muted: #333333;
+      --yellow: #ffeb00;
+      --orange: #ff3b00;
+      --accent: var(--orange);
+      --radius: 0px;
+      --backdrop: #000000aa;
+      --zone-2: #ffeb00;
+      --zone-3: #ffb800;
+      --zone-4: #ff3b00;
+      --face: #ffffff;
+      --needle: #000000;
+      --q-opacity: 0;
+      --axis-line: #000000;
+      --ring-text: #000000;
+      --miss: #000000;
+      --board-shadow: 0 0 0 transparent;
+      --lbl-radius: 0;
+      --lbl-top: #000; --lbl-top-bg: var(--yellow);
+      --lbl-bottom: #000; --lbl-bottom-bg: var(--yellow);
+      --lbl-left: #fff; --lbl-left-bg: #000;
+      --lbl-right: #fff; --lbl-right-bg: #000;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      background: var(--bg);
+      color: var(--text);
+      font: 500 17px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; border-inline: 4px solid #000; }
+    .black { font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: -0.03em; }
+    mark { display: inline-block; line-height: 0.8; background: var(--yellow); color: #000; padding: 0.06em 0.1em 0; }
+
+    .btn {
+      font-family: "Arial Black", Arial, sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #fff;
+      background: #000;
+      border: 4px solid #000;
+      border-radius: 0;
+      padding: 12px 20px;
+    }
+    .btn:hover { background: var(--yellow); color: #000; }
+    .btn:active { background: var(--orange); }
+    .btn.primary { background: var(--orange); color: #000; }
+    .btn.primary:hover { background: #000; color: var(--yellow); }
+    .btn.ghost { background: #fff; color: #000; }
+    .btn.big { padding: 18px 28px; font-size: 1.15rem; }
+    .btn .ripple { display: none; }
+
+    nav.top { display: flex; align-items: stretch; border-bottom: 4px solid #000; }
+    .logo { padding: 14px 18px; font-size: 1.2rem; color: #000; text-decoration: none; border-right: 4px solid #000; display: flex; align-items: center; }
+    .nav-links { display: flex; margin-left: auto; }
+    .nav-links a { display: flex; align-items: center; padding: 0 18px; color: #000; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 3px; border-left: 4px solid #000; }
+    .nav-links a:hover { background: var(--yellow); }
+    .nav-actions { display: flex; }
+    .nav-actions .btn { border-width: 0 0 0 4px; }
+
+    .ticker { overflow: hidden; border-bottom: 4px solid #000; background: var(--yellow); white-space: nowrap; }
+    .ticker div { display: inline-block; padding: 8px 0; animation: tick 18s linear infinite; }
+    .ticker span { margin-right: 28px; }
+    @keyframes tick { to { transform: translateX(-50%); } }
+
+    .hero { display: grid; grid-template-columns: 1.1fr 1fr; border-bottom: 4px solid #000; }
+    .hero > * { min-width: 0; }
+    .hero-text { padding: 32px 24px; border-right: 4px solid #000; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; }
+    .hero h1 { font-size: clamp(3rem, 8.4vw, 7.4rem); line-height: 0.86; }
+    .lead { font-size: 1.25rem; max-width: 26em; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 0; }
+    .hero-ctas .btn + .btn { border-left-width: 0; }
+    .demo { padding: 24px; background: #f2f2f2; }
+    .demo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 4px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+    .demo-head small { font-weight: 700; text-transform: uppercase; }
+    .demo-clue { font-size: 1.5rem; }
+    .axis-label { font-family: "Arial Black", Arial, sans-serif; text-transform: uppercase; font-size: 0.85rem; }
+    .board { outline: 4px solid #000; }
+    .axis-line { stroke-dasharray: none; stroke-width: 0.8; }
+    .marker-dot { stroke-width: 1.6; }
+    .hint { font-size: 0.85rem; margin-top: 12px; font-weight: 700; }
+    .demo-foot { display: flex; margin-top: 14px; }
+    .demo-foot .btn { flex: 1; }
+    .demo-foot .btn + .btn { border-left-width: 0; }
+    .demo-result { color: #000; text-align: left; }
+    .demo-result b { background: #000; color: var(--yellow) !important; padding: 0 8px; }
+
+    .row-title { padding: 18px 24px; border-bottom: 4px solid #000; font-size: clamp(2rem, 6vw, 4rem); line-height: 0.95; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 4px solid #000; }
+    .step { padding: 24px; }
+    .step + .step { border-left: 4px solid #000; }
+    .step .n { font-size: 4.4rem; line-height: 0.9; }
+    .step h3 { font-size: 1.4rem; margin: 10px 0 6px; }
+    .step:hover { background: var(--yellow); }
+
+    .features { display: grid; grid-template-columns: repeat(2, 1fr); border-bottom: 4px solid #000; }
+    .feature { padding: 24px; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+    .feature:nth-child(odd) { border-right: 4px solid #000; }
+    .feature:nth-child(-n+2) { border-bottom: 4px solid #000; }
+    .feature .ico { font-family: "Arial Black", Arial, sans-serif; font-size: 2.4rem; line-height: 1; width: 1.3em; }
+    .feature h3 { font-size: 1.25rem; }
+    .feature p { margin-top: 4px; }
+
+    .cta { background: #000; color: #fff; padding: 48px 24px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; border-bottom: 4px solid #000; }
+    .cta h2 { font-size: clamp(2.4rem, 7vw, 5rem); line-height: 0.9; }
+    .cta h2 mark { color: #000; }
+    .cta .btn { border-color: var(--yellow); background: var(--yellow); color: #000; }
+    .cta .btn:hover { background: #fff; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; border-bottom: 4px solid #000; }
+    footer span { padding: 14px 18px; font-weight: 700; }
+    footer nav { display: flex; }
+    footer a { padding: 14px 18px; color: #000; font-weight: 700; border-left: 4px solid #000; }
+    footer a:hover { background: var(--yellow); }
+
+    .modal { border: 4px solid #000; box-shadow: 12px 12px 0 #000; }
+    .modal h2 { font-family: "Arial Black", Arial, sans-serif; text-transform: uppercase; }
+    .modal p { color: #000; }
+    input { border: 4px solid #000; background: #fff; }
+    .modal-actions { gap: 0; }
+    .modal-actions .btn + .btn { border-left-width: 0; }
+    .room-code { color: #000; background: var(--yellow); padding-block: 10px; }
+    .toast { background: #000; color: var(--yellow); border: 4px solid var(--yellow); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-text { border-right: 0; border-bottom: 4px solid #000; }
+    }
+    @media (max-width: 680px) {
+      .wrap { border-inline-width: 0; }
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .hide-sm { display: none; }
+      .steps, .features { grid-template-columns: 1fr; }
+      .step + .step { border-left: 0; border-top: 4px solid #000; }
+      .feature:nth-child(odd) { border-right: 0; }
+      .feature:not(:last-child) { border-bottom: 4px solid #000; }
+      .demo { padding: 14px; }
+      .logo { border-right: 0; padding: 12px; font-size: 1rem; }
+      .nav-actions .btn { padding: 8px 12px; font-size: 0.8rem; }
+      .hero-ctas .btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo black" href="#top">PSYCHIC PLANE</a>
+      <div class="nav-links">
+        <a href="#how">RULES</a>
+        <a href="#features">WHY</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">SOUND: ON</button>
+        <button class="btn primary" data-action="create">PLAY</button>
+      </div>
+    </nav>
+    <div class="ticker black" aria-hidden="true"><div>
+      <span>NO DOWNLOADS ✱</span><span>NO ACCOUNTS ✱</span><span>3–10 PLAYERS ✱</span><span>ONE CLUE ✱</span><span>FIND THE DOT ✱</span><span>FREE ✱</span>
+      <span>NO DOWNLOADS ✱</span><span>NO ACCOUNTS ✱</span><span>3–10 PLAYERS ✱</span><span>ONE CLUE ✱</span><span>FIND THE DOT ✱</span><span>FREE ✱</span>
+    </div></div>
+
+    <main id="top">
+      <div class="hero">
+        <div class="hero-text">
+          <h1 class="black">READ<br>MINDS.<br><mark>DROP</mark><br>DOTS.</h1>
+          <p class="lead">A party game. One player sees a secret point on a board. They say one clue. Everyone else guesses where it is. Closest wins. That's it.</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">CREATE ROOM →</button>
+            <button class="btn big" data-action="join">JOIN</button>
+          </div>
+        </div>
+
+        <div class="demo" aria-label="Try the board">
+          <div class="demo-head">
+            <small>CLUE FROM ARI:</small>
+            <div class="demo-clue black" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">TAP. DRAG. ARROW KEYS. THEN REVEAL.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">REVEAL</button>
+            <button class="btn" data-action="shuffle">NEW CARD</button>
+          </div>
+          <p class="demo-result black" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <h2 class="row-title black" id="how">HOW IT WORKS</h2>
+      <div class="steps">
+        <div class="step"><div class="n black">1</div><h3 class="black">PEEK</h3><p>The psychic sees where the target sits on a board like Funny ↕ Unfunny and Ugly ↔ Cute. Nobody else does.</p></div>
+        <div class="step"><div class="n black">2</div><h3 class="black">CLUE</h3><p>They say one thing that fits that spot. One. Not two.</p></div>
+        <div class="step"><div class="n black">3</div><h3 class="black">GUESS</h3><p>Everyone drops a dot in secret. Reveal. Bullseye = 4 points. Highest score wins.</p></div>
+      </div>
+
+      <h2 class="row-title black" id="features">WHY THIS GAME</h2>
+      <div class="features">
+        <div class="feature"><div class="ico">A</div><div><h3 class="black">NO TEAMS</h3><p>Every player for themselves. Live scores.</p></div></div>
+        <div class="feature"><div class="ico">B</div><div><h3 class="black">ANY PHONE</h3><p>No app. No account. Open the link.</p></div></div>
+        <div class="feature"><div class="ico">C</div><div><h3 class="black">ENDLESS CARDS</h3><p>Mix any two axes. Or write your own.</p></div></div>
+        <div class="feature"><div class="ico">D</div><div><h3 class="black">4-LETTER CODES</h3><p>Share it. Friends join. Done.</p></div></div>
+      </div>
+
+      <div class="cta">
+        <h2 class="black">STOP READING.<br><mark>START PLAYING.</mark></h2>
+        <button class="btn big" data-action="create">CREATE ROOM →</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 PSYCHIC PLANE</span>
+      <nav>
+        <a href="#how">RULES</a>
+        <a href="#" data-action="soon">PRIVACY</a>
+        <a href="#" data-action="soon">CONTACT</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'square',
+      chime: [330, 660],
+      revealLabel: 'REVEAL',
+      againLabel: 'AGAIN',
+      soundLabels: ['SOUND: ON', 'SOUND: OFF'],
+      results: { 4: 'BULLSEYE.', 3: 'CLOSE.', 2: 'OK.', 0: 'NO.' },
+      lobbyMsg: 'LOBBY NOT BUILT YET.',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

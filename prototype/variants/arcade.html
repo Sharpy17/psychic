@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Arcade</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Retro arcade: black cabinet, neon, CRT scanlines, chunky monospace. */
+    :root {
+      --bg: #05040d;
+      --panel: #0d0b1f;
+      --line: #2a2552;
+      --text: #f4f4ff;
+      --muted: #8f8ac2;
+      --green: #39ff14;
+      --pink: #ff2bd6;
+      --cyan: #00f0ff;
+      --yellow: #ffe600;
+      --accent: var(--yellow);
+      --radius: 0px;
+      --zone-2: #00f0ff;
+      --zone-3: #39ff14;
+      --zone-4: #ff2bd6;
+      --face: #0a0920;
+      --needle: #ffe600;
+      --marker-stroke: #05040d;
+      --q-tl: #ff2bd6; --q-tr: #ffe600; --q-bl: #00f0ff; --q-br: #39ff14;
+      --q-opacity: 0.16;
+      --axis-line: #4d4799;
+      --ring-text: #05040d;
+      --miss: #ffffff;
+      --board-shadow: 0 0 14px #ff2bd666;
+      --lbl-radius: 0;
+      --lbl-top: #ff2bd6; --lbl-top-bg: transparent;
+      --lbl-bottom: #39ff14; --lbl-bottom-bg: transparent;
+      --lbl-left: #00f0ff; --lbl-left-bg: transparent;
+      --lbl-right: #ffe600; --lbl-right-bg: transparent;
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      background:
+        linear-gradient(transparent 60%, #ff2bd612),
+        repeating-linear-gradient(90deg, #ffffff05 0 1px, transparent 1px 48px),
+        repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 48px),
+        var(--bg);
+      color: var(--text);
+      font: 700 15px/1.55 "Courier New", ui-monospace, Consolas, monospace;
+      text-transform: uppercase;
+    }
+    /* CRT scanlines over everything */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      background: repeating-linear-gradient(0deg, #0000 0 2px, #00000038 2px 4px);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    input { text-transform: uppercase; }
+    .neon { text-shadow: 0 0 6px currentColor, 0 0 18px currentColor; }
+
+    /* ---------- Buttons: hard pixel edges, offset shadow ---------- */
+    .btn {
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      background: transparent;
+      border: 3px solid currentColor;
+      padding: 12px 18px;
+      box-shadow: 4px 4px 0 currentColor;
+      transition: transform 0.06s, box-shadow 0.06s;
+    }
+    .btn:hover { background: #ffffff0d; }
+    .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 currentColor; }
+    .btn.primary { color: var(--yellow); }
+    .btn.primary.solid { background: var(--yellow); color: #05040d; box-shadow: 4px 4px 0 var(--pink); border-color: var(--yellow); }
+    .btn.ghost { border-color: transparent; box-shadow: none; color: var(--muted); }
+    .btn.ghost:hover { color: var(--text); }
+    .btn.big { padding: 16px 24px; font-size: 1.05rem; }
+
+    /* ---------- Nav ---------- */
+    nav.top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-block: 14px;
+      background: linear-gradient(var(--bg) 75%, transparent);
+    }
+    .logo { color: var(--pink); font-size: 1.15rem; letter-spacing: 0.12em; text-decoration: none; display: flex; gap: 10px; align-items: center; }
+    .logo i { width: 14px; height: 14px; background: var(--yellow); box-shadow: 0 0 10px var(--yellow); display: inline-block; }
+    .hud { margin-left: auto; display: flex; gap: 22px; color: var(--muted); font-size: 0.85rem; }
+    .hud b { color: var(--text); }
+    .nav-actions { display: flex; gap: 8px; }
+
+    /* ---------- Hero ---------- */
+    .hero { text-align: center; padding-block: 40px 30px; }
+    .insert { color: var(--green); letter-spacing: 0.3em; animation: blink 1.1s steps(2, start) infinite; }
+    @keyframes blink { to { visibility: hidden; } }
+    .title {
+      margin-top: 18px;
+      font-size: clamp(2.8rem, 10vw, 6.4rem);
+      line-height: 0.92;
+      letter-spacing: 0.04em;
+      color: var(--yellow);
+      text-shadow: 4px 4px 0 var(--pink), 8px 8px 0 var(--cyan);
+    }
+    .tagline { margin-top: 22px; color: var(--cyan); font-size: 1.05rem; letter-spacing: 0.1em; }
+    .hero-ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+
+    /* ---------- Cabinet (demo) ---------- */
+    .cabinet {
+      max-width: 620px;
+      margin: 36px auto 0;
+      border: 4px solid var(--pink);
+      box-shadow: 0 0 0 4px var(--bg), 0 0 0 8px var(--cyan), 0 0 40px #ff2bd655;
+      background: var(--panel);
+      padding: 18px;
+    }
+    .cab-hud { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+    .cab-hud b { color: var(--green); }
+    .clue-line { text-align: center; margin-bottom: 10px; }
+    .clue-line small { color: var(--muted); letter-spacing: 0.2em; }
+    .demo-clue { font-size: 1.4rem; color: var(--text); }
+    .demo-clue::before { content: "> "; color: var(--green); }
+    .axis-label { font-size: 0.8rem; letter-spacing: 0.1em; }
+    .board-slot { border: 3px solid var(--line); }
+    .hint { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 10px; letter-spacing: 0.08em; }
+    .cab-foot { display: flex; gap: 12px; margin-top: 14px; }
+    .cab-foot .btn { flex: 1; }
+
+    /* ---------- Sections ---------- */
+    section { padding-block: 64px 24px; }
+    .sec-title { text-align: center; font-size: clamp(1.5rem, 4vw, 2.2rem); color: var(--green); letter-spacing: 0.12em; margin-bottom: 28px; }
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .level { border: 3px solid var(--line); padding: 20px; background: var(--panel); }
+    .level .lv { color: var(--pink); letter-spacing: 0.2em; font-size: 0.8rem; }
+    .level h3 { color: var(--yellow); margin: 8px 0; font-size: 1.1rem; }
+    .level p { color: var(--muted); text-transform: none; font-weight: 400; }
+
+    .powerups { max-width: 760px; margin: 0 auto; border: 3px solid var(--cyan); padding: 8px 20px; background: var(--panel); }
+    .pu { display: grid; grid-template-columns: 2.5rem 1fr auto; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 2px dashed var(--line); }
+    .pu:last-child { border-bottom: 0; }
+    .pu .ico { font-size: 1.5rem; }
+    .pu b { color: var(--text); }
+    .pu span { display: block; color: var(--muted); text-transform: none; font-weight: 400; }
+    .pu em { font-style: normal; color: var(--green); }
+
+    .continue { text-align: center; padding-block: 72px; }
+    .continue h2 { font-size: clamp(2rem, 6vw, 3.4rem); color: var(--pink); }
+    .continue .count { font-size: clamp(3rem, 12vw, 6rem); color: var(--yellow); line-height: 1.1; }
+    .continue p { color: var(--muted); margin: 6px 0 24px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 24px 40px; border-top: 3px solid var(--line); color: var(--muted); font-size: 0.8rem; }
+    footer nav { display: flex; gap: 16px; }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { color: var(--green); }
+
+    .modal { border: 3px solid var(--pink); box-shadow: 6px 6px 0 var(--cyan); }
+    .modal h2 { color: var(--yellow); }
+
+    @media (max-width: 760px) {
+      .hud { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .ghost:not(.icon-btn) { display: none; }
+      .levels { grid-template-columns: 1fr; }
+      .pu { grid-template-columns: 2rem 1fr; }
+      .pu em { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo neon" href="#top"><i></i>PSYCHIC PLANE</a>
+      <div class="hud"><span>1UP <b>000420</b></span><span>HI <b>999999</b></span></div>
+      <div class="nav-actions">
+        <button class="btn ghost icon-btn" data-action="sound" aria-pressed="true" title="Toggle sound">SND ON</button>
+        <button class="btn ghost" data-action="join">JOIN</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div class="insert">▶ INSERT COIN ◀</div>
+        <h1 class="title">PSYCHIC<br>PLANE</h1>
+        <p class="tagline">READ YOUR FRIENDS' MINDS · 3–10 PLAYERS</p>
+        <div class="hero-ctas">
+          <button class="btn primary solid big" data-action="create">1P START: CREATE ROOM</button>
+          <button class="btn big" data-action="join">2P JOIN: ENTER CODE</button>
+        </div>
+
+        <div class="cabinet" aria-label="Try the board">
+          <div class="cab-hud"><span>STAGE <b>01</b></span><span>PSYCHIC <b>ARI</b></span><span>TIME <b>∞</b></span></div>
+          <div class="clue-line">
+            <small>CLUE RECEIVED</small>
+            <div class="demo-clue" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">TAP / DRAG / ARROW KEYS · ENTER TO FIRE</p>
+          <div class="cab-foot">
+            <button class="btn primary solid" data-action="reveal" id="reveal-btn">FIRE!</button>
+            <button class="btn" data-action="shuffle">NEXT STAGE</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title neon">HOW TO PLAY</h2>
+        <div class="levels">
+          <div class="level"><div class="lv">LEVEL 1</div><h3>PSYCHIC PEEKS</h3><p>One player secretly sees a target on a board with four labels, like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="level"><div class="lv">LEVEL 2</div><h3>ONE CLUE</h3><p>They give a single clue that lands on that spot. "A pug in a hot dog costume"?</p></div>
+          <div class="level"><div class="lv">BOSS LEVEL</div><h3>DROP YOUR DOT</h3><p>Everyone places a dot in secret. Reveal! Bullseye is 4 points. Highest score wins.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2 class="sec-title neon">POWER-UPS</h2>
+        <div class="powerups">
+          <div class="pu"><span class="ico">⚡</span><div><b>FREE FOR ALL</b><span>No teams. Everyone guesses for themselves.</span></div><em>+SPEED</em></div>
+          <div class="pu"><span class="ico">📱</span><div><b>THUMB CONTROLS</b><span>Big touch targets on any phone.</span></div><em>+GRIP</em></div>
+          <div class="pu"><span class="ico">🃏</span><div><b>INFINITE STAGES</b><span>Mix any two axes, or write your own.</span></div><em>+∞</em></div>
+          <div class="pu"><span class="ico">🔗</span><div><b>4-LETTER WARP</b><span>Share a room code, friends join in seconds.</span></div><em>+CREW</em></div>
+        </div>
+      </section>
+
+      <div class="continue">
+        <h2 class="neon">CONTINUE?</h2>
+        <div class="count neon" id="count">9</div>
+        <p>GRAB YOUR CREW BEFORE THE TIMER RUNS OUT</p>
+        <button class="btn primary solid big" data-action="create">PRESS START</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 PSYCHIC PLANE · CREDIT 00</span>
+      <nav>
+        <a href="#how">RULES</a>
+        <a href="#" data-action="soon">PRIVACY</a>
+        <a href="#" data-action="soon">CONTACT</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'square',
+      chime: [392, 523, 659, 784],
+      revealLabel: 'FIRE!',
+      againLabel: 'PLAY AGAIN',
+      soundLabels: ['SND ON', 'SND OFF'],
+      results: { 4: 'PERFECT!! MIND MELD ACHIEVED', 3: 'GREAT! SO CLOSE', 2: 'GOOD. IN THE ZONE', 0: 'MISS! GAME OVER... JUST KIDDING' },
+      lobbyMsg: 'LOBBY UNDER CONSTRUCTION',
+    };
+  </script>
+  <script src="common.js"></script>
+  <script>
+    // "CONTINUE?" countdown that loops 9 → 0 like an arcade cabinet.
+    let n = 9;
+    setInterval(() => { n = n ? n - 1 : 9; document.getElementById('count').textContent = n; }, 1000);
+  </script>
+</body>
+</html>
