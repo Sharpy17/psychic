@@ -3,37 +3,59 @@
 @tailwind utilities;
 
 :root {
-  --bg: #15122e;
-  --bg-2: #1d1940;
-  --panel: #241f4d;
-  --line: #3a3470;
-  --text: #f5f2ff;
-  --muted: #a9a3d6;
-  --accent: #ffd35c;
-  --accent-shadow: #b88d1f;
-  --face: #f7efdf;
-  --zone-bullseye: #f59e0b;
-  --zone-close: #06b6d4;
-  --zone-warm: #10b981;
-  --zone-edge: #8b5cf6;
+  --bg: #0a0820;
+  --panel: #15112f;
+  --line: #3b2f5e;
+  --text: #f3ead6;
+  --muted: #b3a7c9;
+  --gold: #e8c36a;
+  --gold-dim: #a8843c;
+  --violet: #8f6bff;
+  --accent: var(--gold);
+  --radius: 18px;
   color-scheme: dark;
 }
 
-body {
-  margin: 0;
-  overflow-x: hidden;
-  background: radial-gradient(1400px 700px at 70% -10%, #2f2870 0%, var(--bg) 60%) fixed;
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+/* Mystic Starfield Background */
+.bg-mystic {
+  background-color: #0a0820;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #fff9 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 80%, #fff7 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 40% 70%, #ffe9b3aa 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 15%, #fff8 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 10% 85%, #fff6 50%, transparent 51%),
+    radial-gradient(900px 600px at 80% -10%, #3a1f7a 0%, transparent 70%),
+    radial-gradient(700px 500px at -10% 40%, #1f2a6e 0%, transparent 70%);
+  background-size: 220px 220px, 300px 300px, 260px 260px, 340px 340px, 280px 280px, auto, auto;
+  background-attachment: fixed;
 }
 
-/* Custom radial glows */
-.radial-bg {
-  background: radial-gradient(circle at 50% 20%, rgba(155, 123, 255, 0.15) 0%, rgba(21, 18, 46, 1) 70%);
+/* Arcade Theme */
+.bg-arcade {
+  background-color: #05040d;
+  background-image:
+    linear-gradient(transparent 60%, #ff2bd612),
+    repeating-linear-gradient(90deg, #ffffff05 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 48px);
+}
+
+/* Crystal Ball / Glowing Board Frame */
+.crystal-frame {
+  background: linear-gradient(160deg, #241b4f, #120d2b);
+  border: 1px solid #3b2f5e;
+  box-shadow: 0 0 0 1px #e8c36a22 inset, 0 40px 90px #0008, 0 0 80px #6b46ff33;
 }
 
 /* Animations */
+@keyframes breathe {
+  50% { filter: drop-shadow(0 0 35px #9c6bff88); }
+}
+
+.animate-breathe {
+  animation: breathe 5s ease-in-out infinite;
+}
+
 @keyframes pulse-ring {
   0% { transform: scale(0.95); opacity: 0.9; }
   50% { transform: scale(1.05); opacity: 0.5; }
@@ -47,7 +69,7 @@ body {
 
 @keyframes drop-in {
   0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.2); opacity: 1; }
+  70% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 
