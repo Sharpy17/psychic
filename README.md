@@ -33,6 +33,7 @@ Welcome to the central knowledge base and single source of truth for **Wavelengt
 - [[05 - Team & Roadmap/Sprint Roadmap|Sprint Roadmap]]: Phased development milestones from prototype to playtest.
 - [[06 - AI Guidelines/AI Agent Instructions & Contract|AI Agent Instructions & Contract]]: Prompt directives for AI agents to prevent code drift and schema collisions.
 - [[07 - Content Bank/Starter Topics & Word Pairs|Starter Topics & Word Pairs]]: Initial deck of 30+ curated topics and axes for testing.
+- [[08 - Pitfalls & Open Decisions/Potential Problems & Critical Review|Potential Problems & Critical Review]]: Teardown of design pitfalls, mathematical corner cases, mobile UX friction, and team balance.
 
 ---
 
