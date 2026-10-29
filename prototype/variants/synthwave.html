@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Synthwave</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Synthwave: 80s sunset, striped sun, chrome title, neon perspective grid floor. */
+    :root {
+      --bg: #12002b;
+      --panel: #1f0645;
+      --line: #4a1d7a;
+      --text: #fdf0ff;
+      --muted: #c9a8e8;
+      --pink: #ff4fd8;
+      --cyan: #2de2e6;
+      --orange: #ff9e3d;
+      --yellow: #ffe45e;
+      --accent: var(--pink);
+      --radius: 14px;
+      --backdrop: #0a001acc;
+      --zone-2: #2de2e6;
+      --zone-3: #ff4fd8;
+      --zone-4: #ffe45e;
+      --face: #1a0438;
+      --needle: #ffe45e;
+      --marker-stroke: #12002b;
+      --q-tl: #ff4fd8; --q-tr: #ff9e3d; --q-bl: #9b5de5; --q-br: #2de2e6;
+      --q-opacity: 0.14;
+      --axis-line: #ff4fd888;
+      --ring-text: #12002b;
+      --miss: #ffffff;
+      --board-shadow: 0 0 24px #ff4fd855;
+      --lbl-radius: 6px;
+      --lbl-top: #fff; --lbl-top-bg: #ff4fd8aa;
+      --lbl-bottom: #fff; --lbl-bottom-bg: #9b5de5aa;
+      --lbl-left: #12002b; --lbl-left-bg: #2de2e6;
+      --lbl-right: #12002b; --lbl-right-bg: #ff9e3d;
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background: linear-gradient(180deg, #12002b 0%, #2a0659 55%, #12002b 100%) fixed;
+      font: 16px/1.55 "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+      overflow-x: clip;
+    }
+    html { overflow-x: clip; }
+    .wrap { max-width: 1100px; margin: 0 auto; position: relative; }
+    .chrome {
+      background: linear-gradient(180deg, #fff 0%, #c9f6ff 38%, #5a4bd1 52%, #ff9ee8 60%, #fff 85%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 3px 0 #ff4fd8) drop-shadow(0 0 18px #ff4fd888);
+    }
+
+    .btn {
+      font-weight: 800;
+      font-style: italic;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      background: #12002b88;
+      border: 2px solid var(--cyan);
+      border-radius: 8px;
+      padding: 11px 20px;
+      box-shadow: 0 0 12px #2de2e655, inset 0 0 10px #2de2e633;
+      transition: box-shadow 0.2s, transform 0.1s;
+    }
+    .btn:hover { box-shadow: 0 0 22px #2de2e6aa, inset 0 0 14px #2de2e655; }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary { color: #fff; border-color: transparent; background: linear-gradient(90deg, #ff4fd8, #ff9e3d); box-shadow: 0 0 20px #ff4fd888; }
+    .btn.primary:hover { box-shadow: 0 0 32px #ff4fd8cc; }
+    .btn.ghost { border-color: transparent; box-shadow: none; background: transparent; }
+    .btn.big { padding: 15px 28px; font-size: 1.05rem; }
+
+    nav.top { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; padding-block: 16px; }
+    .logo { font-weight: 900; font-style: italic; font-size: 1.3rem; text-decoration: none; color: var(--pink); text-shadow: 0 0 12px #ff4fd8; letter-spacing: 0.04em; }
+    .nav-links { display: flex; gap: 6px; margin-left: auto; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-weight: 700; padding: 8px 12px; }
+    .nav-links a:hover { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+    .nav-actions { display: flex; gap: 8px; }
+
+    /* ---------- Hero: sun + grid floor ---------- */
+    .hero { position: relative; text-align: center; padding-block: 40px 0; isolation: isolate; }
+    .sun {
+      position: absolute;
+      z-index: -1;
+      left: 50%;
+      top: 10px;
+      width: min(440px, 80vw);
+      aspect-ratio: 1;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: linear-gradient(180deg, #ffe45e 0%, #ff9e3d 40%, #ff4fd8 75%);
+      box-shadow: 0 0 80px #ff4fd877;
+      -webkit-mask: linear-gradient(#000 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 68%, #000 68% 74%, transparent 74% 80%, #000 80% 85%, transparent 85% 91%, #000 91%);
+      mask: linear-gradient(#000 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 68%, #000 68% 74%, transparent 74% 80%, #000 80% 85%, transparent 85% 91%, #000 91%);
+      opacity: 0.9;
+    }
+    .floor {
+      position: absolute;
+      z-index: -1;
+      left: 50%;
+      top: 330px;
+      width: 260vw;
+      height: 420px;
+      transform: translateX(-50%) perspective(260px) rotateX(62deg);
+      transform-origin: top;
+      background:
+        repeating-linear-gradient(90deg, #ff4fd8aa 0 2px, transparent 2px 70px),
+        repeating-linear-gradient(0deg, #ff4fd8aa 0 2px, transparent 2px 70px);
+      animation: drive 1.6s linear infinite;
+      -webkit-mask: linear-gradient(#000, transparent 85%);
+      mask: linear-gradient(#000, transparent 85%);
+    }
+    @keyframes drive { to { background-position: 0 0, 0 70px; } }
+    .tagline { color: var(--cyan); letter-spacing: 0.4em; font-weight: 700; font-size: 0.85rem; text-shadow: 0 0 10px var(--cyan); }
+    .title { font-size: clamp(3rem, 11vw, 7.5rem); line-height: 0.9; font-weight: 900; font-style: italic; letter-spacing: -0.02em; margin-top: 140px; }
+    .script { font-family: "Brush Script MT", "Segoe Script", cursive; font-style: normal; font-weight: 400; color: var(--pink); font-size: clamp(2rem, 6vw, 3.6rem); transform: rotate(-6deg); display: inline-block; margin-top: 0.2em; text-shadow: 0 0 6px #fff, 0 0 18px #ff4fd8; }
+    .lead { max-width: 34em; margin: 18px auto 0; color: var(--muted); font-size: 1.1rem; }
+    .hero-ctas { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+
+    .demo { position: relative; max-width: 560px; margin: 56px auto 0; background: #1a0438dd; border: 2px solid var(--pink); border-radius: 18px; padding: 20px; box-shadow: 0 0 40px #ff4fd855, inset 0 0 30px #ff4fd822; backdrop-filter: blur(6px); }
+    .demo-head { text-align: center; margin-bottom: 10px; }
+    .demo-head small { color: var(--cyan); letter-spacing: 0.2em; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
+    .demo-clue { font-size: 1.4rem; font-weight: 800; font-style: italic; }
+    .axis-label { font-style: italic; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; }
+    .hint { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
+    .demo-foot { display: flex; gap: 12px; margin-top: 12px; }
+    .demo-foot .btn { flex: 1; }
+
+    section { padding-block: 72px 0; }
+    .sec-title { text-align: center; font-size: clamp(2rem, 5vw, 3rem); font-weight: 900; font-style: italic; margin-bottom: 32px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; border-top: 4px solid var(--cyan); }
+    .step:nth-child(2) { border-top-color: var(--pink); }
+    .step:nth-child(3) { border-top-color: var(--orange); }
+    .step .n { font-size: 2.4rem; font-weight: 900; font-style: italic; color: transparent; -webkit-text-stroke: 1.5px var(--cyan); }
+    .step:nth-child(2) .n { -webkit-text-stroke-color: var(--pink); }
+    .step:nth-child(3) .n { -webkit-text-stroke-color: var(--orange); }
+    .step h3 { font-size: 1.2rem; font-style: italic; margin: 4px 0 6px; }
+    .step p { color: var(--muted); }
+
+    .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .feature { text-align: center; padding: 22px 16px; border-radius: 16px; background: linear-gradient(180deg, #ff4fd822, transparent); border: 1px solid var(--line); }
+    .feature .ico { font-size: 2rem; filter: drop-shadow(0 0 10px #ff4fd8); }
+    .feature h3 { font-size: 1.05rem; margin: 8px 0 4px; font-style: italic; }
+    .feature p { color: var(--muted); font-size: 0.95rem; }
+
+    .cta { text-align: center; padding: 64px 24px; margin-block: 72px 56px; border-radius: 24px; background: linear-gradient(135deg, #ff4fd833, #2de2e622); border: 2px solid var(--line); }
+    .cta h2 { font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 900; font-style: italic; }
+    .cta p { color: var(--muted); margin: 8px 0 24px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 24px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { color: var(--pink); }
+
+    .modal { border: 2px solid var(--pink); box-shadow: 0 0 50px #ff4fd855; }
+    .modal h2 { font-style: italic; color: var(--pink); }
+    .room-code { color: var(--yellow); text-shadow: 0 0 14px #ffe45e88; }
+
+    @media (max-width: 900px) {
+      .features { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .hide-sm { display: none; }
+      .steps { grid-template-columns: 1fr; }
+      .title { margin-top: 110px; }
+      .floor { top: 260px; }
+      .demo { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top">PSYCHIC PLANE</a>
+      <div class="nav-links">
+        <a href="#how">How to play</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Join</button>
+        <button class="btn primary" data-action="create">Play</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div class="sun" aria-hidden="true"></div>
+        <div class="floor" aria-hidden="true"></div>
+        <div class="tagline">A PARTY GAME · 3–10 PLAYERS</div>
+        <h1 class="title chrome">PSYCHIC<br>PLANE</h1>
+        <div class="script">read their minds</div>
+        <p class="lead">One psychic. One hidden point on a neon grid. One clue. Drop your dot and find out who's really on your wavelength.</p>
+        <div class="hero-ctas">
+          <button class="btn primary big" data-action="create">Create a room</button>
+          <button class="btn big" data-action="join">Join with a code</button>
+        </div>
+
+        <div class="demo" aria-label="Try the board">
+          <div class="demo-head">
+            <small>Ari's clue</small>
+            <div class="demo-clue" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Tap or drag the dot, then reveal.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal</button>
+            <button class="btn" data-action="shuffle">New card</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title chrome">HOW TO PLAY</h2>
+        <div class="steps">
+          <div class="step"><div class="n">01</div><h3>The psychic peeks</h3><p>One player secretly sees a target on a board with four labels, like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="step"><div class="n">02</div><h3>One clue</h3><p>They give a single clue that fits that spot. "A pug in a hot dog costume" is pretty cute and kind of funny.</p></div>
+          <div class="step"><div class="n">03</div><h3>Drop your dot</h3><p>Everyone places a dot in secret. Reveal! A bullseye is 4 points, and the highest score wins.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2 class="sec-title chrome">FEATURES</h2>
+        <div class="features">
+          <div class="feature"><div class="ico">⚡</div><h3>Every player for themselves</h3><p>No teams, live scores.</p></div>
+          <div class="feature"><div class="ico">📱</div><h3>Phone-friendly</h3><p>Big, thumb-sized controls.</p></div>
+          <div class="feature"><div class="ico">🌴</div><h3>Endless cards</h3><p>Mix any two axes, or write your own.</p></div>
+          <div class="feature"><div class="ico">🔗</div><h3>4-letter rooms</h3><p>Share a code, friends join in seconds.</p></div>
+        </div>
+      </section>
+
+      <div class="cta">
+        <h2 class="chrome">LET'S GO!</h2>
+        <p>Start a room and send the code to your crew.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Psychic Plane · a student project</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'sawtooth',
+      chime: [440, 554, 659, 880],
+      revealLabel: 'Reveal',
+      againLabel: 'Play again',
+      results: { 4: 'Totally radical! 🌴', 3: 'So close, dude!', 2: 'Gnarly. In the zone.', 0: 'Bogus! Way off.' },
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

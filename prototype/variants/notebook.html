@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Sketchbook</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Sketchbook: lined notebook paper, handwriting, wobbly hand-drawn boxes, sticky notes, tape. */
+    :root {
+      --bg: #fdfcf7;
+      --panel: #ffffff;
+      --line: #2b2b33;
+      --text: #22222a;
+      --muted: #5a5a66;
+      --ink: #1f4fd1;
+      --red: #e0453a;
+      --hl: #fff27a;
+      --accent: var(--ink);
+      --radius: 14px;
+      --backdrop: #22222a77;
+      --zone-2: #fff59d;
+      --zone-3: #ffcc80;
+      --zone-4: #ff8a80;
+      --face: #ffffff;
+      --needle: #1f4fd1;
+      --q-opacity: 0;
+      --axis-line: #8a8a96;
+      --ring-text: #22222a;
+      --miss: #e0453a;
+      --board-shadow: 2px 3px 0 #0000001a;
+      --lbl-radius: 4px;
+      --lbl-top: var(--text); --lbl-top-bg: transparent;
+      --lbl-bottom: var(--text); --lbl-bottom-bg: transparent;
+      --lbl-left: var(--text); --lbl-left-bg: transparent;
+      --lbl-right: var(--text); --lbl-right-bg: transparent;
+      --sketch: 255px 15px 225px 15px / 15px 225px 15px 255px;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background:
+        linear-gradient(90deg, transparent 52px, #e0453a66 52px 54px, transparent 54px),
+        repeating-linear-gradient(180deg, transparent 0 31px, #9cc2ff66 31px 32px),
+        var(--bg);
+      font: 19px/32px "Segoe Print", "Bradley Hand", "Comic Sans MS", "Chalkboard SE", cursive;
+    }
+    .wrap { max-width: 1060px; margin: 0 auto; padding-left: 48px; }
+    .hand { font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
+    .hl { background: linear-gradient(176deg, transparent 48%, var(--hl) 50% 88%, transparent 90%); padding: 0 0.15em; }
+    .scribble { text-decoration: underline wavy var(--red); text-underline-offset: 6px; text-decoration-thickness: 2px; }
+    .sketchy { border: 2.5px solid var(--line); border-radius: var(--sketch); }
+
+    .btn {
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      background: #fff;
+      border: 2.5px solid var(--line);
+      border-radius: var(--sketch);
+      padding: 6px 18px;
+      line-height: 1.5;
+      box-shadow: 2px 3px 0 #22222a33;
+      transition: transform 0.15s;
+    }
+    .btn:hover { transform: rotate(-2deg) scale(1.04); }
+    .btn:active { transform: translateY(2px); box-shadow: 0 0 0 transparent; }
+    .btn.primary { background: var(--ink); color: #fff; }
+    .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+    .btn.big { padding: 10px 26px; font-size: 1.15rem; }
+
+    nav.top { display: flex; align-items: center; gap: 16px; padding-block: 16px; }
+    .logo { font-weight: 700; font-size: 1.4rem; color: var(--text); text-decoration: none; display: flex; gap: 8px; align-items: center; }
+    .logo svg { width: 34px; }
+    .nav-links { display: flex; gap: 6px; margin-left: auto; }
+    .nav-links a { color: var(--ink); padding: 0 10px; }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding-block: 32px 64px; }
+    .hero > * { min-width: 0; }
+    .date { color: var(--muted); font-size: 0.95rem; }
+    .hero h1 { font-size: clamp(2.4rem, 5.4vw, 3.9rem); line-height: 1.15; margin-top: 8px; }
+    .lead { margin-top: 16px; font-size: 1.1rem; color: var(--muted); max-width: 26em; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 26px; }
+
+    /* The demo is a paper card taped to the page */
+    .card { position: relative; background: var(--panel); padding: 22px; transform: rotate(-1.2deg); box-shadow: 4px 6px 0 #0000001a; }
+    .card::before, .card::after { content: ""; position: absolute; width: 110px; height: 30px; background: #f7e6a6bb; top: -14px; box-shadow: 0 1px 2px #0002; }
+    .card::before { left: 24px; transform: rotate(-6deg); }
+    .card::after { right: 24px; transform: rotate(5deg); }
+    .arrow { position: absolute; left: -96px; top: 40%; color: var(--red); font-size: 1.05rem; transform: rotate(-10deg); text-align: center; line-height: 1.2; }
+    .arrow svg { display: block; width: 80px; margin: 2px auto 0; }
+    .demo-head { margin-bottom: 8px; }
+    .demo-head small { color: var(--muted); font-size: 0.95rem; }
+    .demo-clue { font-size: 1.35rem; font-weight: 700; color: var(--ink); line-height: 1.3; }
+    .axis-label { font-weight: 700; font-size: 0.95rem; }
+    .board-slot { border: 2.5px solid var(--line); border-radius: 6px 12px 8px 14px; overflow: hidden; }
+    .axis-line { stroke-dasharray: 3 2; }
+    .ring { stroke: #22222a; stroke-width: 0.5; stroke-dasharray: 1.5 1; }
+    .hint { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .demo-foot { display: flex; gap: 12px; margin-top: 8px; }
+    .demo-foot .btn { flex: 1; }
+
+    section { padding-block: 48px; }
+    .sec-title { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 24px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .step { padding: 18px 20px; background: #ffffffcc; }
+    .step:nth-child(2) { transform: rotate(0.8deg); }
+    .step .n { display: inline-grid; place-items: center; width: 42px; height: 42px; border: 2.5px solid var(--red); border-radius: 50% 45% 55% 48%; color: var(--red); font-weight: 700; font-size: 1.2rem; }
+    .step h3 { font-size: 1.25rem; margin: 6px 0 2px; }
+    .step p { color: var(--muted); }
+
+    .notes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; padding-top: 8px; }
+    .note { padding: 20px 16px 22px; min-height: 180px; box-shadow: 3px 5px 8px #0000002a; transition: transform 0.2s; line-height: 1.5; }
+    .note:nth-child(1) { background: #fff6a1; transform: rotate(-2.5deg); }
+    .note:nth-child(2) { background: #ffd1e3; transform: rotate(1.8deg); }
+    .note:nth-child(3) { background: #c9ecff; transform: rotate(-1deg); }
+    .note:nth-child(4) { background: #d4f7c8; transform: rotate(2.4deg); }
+    .note:hover { transform: rotate(0) scale(1.05); }
+    .note h3 { font-size: 1.1rem; }
+    .note p { margin-top: 6px; font-size: 0.95rem; }
+
+    .cta { text-align: center; padding: 40px 24px; margin-block: 32px 56px; background: #ffffffcc; }
+    .cta h2 { font-size: clamp(2rem, 5vw, 3rem); }
+    .cta p { color: var(--muted); margin: 4px 0 20px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 20px 40px; color: var(--muted); font-size: 0.9rem; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: var(--ink); }
+
+    .modal { border: 2.5px solid var(--line); border-radius: var(--sketch); font-family: inherit; line-height: 1.5; }
+    input { border: 2.5px solid var(--line); background: #fff; font-family: inherit; }
+    .room-code { color: var(--ink); font-family: inherit; }
+    .toast { background: #fff6a1; color: var(--text); border: 2px solid var(--line); line-height: 1.5; box-shadow: 3px 4px 0 #0002; }
+
+    @media (max-width: 1000px) {
+      .arrow { display: none; }
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 12px; }
+      .notes { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      body { background: repeating-linear-gradient(180deg, transparent 0 31px, #9cc2ff66 31px 32px), var(--bg); }
+      .wrap { padding-left: 0; }
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .hide-sm { display: none; }
+      .steps { grid-template-columns: 1fr; }
+      .card { padding: 14px; transform: none; }
+    }
+    @media (max-width: 460px) {
+      .notes { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top">
+        <svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="#22222a" stroke-width="2.2" stroke-linecap="round"><path d="M5 6 Q20 4 35 6 Q37 20 35 34 Q20 36 5 34 Q3 20 5 6Z"/><path d="M20 7 V33 M6 20 H34" stroke-dasharray="3 3"/><circle cx="27" cy="13" r="4" stroke="#e0453a"/><path d="M11 26 l4 4 M15 26 l-4 4" stroke="#1f4fd1"/></svg>
+        Psychic Plane
+      </a>
+      <div class="nav-links">
+        <a href="#how">how to play</a>
+        <a href="#features">why it's fun</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Join</button>
+        <button class="btn primary" data-action="create">Play!</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <div class="date">game night ideas, page 1</div>
+          <h1>Can you guess what your <span class="hl">friends</span> are <span class="scribble">thinking</span>?</h1>
+          <p class="lead">One friend secretly sees a spot on the board and gives one clue. Everybody else draws a dot where they think it is. Closest dot wins!</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Start a room</button>
+            <button class="btn big" data-action="join">I have a code</button>
+          </div>
+        </div>
+
+        <div class="card sketchy" aria-label="Try the board">
+          <div class="arrow" aria-hidden="true">try it!<svg viewBox="0 0 80 30" fill="none" stroke="#e0453a" stroke-width="2.5" stroke-linecap="round"><path d="M4 22 Q36 2 72 14 M62 6 L73 14 L62 22"/></svg></div>
+          <div class="demo-head">
+            <small>Ari's clue:</small>
+            <div class="demo-clue" id="demo-clue"></div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">tap or drag the dot, then reveal</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal!</button>
+            <button class="btn" data-action="shuffle">New card</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title"><span class="hl">How to play</span></h2>
+        <div class="steps">
+          <div class="step sketchy"><div class="n">1</div><h3>Peek</h3><p>The psychic secretly sees the target on a board like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="step sketchy"><div class="n">2</div><h3>Clue</h3><p>They say ONE thing that fits. "A pug in a hot dog costume" = cute + funny?</p></div>
+          <div class="step sketchy"><div class="n">3</div><h3>Dot!</h3><p>Everyone draws a dot in secret. Reveal! Bullseye = 4 points.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2 class="sec-title"><span class="hl">Why it's fun</span></h2>
+        <div class="notes">
+          <div class="note"><h3>✎ Everyone for themselves</h3><p>No teams. Your guess, your points.</p></div>
+          <div class="note"><h3>✎ Works on phones</h3><p>No app, no sign-up. Just open the link.</p></div>
+          <div class="note"><h3>✎ Endless cards</h3><p>Mix any two axes, or make up your own!</p></div>
+          <div class="note"><h3>✎ 4-letter rooms</h3><p>Text the code to friends, done.</p></div>
+        </div>
+      </section>
+
+      <div class="cta sketchy">
+        <h2>Okay, let's play!</h2>
+        <p>Start a room and send the code to your friends.</p>
+        <button class="btn primary big" data-action="create">Start a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Psychic Plane · doodled by students</span>
+      <nav>
+        <a href="#how">rules</a>
+        <a href="#" data-action="soon">privacy</a>
+        <a href="#" data-action="soon">contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'triangle',
+      revealLabel: 'Reveal!',
+      againLabel: 'Again!',
+      results: { 4: '✔ Nailed it!', 3: 'Ooh, so close!', 2: 'Not bad :)', 0: 'Nope ✗ way off' },
+      lobbyMsg: 'The lobby is still a sketch',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

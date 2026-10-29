@@ -1,0 +1,107 @@
+/* The square board and its four labels. Shared by index.html and landing.html.
+   Uses the colour variables (--face, --zone-*, --needle, --accent) each page defines. */
+
+.board-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    ".    top    .    "
+    "left board  right"
+    ".    bottom .    ";
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+}
+.board-slot { grid-area: board; width: 100%; max-width: 440px; }
+
+.axis-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  text-align: center;
+  line-height: 1.2;
+}
+.axis-label.top { grid-area: top; background: #ff5c8d26; color: #ffadc6; }
+.axis-label.bottom { grid-area: bottom; background: #ffd35c22; color: #ffe28f; }
+.axis-label.left { grid-area: left; writing-mode: vertical-rl; transform: rotate(180deg); background: #9b7bff29; color: #cdbdff; padding: 12px 6px; }
+.axis-label.right { grid-area: right; writing-mode: vertical-rl; background: #3fd8c726; color: #9ff0e6; padding: 12px 6px; }
+
+.board {
+  width: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(0 6px 18px #0005);
+}
+.board.interactive { cursor: crosshair; touch-action: none; }
+.board.dragging { cursor: grabbing; }
+.board:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+
+.board-face { fill: var(--face); }
+.q { opacity: 0.13; }
+.q-tl { fill: #ff5c8d; }
+.q-tr { fill: #ff9e45; }
+.q-bl { fill: #9b7bff; }
+.q-br { fill: #3fd8c7; }
+.axis-line { stroke: #b9aa8a; stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+
+.target, .marker { transform-box: view-box; }
+.rings {
+  opacity: 0;
+  transform: scale(0.3);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.3s, transform 0.55s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.rings.show { opacity: 1; transform: scale(1); }
+.ring.r2 { fill: var(--zone-2); }
+.ring.r3 { fill: var(--zone-3); }
+.ring.r4 { fill: var(--zone-4); }
+.rings text { font-size: 3.6px; font-weight: 800; fill: #3a1630; text-anchor: middle; }
+
+.miss-line {
+  stroke: #2b2550;
+  stroke-width: 0.7;
+  stroke-dasharray: 1.5 1.2;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.3s 0.35s;
+}
+.miss-line.show { opacity: 0.75; }
+
+.shield { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.shield rect { fill: #2b2560; }
+.shield text { font-size: 30px; font-weight: 800; fill: #4a4290; text-anchor: middle; }
+.board.shielded .shield { opacity: 1; }
+
+.marker { transition: transform 0.15s ease-out, opacity 0.2s; }
+.board.dragging .marker { transition: opacity 0.2s; }
+.marker.hidden { opacity: 0; }
+.marker-dot { fill: var(--marker, var(--needle)); stroke: #fff; stroke-width: 1.2; }
+.marker-halo { fill: var(--marker, var(--needle)); opacity: 0.25; transform-box: fill-box; transform-origin: center; }
+
+/* Everyone's dots on reveal */
+.other { transform-box: view-box; }
+.other-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes dot-pop { from { transform: scale(0); opacity: 0; } }
+.other circle { stroke: #fff; stroke-width: 0.9; }
+.other text {
+  font-size: 3.2px;
+  font-weight: 800;
+  text-anchor: middle;
+  fill: #fff;
+  stroke: #1d1940;
+  stroke-width: 0.9px;
+  paint-order: stroke;
+}
+.board.interactive .marker-halo { animation: halo 1.4s ease-in-out infinite; }
+@keyframes halo { 50% { transform: scale(1.6); opacity: 0.05; } }
+
+@media (max-width: 420px) {
+  .axis-label { font-size: 0.85rem; }
+}

@@ -1,0 +1,53 @@
+// This is Arthur's Prisma schema file
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Spectrum Axis Pairs (e.g. "Unfunny" <-> "Funny", "Cute" <-> "Ugly")
+model AxisPair {
+  id        String   @id @default(uuid())
+  minLabel  String   // e.g. "Unfunny"
+  maxLabel  String   // e.g. "Funny"
+  category  String?  // Optional grouping e.g. "Vibe", "Physical", "Moral"
+  createdAt DateTime @default(now())
+}
+
+// 2. Topics / Categories (e.g. "Video Game Characters", "Foods", "Superheroes")
+model Topic {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+// 3. Match History and Stats
+model GameSession {
+  id          String   @id @default(uuid())
+  roomCode    String
+  totalRounds Int
+  createdAt   DateTime @default(now())
+  rounds      RoundRecord[]
+}
+
+model RoundRecord {
+  id           String      @id @default(uuid())
+  sessionId    String
+  session      GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  topicName    String
+  clue         String
+  targetX      Float
+  targetY      Float
+  psychicName  String
+  createdAt    DateTime    @default(now())
+}

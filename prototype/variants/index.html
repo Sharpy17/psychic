@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Psychic Plane: Landing Page Versions</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 16px 64px;
+      background: #111114;
+      color: #f2f2f5;
+      font: 16px/1.5 system-ui, "Segoe UI", sans-serif;
+    }
+    .wrap { max-width: 1040px; margin: 0 auto; }
+    h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.4rem); letter-spacing: -0.02em; }
+    .sub { color: #9a9aa5; margin: 8px 0 32px; max-width: 40em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+    a.card {
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+      background: #1b1b20;
+      border: 1px solid #2c2c33;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    a.card:hover { transform: translateY(-3px); border-color: #55555f; }
+    a.card:focus-visible { outline: 3px solid #7aa2ff; outline-offset: 3px; }
+    .preview { height: 120px; display: grid; place-items: center; font-weight: 900; font-size: 1.4rem; letter-spacing: 0.02em; }
+    .body { padding: 16px 18px 18px; }
+    .body h2 { margin: 0; font-size: 1.1rem; }
+    .body h2 small { color: #9a9aa5; font-weight: 500; font-size: 0.8rem; margin-left: 6px; }
+    .body p { margin: 6px 0 12px; color: #a8a8b3; font-size: 0.95rem; }
+    .swatches { display: flex; gap: 6px; }
+    .swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid #ffffff22; }
+
+    .p1 { background: radial-gradient(400px 160px at 70% 0%, #2f2870, #15122e); color: #ffd35c; font-family: ui-rounded, "Nunito", sans-serif; }
+    .p2 { background: #05040d repeating-linear-gradient(0deg, #0000 0 2px, #0006 2px 4px); color: #ffe600; font-family: "Courier New", monospace; text-shadow: 3px 3px 0 #ff2bd6, 6px 6px 0 #00f0ff; }
+    .p3 { background: #fbfbfa; color: #121212; font-weight: 700; letter-spacing: -0.04em; }
+    .p3 span { color: #2f5bff; }
+    .p4 { background: radial-gradient(600px 200px at 80% 0%, #3a1f7a, #0a0820); color: #e8c36a; font-family: "Palatino Linotype", Georgia, serif; font-weight: 600; font-style: italic; }
+    .p5 { background: radial-gradient(#00000018 2px, transparent 2.5px) 0 0 / 18px 18px, #ffd23f; color: #ff5ca8; -webkit-text-stroke: 1.5px #1a1423; text-shadow: 3px 3px 0 #1a1423; font-family: ui-rounded, "Arial Rounded MT Bold", sans-serif; }
+    .p6 { background: repeating-radial-gradient(circle at 50% 50%, transparent 0 18px, #33ff9922 18px 19px), #021009; color: #33ff99; font-family: Consolas, monospace; text-shadow: 0 0 10px #33ff9988; }
+
+    .p7 { background: radial-gradient(#0000000d 1px, transparent 1.2px) 0 0 / 4px 4px, #f3eee2; color: #1b1b1b; font-family: "Old English Text MT", "Times New Roman", serif; font-weight: 400; font-size: 1.7rem; border-bottom: 3px double #1b1b1b; }
+    .p8 { background: linear-gradient(180deg, #12002b, #2a0659); color: #fff; font-style: italic; text-shadow: 0 2px 0 #ff4fd8, 0 0 16px #ff4fd8; position: relative; overflow: hidden; }
+    .p8::before { content: ""; position: absolute; width: 110px; height: 110px; border-radius: 50%; left: 50%; top: 55%; transform: translateX(-50%); background: linear-gradient(#ffe45e, #ff4fd8); opacity: 0.55; }
+    .p8 span { position: relative; }
+    .p9 { background: #fff; color: #000; font-family: "Arial Black", Arial, sans-serif; letter-spacing: -0.03em; font-size: 1.6rem; border-bottom: 4px solid #000; }
+    .p9 mark { background: #ffeb00; }
+    .p10 { background: repeating-linear-gradient(180deg, transparent 0 19px, #9cc2ff88 19px 20px), #fdfcf7; color: #1f4fd1; font-family: "Segoe Print", "Comic Sans MS", cursive; font-weight: 700; }
+    .p11 { background: radial-gradient(120px 90px at 25% 30%, #3be8d1aa, transparent), radial-gradient(140px 100px at 75% 70%, #ff5cc8aa, transparent), radial-gradient(120px 90px at 70% 20%, #8a5cffaa, transparent), #080b1a; color: #fff; font-weight: 700; letter-spacing: -0.03em; }
+    .p12 { background: radial-gradient(ellipse, #f1e2b8 40%, #c9a76a), #e8d5a3; color: #3b2a1a; font-family: "Book Antiqua", Palatino, Georgia, serif; font-style: italic; }
+    .p12 b { color: #a4161a; font-style: normal; margin-right: 8px; }
+
+    .note { margin-top: 32px; color: #9a9aa5; font-size: 0.9rem; }
+    .note code { background: #1b1b20; border: 1px solid #2c2c33; border-radius: 6px; padding: 1px 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Landing page versions</h1>
+    <p class="sub">Twelve takes on the Psychic Plane landing page. Each one is fully clickable: the demo board works, and so do the Create / Join pop-ups. Open a few, try them on your phone too, and vote for a favourite.</p>
+
+    <div class="grid">
+      <a class="card" href="../landing.html">
+        <div class="preview p1">Mind Meter</div>
+        <div class="body">
+          <h2>1. Original <small>landing.html</small></h2>
+          <p>The first version: dark purple party game, friendly and rounded.</p>
+          <div class="swatches"><i style="background:#15122e"></i><i style="background:#ffd35c"></i><i style="background:#3fd8c7"></i><i style="background:#ff7b8c"></i></div>
+        </div>
+      </a>
+      <a class="card" href="arcade.html">
+        <div class="preview p2">PSYCHIC PLANE</div>
+        <div class="body">
+          <h2>2. Retro arcade <small>arcade.html</small></h2>
+          <p>80s cabinet: neon, CRT scanlines, "INSERT COIN", levels and power-ups.</p>
+          <div class="swatches"><i style="background:#05040d"></i><i style="background:#ffe600"></i><i style="background:#ff2bd6"></i><i style="background:#00f0ff"></i><i style="background:#39ff14"></i></div>
+        </div>
+      </a>
+      <a class="card" href="minimal.html">
+        <div class="preview p3"><div>Find the <span>dot.</span></div></div>
+        <div class="body">
+          <h2>3. Clean &amp; minimal <small>minimal.html</small></h2>
+          <p>Light, modern and calm. Lots of white space and one blue accent.</p>
+          <div class="swatches"><i style="background:#fbfbfa"></i><i style="background:#121212"></i><i style="background:#2f5bff"></i></div>
+        </div>
+      </a>
+      <a class="card" href="mystic.html">
+        <div class="preview p4">Can you sense it?</div>
+        <div class="body">
+          <h2>4. Mystic <small>mystic.html</small></h2>
+          <p>Fortune-teller night sky: gold, stars, a glowing crystal board and tarot-card steps.</p>
+          <div class="swatches"><i style="background:#0a0820"></i><i style="background:#e8c36a"></i><i style="background:#8f6bff"></i><i style="background:#f3ead6"></i></div>
+        </div>
+      </a>
+      <a class="card" href="cartoon.html">
+        <div class="preview p5">Thinking!</div>
+        <div class="body">
+          <h2>5. Playful cartoon <small>cartoon.html</small></h2>
+          <p>Board-game box: thick outlines, sticker badges, candy colours, bouncy motion.</p>
+          <div class="swatches"><i style="background:#ffd23f"></i><i style="background:#ff5ca8"></i><i style="background:#3ec1ff"></i><i style="background:#5fe08a"></i><i style="background:#1a1423"></i></div>
+        </div>
+      </a>
+      <a class="card" href="sonar.html">
+        <div class="preview p6">PING_</div>
+        <div class="body">
+          <h2>6. Sonar <small>sonar.html</small></h2>
+          <p>Submarine radar: a rotating sweep, live bearing readouts and a sonar ping when the target is revealed.</p>
+          <div class="swatches"><i style="background:#020f0b"></i><i style="background:#33ff99"></i><i style="background:#ffb000"></i><i style="background:#c9ffe4"></i></div>
+        </div>
+      </a>
+      <a class="card" href="newspaper.html">
+        <div class="preview p7">The Psychic Plane</div>
+        <div class="body">
+          <h2>7. Newspaper <small>newspaper.html</small></h2>
+          <p>Vintage front page: "Local friends caught reading minds", a cut-out puzzle and classified ads.</p>
+          <div class="swatches"><i style="background:#f3eee2"></i><i style="background:#1b1b1b"></i><i style="background:#b3261e"></i></div>
+        </div>
+      </a>
+      <a class="card" href="synthwave.html">
+        <div class="preview p8"><span>PSYCHIC PLANE</span></div>
+        <div class="body">
+          <h2>8. Synthwave <small>synthwave.html</small></h2>
+          <p>80s sunset: a striped sun, chrome title and a neon grid floor rolling toward you.</p>
+          <div class="swatches"><i style="background:#12002b"></i><i style="background:#ff4fd8"></i><i style="background:#2de2e6"></i><i style="background:#ffe45e"></i><i style="background:#ff9e3d"></i></div>
+        </div>
+      </a>
+      <a class="card" href="brutalist.html">
+        <div class="preview p9"><div>READ MINDS. <mark>DROP</mark></div></div>
+        <div class="body">
+          <h2>9. Brutalist <small>brutalist.html</small></h2>
+          <p>Raw and loud: a grid of black boxes, giant type, yellow highlights and a scrolling ticker.</p>
+          <div class="swatches"><i style="background:#fff"></i><i style="background:#000"></i><i style="background:#ffeb00"></i><i style="background:#ff3b00"></i></div>
+        </div>
+      </a>
+      <a class="card" href="notebook.html">
+        <div class="preview p10">guess what they're thinking?</div>
+        <div class="body">
+          <h2>10. Sketchbook <small>notebook.html</small></h2>
+          <p>Lined notebook paper, handwriting, wobbly hand-drawn boxes, sticky notes and tape.</p>
+          <div class="swatches"><i style="background:#fdfcf7"></i><i style="background:#1f4fd1"></i><i style="background:#e0453a"></i><i style="background:#fff27a"></i></div>
+        </div>
+      </a>
+      <a class="card" href="glass.html">
+        <div class="preview p11">Tune into your friends</div>
+        <div class="body">
+          <h2>11. Aurora glass <small>glass.html</small></h2>
+          <p>Modern and dreamy: frosted-glass panels floating over slowly drifting colour light.</p>
+          <div class="swatches"><i style="background:#080b1a"></i><i style="background:#5ef2e0"></i><i style="background:#a98bff"></i><i style="background:#ff7ad9"></i></div>
+        </div>
+      </a>
+      <a class="card" href="treasure.html">
+        <div class="preview p12"><div><b>X</b>marks the spot</div></div>
+        <div class="body">
+          <h2>12. Treasure map <small>treasure.html</small></h2>
+          <p>Parchment and pirates: a swaying compass, a captain's riddle, and digging for the hidden gold.</p>
+          <div class="swatches"><i style="background:#e8d5a3"></i><i style="background:#3b2a1a"></i><i style="background:#a4161a"></i><i style="background:#4f7c82"></i></div>
+        </div>
+      </a>
+    </div>
+
+    <p class="note">The versions share their behaviour (<code>common.js</code>) and board styles (<code>board.css</code>, <code>base.css</code>). Each <code>.html</code> file holds only its own look and wording, so restyling one never breaks the others.</p>
+  </div>
+</body>
+</html>

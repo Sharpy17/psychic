@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Cartoon</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Playful cartoon: board-game box feel, thick ink outlines, hard shadows, candy colours. */
+    :root {
+      --ink: #1a1423;
+      --bg: #ffd23f;
+      --panel: #fff8e7;
+      --line: var(--ink);
+      --text: var(--ink);
+      --muted: #5b4d63;
+      --pink: #ff5ca8;
+      --blue: #3ec1ff;
+      --green: #5fe08a;
+      --orange: #ff8a3d;
+      --accent: var(--pink);
+      --radius: 22px;
+      --backdrop: #1a142399;
+      --zone-2: #3ec1ff;
+      --zone-3: #5fe08a;
+      --zone-4: #ff5ca8;
+      --face: #fff8e7;
+      --needle: #ff5ca8;
+      --marker-stroke: #1a1423;
+      --q-tl: #ff5ca8; --q-tr: #ff8a3d; --q-bl: #3ec1ff; --q-br: #5fe08a;
+      --q-opacity: 0.28;
+      --axis-line: #1a1423;
+      --ring-text: #1a1423;
+      --miss: #1a1423;
+      --board-shadow: 0 0 0 transparent;
+      --lbl-radius: 12px;
+      --lbl-top: var(--ink); --lbl-top-bg: #ff5ca8;
+      --lbl-bottom: var(--ink); --lbl-bottom-bg: #ff8a3d;
+      --lbl-left: var(--ink); --lbl-left-bg: #3ec1ff;
+      --lbl-right: var(--ink); --lbl-right-bg: #5fe08a;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background: radial-gradient(#00000014 2px, transparent 2.5px) 0 0 / 26px 26px, var(--bg);
+      font: 600 17px/1.5 ui-rounded, "Nunito", "Arial Rounded MT Bold", "Segoe UI", system-ui, sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1, h2, h3 { font-weight: 900; }
+    .ink { border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+
+    .btn {
+      font-weight: 900;
+      color: var(--ink);
+      background: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 16px;
+      padding: 11px 20px;
+      box-shadow: 4px 4px 0 var(--ink);
+      transition: transform 0.12s cubic-bezier(0.3, 2, 0.5, 1), box-shadow 0.08s;
+    }
+    .btn:hover { transform: translate(-1px, -2px) rotate(-1.5deg); box-shadow: 5px 6px 0 var(--ink); }
+    .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+    .btn.primary { background: var(--pink); color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+    .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+    .btn.ghost:hover { transform: rotate(-6deg) scale(1.1); box-shadow: none; }
+    .btn.big { padding: 15px 26px; font-size: 1.15rem; }
+
+    nav.top { display: flex; align-items: center; gap: 14px; padding-block: 16px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.35rem; text-decoration: none; color: var(--ink); }
+    .logo .blob { width: 40px; height: 40px; border-radius: 12px; background: var(--blue); border: 3px solid var(--ink); display: grid; place-items: center; transform: rotate(-8deg); font-size: 1.3rem; }
+    .nav-links { display: flex; gap: 4px; margin-left: auto; }
+    .nav-links a { color: var(--ink); text-decoration: none; font-weight: 800; padding: 8px 12px; border-radius: 12px; }
+    .nav-links a:hover { background: #fff8; }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding-block: 40px 72px; }
+    .stickers { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    .sticker { background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 4px 14px; font-weight: 900; font-size: 0.85rem; box-shadow: 3px 3px 0 var(--ink); }
+    .sticker:nth-child(1) { transform: rotate(-4deg); background: var(--green); }
+    .sticker:nth-child(2) { transform: rotate(3deg); background: var(--blue); }
+    .sticker:nth-child(3) { transform: rotate(-2deg); background: var(--orange); }
+    .hero h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: 1; letter-spacing: -0.02em; }
+    .hero h1 .pop { display: inline-block; background: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 0 12px; box-shadow: 5px 5px 0 var(--ink); transform: rotate(-2deg); color: var(--pink); }
+    .lead { margin-top: 22px; font-size: 1.15rem; color: var(--muted); max-width: 28em; }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+
+    .gamebox { background: var(--panel); border-radius: 28px; padding: 20px; transform: rotate(1.5deg); position: relative; }
+    .gamebox .badge { position: absolute; top: -22px; right: -12px; width: 82px; height: 82px; border-radius: 50%; background: var(--green); border: 3px solid var(--ink); display: grid; place-items: center; text-align: center; font-weight: 900; font-size: 0.85rem; line-height: 1.1; transform: rotate(12deg); box-shadow: 3px 3px 0 var(--ink); animation: wobble 2.6s ease-in-out infinite; }
+    @keyframes wobble { 50% { transform: rotate(-6deg) scale(1.06); } }
+    .demo-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .bubble { position: relative; flex: 1; background: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 8px 14px; }
+    .bubble::after { content: ""; position: absolute; left: -12px; top: 16px; border: 8px solid transparent; border-right-color: var(--ink); border-left: 0; }
+    .bubble small { color: var(--muted); font-weight: 800; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--orange); border: 3px solid var(--ink); display: grid; place-items: center; font-size: 1.4rem; flex: none; }
+    .demo-clue { font-size: 1.25rem; font-weight: 900; }
+    .axis-label { border: 3px solid var(--ink); font-weight: 900; }
+    .board .board-face { stroke: var(--ink); stroke-width: 3; }
+    .board-slot { border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
+    .axis-line { stroke-width: 0.8; stroke-dasharray: none; opacity: 0.5; }
+    .ring { stroke: var(--ink); stroke-width: 0.8; }
+    .rings.show { animation: boing 0.6s cubic-bezier(0.3, 2.2, 0.5, 1); }
+    @keyframes boing { from { transform: scale(0.2); } }
+    .hint { font-size: 0.9rem; text-align: center; color: var(--muted); margin-top: 10px; }
+    .demo-foot { display: flex; gap: 12px; margin-top: 12px; }
+    .demo-foot .btn { flex: 1; }
+    .demo-result b { -webkit-text-stroke: 1px var(--ink); font-size: 1.6rem; }
+
+    section { padding-block: 56px; }
+    .sec-head { text-align: center; margin-bottom: 36px; }
+    .sec-head h2 { display: inline-block; font-size: clamp(1.8rem, 4vw, 2.6rem); background: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 4px 22px; box-shadow: 5px 5px 0 var(--ink); transform: rotate(-1.5deg); }
+    .sec-head p { margin-top: 18px; color: var(--muted); }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .step { background: var(--panel); border-radius: 22px; padding: 24px; transition: transform 0.2s cubic-bezier(0.3, 2, 0.5, 1); }
+    .step:nth-child(1) { transform: rotate(-1.5deg); }
+    .step:nth-child(2) { transform: rotate(1deg); }
+    .step:nth-child(3) { transform: rotate(-0.5deg); }
+    .step:hover { transform: rotate(0) scale(1.04); }
+    .step .n { width: 46px; height: 46px; border-radius: 14px; border: 3px solid var(--ink); display: grid; place-items: center; font-weight: 900; font-size: 1.3rem; margin-bottom: 12px; }
+    .step:nth-child(1) .n { background: var(--pink); }
+    .step:nth-child(2) .n { background: var(--blue); }
+    .step:nth-child(3) .n { background: var(--green); }
+    .step h3 { font-size: 1.2rem; margin-bottom: 6px; }
+    .step p { color: var(--muted); }
+
+    .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .feature { border-radius: 22px; padding: 22px; text-align: center; }
+    .feature:nth-child(1) { background: var(--pink); }
+    .feature:nth-child(2) { background: var(--blue); }
+    .feature:nth-child(3) { background: var(--green); }
+    .feature:nth-child(4) { background: var(--orange); }
+    .feature .ico { font-size: 2.4rem; }
+    .feature h3 { margin: 8px 0 4px; font-size: 1.1rem; }
+    .feature p { font-size: 0.95rem; }
+
+    .cta { text-align: center; background: var(--blue); border-radius: 30px; padding: 56px 24px; margin-block: 32px 64px; }
+    .cta h2 { font-size: clamp(2rem, 5vw, 3.2rem); color: #fff; text-shadow: 3px 3px 0 var(--ink); -webkit-text-stroke: 1.5px var(--ink); }
+    .cta p { margin: 10px 0 24px; font-weight: 800; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 24px 40px; border-top: 3px dashed var(--ink); font-weight: 800; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { text-decoration: underline wavy; }
+
+    .modal { border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); }
+    input { border: 3px solid var(--ink); background: #fff; }
+    .room-code { color: var(--pink); -webkit-text-stroke: 1.5px var(--ink); }
+    .toast { border: 3px solid var(--ink); background: #fff; color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 20px; }
+      .gamebox { transform: none; }
+      .features { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .nav-links { display: none; }
+      .nav-actions { margin-left: auto; }
+      .nav-actions .hide-sm { display: none; }
+      .steps, .features { grid-template-columns: 1fr; }
+      .gamebox .badge { width: 66px; height: 66px; font-size: 0.75rem; right: -4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top"><span class="blob" aria-hidden="true">🎯</span>Psychic Plane</a>
+      <div class="nav-links">
+        <a href="#how">How to play</a>
+        <a href="#features">Why it rocks</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Join</button>
+        <button class="btn primary" data-action="create">Play!</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <div class="stickers"><span class="sticker">FREE!</span><span class="sticker">No downloads</span><span class="sticker">3–10 players</span></div>
+          <h1>Guess what your friends are <span class="pop">thinking!</span></h1>
+          <p class="lead">One friend gets a secret spot on the board and gives one silly clue. Everyone else drops a dot. Closest dot wins. Chaos guaranteed.</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Make a room 🎉</button>
+            <button class="btn big" data-action="join">I have a code</button>
+          </div>
+        </div>
+
+        <div class="gamebox ink" aria-label="Try the board">
+          <div class="badge">TRY<br>ME!</div>
+          <div class="demo-head">
+            <div class="avatar" aria-hidden="true">🦊</div>
+            <div class="bubble">
+              <small>Ari says…</small>
+              <div class="demo-clue" id="demo-clue"></div>
+            </div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Poke the board or drag the dot!</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Show me! 👀</button>
+            <button class="btn" data-action="shuffle">New card</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <div class="sec-head">
+          <h2>How to play</h2>
+          <p>Seriously, it takes 30 seconds.</p>
+        </div>
+        <div class="steps">
+          <div class="step ink"><div class="n">1</div><h3>Peek!</h3><p>The psychic secretly sees where the target is, on a board like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="step ink"><div class="n">2</div><h3>Clue!</h3><p>They say ONE thing that fits that spot. "A pug in a hot dog costume" is cute AND funny, right?</p></div>
+          <div class="step ink"><div class="n">3</div><h3>Drop!</h3><p>Everyone drops a dot in secret. Then the big reveal! Bullseye = 4 points.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="sec-head"><h2>Why it rocks</h2></div>
+        <div class="features">
+          <div class="feature ink"><div class="ico">⚡</div><h3>Everyone vs everyone</h3><p>No teams, no carrying. Just you and your brain.</p></div>
+          <div class="feature ink"><div class="ico">📱</div><h3>Phone-friendly</h3><p>Big buttons. Thumb approved.</p></div>
+          <div class="feature ink"><div class="ico">🃏</div><h3>Endless cards</h3><p>Mix any two axes, or make your own.</p></div>
+          <div class="feature ink"><div class="ico">🔗</div><h3>4-letter codes</h3><p>Share it, and friends hop in.</p></div>
+        </div>
+      </section>
+
+      <div class="cta ink">
+        <h2>Grab your crew!</h2>
+        <p>Make a room, share the code, and let the arguing begin.</p>
+        <button class="btn primary big" data-action="create">Make a room 🎉</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 Psychic Plane · made with ❤️ by students</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'triangle',
+      chime: [523, 659, 784, 1047],
+      revealLabel: 'Show me! 👀',
+      againLabel: 'Again!',
+      results: { 4: 'BULLSEYE!! 🎯 Mind = read.', 3: 'Sooo close! 🔥', 2: 'Not bad! 👍', 0: 'Whoops! 🙈 Way off.' },
+      lobbyMsg: 'The lobby is still being built 🔨',
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

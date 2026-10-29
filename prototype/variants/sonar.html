@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychic Plane: Sonar</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* Sonar: submarine console, phosphor green, rotating sweep, the target is a hidden "contact". */
+    :root {
+      --bg: #020f0b;
+      --panel: #04190f;
+      --line: #0f3d29;
+      --text: #c9ffe4;
+      --muted: #5fa585;
+      --green: #33ff99;
+      --amber: #ffb000;
+      --accent: var(--green);
+      --radius: 10px;
+      --backdrop: #010805cc;
+      --zone-2: #3d2a00;
+      --zone-3: #8a5f00;
+      --zone-4: #ffb000;
+      --face: transparent;
+      --needle: #33ff99;
+      --marker-stroke: #020f0b;
+      --q-opacity: 0;
+      --axis-line: #33ff9955;
+      --miss: #ffb000;
+      --board-shadow: 0 0 0 transparent;
+      --lbl-radius: 4px;
+      --lbl-top: var(--green); --lbl-top-bg: #33ff9914;
+      --lbl-bottom: var(--green); --lbl-bottom-bg: #33ff9914;
+      --lbl-left: var(--green); --lbl-left-bg: #33ff9914;
+      --lbl-right: var(--green); --lbl-right-bg: #33ff9914;
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      padding: 0 16px;
+      color: var(--text);
+      background:
+        radial-gradient(900px 500px at 75% 0%, #0b3d26 0%, transparent 70%),
+        repeating-linear-gradient(0deg, #33ff9906 0 1px, transparent 1px 40px),
+        repeating-linear-gradient(90deg, #33ff9906 0 1px, transparent 1px 40px),
+        var(--bg);
+      background-attachment: fixed;
+      font: 15px/1.6 Consolas, "Cascadia Mono", ui-monospace, "SF Mono", monospace;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; }
+    .glow { text-shadow: 0 0 10px #33ff9988; }
+    .tag { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; }
+
+    .btn {
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      color: var(--green);
+      background: #33ff990a;
+      border: 1px solid #33ff9966;
+      border-radius: 6px;
+      padding: 12px 18px;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { background: #33ff991f; box-shadow: 0 0 16px #33ff9944; }
+    .btn.primary { background: var(--green); color: #021a10; border-color: var(--green); }
+    .btn.primary:hover { box-shadow: 0 0 24px #33ff9988; }
+    .btn.ghost { background: transparent; border-color: transparent; }
+    .btn.big { padding: 15px 24px; font-size: 0.95rem; }
+
+    nav.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px; padding-block: 14px; background: linear-gradient(var(--bg) 75%, transparent); }
+    .logo { display: flex; align-items: center; gap: 10px; color: var(--green); text-decoration: none; font-weight: 700; letter-spacing: 0.12em; }
+    .logo .radar { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--green); position: relative; overflow: hidden; }
+    .logo .radar::after { content: ""; position: absolute; inset: 0; background: conic-gradient(transparent 270deg, #33ff99cc); animation: spin 2.5s linear infinite; }
+    .status { margin-left: auto; display: flex; gap: 18px; color: var(--muted); font-size: 0.8rem; }
+    .status b { color: var(--green); font-weight: 400; }
+    .status .live::before { content: "●"; color: var(--green); margin-right: 6px; animation: pulse 1.6s infinite; }
+    @keyframes pulse { 50% { opacity: 0.2; } }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .hero { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 48px; align-items: center; padding-block: 48px 72px; }
+    .hero > * { min-width: 0; }
+    .hero h1 { font-size: clamp(2.3rem, 5.4vw, 4rem); line-height: 1.05; letter-spacing: -0.02em; margin-top: 14px; font-weight: 700; }
+    .hero h1 em { font-style: normal; color: var(--green); }
+    .lead { margin-top: 18px; color: var(--muted); font-size: 1.05rem; max-width: 30em; }
+    .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+
+    .log { margin-top: 28px; border: 1px solid var(--line); border-radius: 8px; background: #010a07; padding: 12px 14px; height: 132px; overflow: hidden; font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; justify-content: flex-end; }
+    .log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: type 0.3s ease-out; }
+    .log div b { color: var(--green); font-weight: 400; }
+    .log div i { color: var(--amber); font-style: normal; }
+    @keyframes type { from { opacity: 0; transform: translateY(6px); } }
+
+    /* ---------- The console ---------- */
+    .console { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 0 0 1px #33ff9911 inset, 0 30px 80px #000a; }
+    .console-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .demo-clue { font-size: 1.3rem; color: var(--text); }
+    .demo-clue::before { content: "» "; color: var(--green); }
+    .readout { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 16px; font-size: 0.8rem; text-align: right; }
+    .readout span { color: var(--muted); }
+    .readout b { color: var(--green); font-weight: 400; font-variant-numeric: tabular-nums; }
+    .axis-label { font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; }
+
+    .scope {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid #33ff9955;
+      background:
+        repeating-radial-gradient(circle at 50% 50%, transparent 0 calc(10% - 1px), #33ff9922 calc(10% - 1px) 10%),
+        repeating-linear-gradient(0deg, transparent 0 calc(10% - 1px), #33ff990d calc(10% - 1px) 10%),
+        repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #33ff990d calc(10% - 1px) 10%),
+        radial-gradient(circle, #06301e, #021009);
+      box-shadow: 0 0 30px #33ff9922, inset 0 0 40px #000c;
+    }
+    .sweep {
+      position: absolute;
+      inset: -21%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg 290deg, #33ff9912 320deg, #33ff9966 360deg);
+      animation: spin 4s linear infinite;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scope.locked .sweep { animation-duration: 1.2s; }
+    .ping {
+      position: absolute;
+      width: 12%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid var(--amber);
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .ping.go { animation: ping 1.2s ease-out 2; }
+    @keyframes ping { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(3.2); } }
+    .rings text { fill: #fff2c9; paint-order: stroke; stroke: #021a10; stroke-width: 0.6px; }
+    .marker-dot { filter: drop-shadow(0 0 2px #33ff99); }
+
+    .hint { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 10px; letter-spacing: 0.08em; }
+    .demo-foot { display: flex; gap: 10px; margin-top: 12px; }
+    .demo-foot .btn { flex: 1; }
+    .demo-result { font-size: 0.9rem; letter-spacing: 0.04em; }
+
+    section { padding-block: 64px; }
+    .sec-head { margin-bottom: 32px; }
+    .sec-head h2 { font-size: clamp(1.6rem, 3.6vw, 2.4rem); margin-top: 6px; }
+
+    .procedure { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .proc { background: var(--panel); padding: 26px; }
+    .proc .n { color: var(--green); font-size: 0.8rem; letter-spacing: 0.2em; }
+    .proc h3 { font-size: 1.2rem; margin: 10px 0 8px; color: var(--text); }
+    .proc p { color: var(--muted); }
+
+    .systems { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .sys { display: flex; gap: 16px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 18px; background: #04190f99; }
+    .sys .light { margin-top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex: none; }
+    .sys h3 { font-size: 1rem; }
+    .sys h3 small { color: var(--green); font-weight: 400; margin-left: 8px; font-size: 0.75rem; letter-spacing: 0.15em; }
+    .sys p { color: var(--muted); margin-top: 4px; }
+
+    .cta { text-align: center; padding: 56px 24px; margin-block: 24px 64px; border: 1px solid #33ff9944; border-radius: 16px; background: radial-gradient(600px 240px at 50% 100%, #0b3d26, transparent), var(--panel); }
+    .cta h2 { font-size: clamp(1.8rem, 4.4vw, 3rem); }
+    .cta p { color: var(--muted); margin: 10px 0 24px; }
+
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 24px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: inherit; text-decoration: none; }
+    footer a:hover { color: var(--green); }
+
+    .modal { border-color: #33ff9955; box-shadow: 0 0 50px #33ff9922; }
+    .modal h2 { color: var(--green); }
+    .toast { background: var(--green); color: #021a10; }
+
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 24px; }
+      .status { display: none; }
+      .nav-actions { margin-left: auto; }
+    }
+    @media (max-width: 680px) {
+      .nav-actions .hide-sm { display: none; }
+      .procedure, .systems { grid-template-columns: 1fr; }
+      .readout { grid-template-columns: repeat(3, auto); text-align: left; }
+      .console { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="top">
+      <a class="logo" href="#top"><span class="radar" aria-hidden="true"></span>PSYCHIC PLANE</a>
+      <div class="status"><span class="live">SONAR <b>ACTIVE</b></span><span>DEPTH <b>120M</b></span><span>CREW <b>3–10</b></span></div>
+      <div class="nav-actions">
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn hide-sm" data-action="join">Join</button>
+        <button class="btn primary" data-action="create">Dive in</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <div class="hero">
+        <div>
+          <div class="tag glow">// A party game for 3–10 operators</div>
+          <h1>Ping your friends' <em class="glow">minds.</em></h1>
+          <p class="lead">Somewhere on the grid is a hidden contact. The psychic sends out one signal, a single clue. Your crew has to triangulate where it is.</p>
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Launch a room</button>
+            <button class="btn big" data-action="join">Join with code</button>
+          </div>
+          <div class="log" id="log" aria-hidden="true"></div>
+        </div>
+
+        <div class="console" aria-label="Try the board">
+          <div class="console-head">
+            <div>
+              <div class="tag">Incoming signal · psychic ARI</div>
+              <div class="demo-clue" id="demo-clue"></div>
+            </div>
+            <div class="readout">
+              <span>X</span><span>Y</span><span>BRG</span>
+              <b id="ro-x">050</b><b id="ro-y">050</b><b id="ro-b">000°</b>
+            </div>
+          </div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot scope" id="scope">
+              <div id="board-slot"></div>
+              <div class="sweep"></div>
+              <div class="ping" id="ping"></div>
+            </div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">TAP OR DRAG TO PLACE YOUR FIX · ARROWS FINE-TUNE · ENTER TO PING</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Ping</button>
+            <button class="btn" data-action="shuffle">New signal</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <div class="sec-head">
+          <div class="tag glow">// Operating procedure</div>
+          <h2>Three steps to a direct hit</h2>
+        </div>
+        <div class="procedure">
+          <div class="proc"><div class="n">01 / SIGNAL</div><h3>The psychic gets a fix</h3><p>Only they can see where the contact sits on a grid with two axes, like Funny ↕ Unfunny and Ugly ↔ Cute.</p></div>
+          <div class="proc"><div class="n">02 / TRANSMIT</div><h3>One clue goes out</h3><p>A single word or phrase that belongs at those coordinates. No follow-up transmissions.</p></div>
+          <div class="proc"><div class="n">03 / TRIANGULATE</div><h3>Everyone places a fix</h3><p>Each operator drops a dot in secret. Ping! The contact is revealed. Direct hit = 4 points.</p></div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="sec-head">
+          <div class="tag glow">// Systems check</div>
+          <h2>All systems nominal</h2>
+        </div>
+        <div class="systems">
+          <div class="sys"><span class="light"></span><div><h3>Solo operators<small>ONLINE</small></h3><p>No teams. Every player tracks the contact on their own.</p></div></div>
+          <div class="sys"><span class="light"></span><div><h3>Handheld console<small>ONLINE</small></h3><p>Built for phones. No app, no account.</p></div></div>
+          <div class="sys"><span class="light"></span><div><h3>Infinite frequencies<small>ONLINE</small></h3><p>Mix any two axes, or broadcast your own.</p></div></div>
+          <div class="sys"><span class="light"></span><div><h3>4-letter channel<small>ONLINE</small></h3><p>Share the room code, and your crew tunes in.</p></div></div>
+        </div>
+      </section>
+
+      <div class="cta">
+        <div class="tag glow">// Awaiting orders</div>
+        <h2>All hands on deck.</h2>
+        <p>Open a room, send the channel code, and start the hunt.</p>
+        <button class="btn primary big" data-action="create">Launch a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 PSYCHIC PLANE · STUDENT VESSEL</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const pad = n => String(Math.round(n)).padStart(3, '0');
+    const time = () => new Date().toTimeString().slice(0, 8);
+    function log(html) {
+      const el = document.getElementById('log');
+      const row = document.createElement('div');
+      row.innerHTML = `[${time()}] ${html}`;
+      el.appendChild(row);
+      while (el.children.length > 6) el.firstChild.remove();
+    }
+    const safe = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+    window.LANDING = {
+      wave: 'sine',
+      chime: [880, 1175],
+      revealLabel: 'Ping',
+      againLabel: 'Next contact',
+      results: { 4: 'DIRECT HIT. Contact locked.', 3: 'Close contact. Almost on top of it.', 2: 'Contact in range.', 0: 'No contact. Signal lost.' },
+      lobbyMsg: 'Docking bay (lobby) under construction',
+      onMove(pos) {
+        // Bearing from the centre of the scope, 0° = up, clockwise like a compass.
+        const deg = (Math.atan2(pos.x - 50, 50 - pos.y) * 180 / Math.PI + 360) % 360;
+        document.getElementById('ro-x').textContent = pad(pos.x);
+        document.getElementById('ro-y').textContent = pad(100 - pos.y);
+        document.getElementById('ro-b').textContent = pad(deg) + '°';
+      },
+      onCard(card) {
+        document.getElementById('scope').classList.remove('locked');
+        log(`SIGNAL RECEIVED: <b>"${safe(card.clue)}"</b> on ${safe(card.left)}/${safe(card.right)} × ${safe(card.top)}/${safe(card.bottom)}`);
+      },
+      onReveal(pts, dist, target) {
+        document.getElementById('scope').classList.add('locked');
+        const ping = document.getElementById('ping');
+        ping.style.left = target.x + '%';
+        ping.style.top = target.y + '%';
+        ping.classList.remove('go');
+        void ping.offsetWidth; // restart the animation
+        ping.classList.add('go');
+        blip(1320, 1.1, 'sine', 0.09); // the classic sonar "ping"
+        log(`CONTACT AT ${pad(target.x)}·${pad(100 - target.y)}, miss distance <i>${dist.toFixed(1)}</i> · +${pts}`);
+      },
+    };
+  </script>
+  <script src="common.js"></script>
+</body>
+</html>

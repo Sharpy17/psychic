@@ -1,0 +1,17 @@
+{
+  "name": "psychic-plane-monorepo",
+  "version": "1.0.0",
+  "description": "Multiplayer 2D Cartesian Spectrum Party Game",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build"
+  },
+  "keywords": ["game", "multiplayer", "party-game", "socket.io", "react", "typescript"]
+}

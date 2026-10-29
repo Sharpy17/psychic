@@ -1,0 +1,38 @@
+{
+  "topics": [
+    { "name": "Video Game Characters", "description": "Protagonists, villains, and NPCs from gaming" },
+    { "name": "Fictional Characters", "description": "From movies, series, books, anime, and lore" },
+    { "name": "Foods & Dishes", "description": "Snacks, full meals, drinks, and ingredients" },
+    { "name": "Everyday Household Objects", "description": "Items found in homes, apartments, or offices" },
+    { "name": "Animals & Creatures", "description": "Living, extinct, or mythical creatures" },
+    { "name": "Superpowers & Magic Spells", "description": "Fictional abilities, spells, and enchantments" },
+    { "name": "Jobs & Professions", "description": "Careers, side gigs, and vocations" },
+    { "name": "Historical Figures", "description": "People from world history" },
+    { "name": "Celebrities & Public Figures", "description": "Modern icons, singers, actors, athletes" },
+    { "name": "Places & Travel Destinations", "description": "Cities, landmarks, natural wonders" },
+    { "name": "Hobbies & Activities", "description": "Pastimes, sports, and creative pursuits" },
+    { "name": "Movies & TV Shows", "description": "Cinema classics, reality TV, and blockbusters" }
+  ],
+  "axisPairs": [
+    { "minLabel": "Ugly", "maxLabel": "Handsome / Cute" },
+    { "minLabel": "Boring", "maxLabel": "Hilarious" },
+    { "minLabel": "Pure Evil", "maxLabel": "Saintly & Pure" },
+    { "minLabel": "Completely Harmless", "maxLabel": "Lethally Powerful" },
+    { "minLabel": "Dirt Cheap / Budget", "maxLabel": "Ultra-Luxurious" },
+    { "minLabel": "Soft & Squishy", "maxLabel": "Rock Solid" },
+    { "minLabel": "Dies First in a Horror Movie", "maxLabel": "Survives the Apocalypse" },
+    { "minLabel": "Wildly Overrated", "maxLabel": "Criminally Underrated" },
+    { "minLabel": "Orderly & Neat", "maxLabel": "Pure Chaos" },
+    { "minLabel": "Repulsive Odor", "maxLabel": "Heavenly Scent" },
+    { "minLabel": "Smooth Brain (Dumb)", "maxLabel": "Galaxy Brain (Genius)" },
+    { "minLabel": "Sweatpants Vibe", "maxLabel": "Black Tie / Formal" },
+    { "minLabel": "Deeply Stressful", "maxLabel": "Pure Comfort / Cozy" },
+    { "minLabel": "Totally Useless", "maxLabel": "Desert Island Essential" },
+    { "minLabel": "Unbearably Cringe", "maxLabel": "Undeniably Cool / Based" },
+    { "minLabel": "Loud & Obnoxious", "maxLabel": "Peaceful & Quiet" },
+    { "minLabel": "Freezing Cold", "maxLabel": "Boiling Hot" },
+    { "minLabel": "Worthless Trash", "maxLabel": "Priceless Treasure" },
+    { "minLabel": "Deeply Bitter", "maxLabel": "Delightfully Sweet" },
+    { "minLabel": "Easy to beat in a fight", "maxLabel": "Impossible to beat in a fight" }
+  ]
+}

@@ -1,48 +1,173 @@
-# Wavelength 2D — Master Obsidian Vault 🎯
+# 🔮 Psychic Plane
 
-Welcome to the central knowledge base and single source of truth for **Wavelength 2D** (working title), a multiplayer web-based party game for 3–10 players.
-
-> [!IMPORTANT]
-> **To All Team Members and AI Agents:**
-> This repository is synchronized via GitHub. Any AI agent (ChatGPT, Claude, Cursor, Copilot, Antigravity) and human working on this project **must read and adhere to the specifications in this vault before writing or altering code**. If architectural decisions change, update the corresponding markdown note in this vault and commit it to Git first.
+> A 2D Cartesian spectrum multiplayer party game.
 
 ---
 
-## 🗺️ Quick Navigation (Map of Content)
+## 🎯 Game Concept
 
-### 1. Core Architecture & Tech
-- [[01 - System Architecture/Tech Stack|Tech Stack & Frameworks]]: React + Tailwind + SVG, Node.js + Socket.io.
-- [[01 - System Architecture/Socket Protocol & Events|Socket Protocol & Events]]: Exact socket event names, request/response payloads, and security boundaries.
-- [[01 - System Architecture/State Machine & Game Loop|State Machine & Game Loop]]: Phase definitions (`LOBBY` ➔ `PSYCHIC_TURN` ➔ `GUESSING` ➔ `REVEAL` ➔ `ROUND_END`).
+In **Psychic Plane**, players test their telepathic wavelength across a 2D coordinate grid:
 
-### 2. Mechanics & Mathematics
-- [[02 - Game Mechanics/Coordinate System & Math|Coordinate System & Math]]: Normalized $[-1, 1]$ coordinate space, screen-to-cartesian mapping, touch handling.
-- [[02 - Game Mechanics/Scoring Formula & Balance|Scoring Formula & Balance]]: Euclidean distance equations, concentric target rings, psychic reward incentives.
-- [[02 - Game Mechanics/Edge Cases & Disconnects|Edge Cases & Disconnects]]: Psychic disconnects, timeouts, minimum player handling.
-
-### 3. Data Schemas & Types
-- [[03 - Data Models & Schemas/Data Models (TypeScript)|Data Models (TypeScript)]]: Unified types for Player, Room, Guess, Round, and GameState.
-- [[03 - Data Models & Schemas/Content Deck Schema|Content Deck Schema]]: Schema for game topics and opposing attribute axes.
-
-### 4. UI & Components
-- [[04 - Modules & UI/2D Coordinate Board Component|2D Coordinate Board Component]]: Interactive SVG unit square specifications, pin placement, bullseye visualization.
-- [[04 - Modules & UI/Screens & Role Views|Screens & Role Views]]: Psychic screen vs. Guesser screen vs. Spectator/Lobby screens.
-
-### 5. Project Management & AI Directives
-- [[05 - Team & Roadmap/Team Ownership & Tasks|Team Ownership & Tasks]]: Division of responsibilities across the 4 team members.
-- [[05 - Team & Roadmap/Sprint Roadmap|Sprint Roadmap]]: Phased development milestones from prototype to playtest.
-- [[06 - AI Guidelines/AI Agent Instructions & Contract|AI Agent Instructions & Contract]]: Prompt directives for AI agents to prevent code drift and schema collisions.
-- [[07 - Content Bank/Starter Topics & Word Pairs|Starter Topics & Word Pairs]]: Initial deck of 30+ curated topics and axes for testing.
-- [[08 - Pitfalls & Open Decisions/Potential Problems & Critical Review|Potential Problems & Critical Review]]: Teardown of design pitfalls, mathematical corner cases, mobile UX friction, and team balance.
+- **Two Spectrum Axes**: 
+  - **X-Axis**: e.g., *Unfunny* (left) $\leftrightarrow$ *Hilarious* (right)
+  - **Y-Axis**: e.g., *Ugly* (bottom) $\leftrightarrow$ *Cute* (top)
+- **The Psychic**: Receives a secret target point $(x, y)$ on the plane and a topic (e.g., *Video Game Characters*). The Psychic gives a single clue that fits those coordinates (e.g., *"Liu Kang"*).
+- **The Guessers**: Must discuss and place their pins on the 2D plane where they think *"Liu Kang"* sits on both spectrums.
+- **The Reveal**: The target point is exposed! Scores are calculated based on Euclidean distance ($d = \sqrt{\Delta x^2 + \Delta y^2}$). A direct hit earns 1,000 points!
 
 ---
 
-## 🎮 Game Summary
-- **Players:** 3 to 10 players.
-- **Roles:** 1 Psychic (rotates each round) and 2–9 Guessers.
-- **Board:** A 2D plane (unit square) bounded between $-1$ and $+1$ along X and Y.
-  - **X-Axis:** Pair of opposing attributes (e.g., *Ugly* $\leftrightarrow$ *Handsome*).
-  - **Y-Axis:** Pair of opposing attributes (e.g., *Boring* $\leftrightarrow$ *Funny*).
-- **The Psychic:** Sees a secret target point $(x_s, y_s)$ visible **only** to them. Submits a clue word or phrase strictly within the designated topic.
-- **The Guessers:** See only the clue and axes; each drops a pin on the plane attempting to hit the secret point.
-- **Scoring:** Points awarded based on proximity. Psychic earns points based on the collective accuracy of the team.
+## 👥 Team Roles & Code Ownership
+
+| Team Member | Responsibility | Primary Directory / Files |
+| :--- | :--- | :--- |
+| **Dosia** *(You)* | **Architecture, Integration & DevOps** | `shared/types.ts`, `server/src/index.ts`, `client/src/components/GameBoard.tsx` |
+| **Isa** | **Game Engine & Rules Logic** | `server/src/game/engine.ts` |
+| **Azim** | **Landing Page & UI Shell** | `client/src/components/LandingPage.tsx`, `client/src/index.css` |
+| **Arthur** | **Database & Spectrum Prompts** | `database/prisma/schema.prisma`, `database/seed-data.json`, `server/src/db/` |
+
+---
+
+## 📁 Project Architecture
+
+```text
+psychic-plane/
+├── shared/
+│   └── types.ts             # 💎 THE CONTRACT: Shared TypeScript types for Socket events, coordinates & game state
+├── server/
+│   ├── src/
+│   │   ├── game/engine.ts   # Isa's pure logic: Euclidean scoring, random target generation
+│   │   ├── db/client.ts     # Arthur's data layer: Fetching prompts, axis pairs, saving match history
+│   │   └── index.ts         # Dosia's Socket.io & Express server
+│   └── package.json
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── LandingPage.tsx # Azim's landing page & room join screen
+│   │   │   ├── Lobby.tsx       # Player waiting room & host controls
+│   │   │   └── GameBoard.tsx   # 2D interactive plane with draggable pins & reveal animation
+│   │   ├── services/socket.ts  # Socket.io client connector
+│   │   ├── App.tsx             # Main view router
+│   │   └── main.tsx
+│   └── package.json
+└── database/
+    ├── prisma/schema.prisma # Arthur's database schema
+    └── seed-data.json       # 15+ starter spectrum pairs & 9 categories
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+Make sure you have **Node.js (v18+)** and **npm** installed on your machine.
+
+### Installation
+
+1. Clone your repo:
+   ```bash
+   git clone https://github.com/Sharpy17/psychic.git
+   cd psychic
+   ```
+
+2. Install server dependencies:
+   ```bash
+   cd server
+   npm install
+   ```
+
+3. Install client dependencies:
+   ```bash
+   cd ../client
+   npm install
+   ```
+
+### Running Locally
+
+Open two terminal windows:
+
+- **Terminal 1 (Backend)**:
+  ```bash
+  cd server
+  npm run dev
+  ```
+  *Server runs at `http://localhost:4000`*
+
+- **Terminal 2 (Frontend)**:
+  ```bash
+  cd client
+  npm run dev
+  ```
+  *Client runs at `http://localhost:3000`*
+
+Open `http://localhost:3000` in multiple browser tabs (or incognito windows) to play against yourself or share via local network IP!
+
+---
+
+## 🌐 Production Deployment
+
+The project is pre-configured with a Render blueprint (`render.yaml`) and Vercel routing (`client/vercel.json`):
+
+### 1. Deploy Server to Render (Free Web Service)
+1. Go to **[dashboard.render.com](https://dashboard.render.com)** $\rightarrow$ click **New +** $\rightarrow$ **Blueprint**.
+2. Connect `Sharpy17/psychic` — Render will automatically detect `render.yaml`!
+3. Click **Apply**.
+4. Once deployed, copy your server URL (e.g. `https://psychic-server-xxxx.onrender.com`).
+
+### 2. Deploy Client to Vercel (Free Static SPA)
+1. Go to **[vercel.com/new](https://vercel.com/new)** $\rightarrow$ Import `Sharpy17/psychic`.
+2. Set **Root Directory** to `client`.
+3. Add Environment Variable:
+   - `VITE_SERVER_URL`: `https://psychic-server-xxxx.onrender.com` (your Render URL)
+4. Click **Deploy**. Done!
+
+---
+
+## 🌿 Git & Team Workflow
+
+### 1. Dosia's Initial Push
+```bash
+git init
+git add .
+git commit -m "feat: initial project scaffold with shared contracts, game engine, and 2D board"
+git branch -M main
+git remote add origin https://github.com/Sharpy17/psychic.git
+git push -u origin main
+```
+
+### 2. How the Team Works (Branching Strategy)
+Nobody commits directly to `main`. Every teammate creates a feature branch:
+
+- **Isa**:
+  ```bash
+  git checkout -b feature/isa-game-scoring
+  # Work inside server/src/game/
+  git commit -m "feat(game): refine distance scoring and round timers"
+  git push origin feature/isa-game-scoring
+  ```
+- **Azim**:
+  ```bash
+  git checkout -b feature/azim-landing-ui
+  # Work inside client/src/components/LandingPage.tsx
+  git commit -m "style(landing): add animations and sound effects"
+  git push origin feature/azim-landing-ui
+  ```
+- **Arthur**:
+  ```bash
+  git checkout -b feature/arthur-database
+  # Work inside database/ and server/src/db/
+  git commit -m "feat(db): setup prisma migration and PostgreSQL connection"
+  git push origin feature/arthur-database
+  ```
+
+### 3. Discord Push Notifications
+Every push to any branch posts a short notice in our Discord (who pushed, the branch, and the commit messages), via `.github/workflows/discord-notify.yml`.
+
+One-time setup (repo admin):
+1. In Discord: **Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL**.
+2. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**, named `DISCORD_WEBHOOK`, with the URL as the value.
+
+Tip: write clear commit messages — they're what the team sees in Discord!
+
+### 4. Pull Requests
+Teammates open a Pull Request on GitHub. **Dosia reviews the PR**, checks that it doesn't break `shared/types.ts`, and merges it into `main`!
