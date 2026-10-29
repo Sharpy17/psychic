@@ -13,11 +13,14 @@ graph TD
     Home --> UI[04 - 2D Board Component]
     Home --> Team[05 - Team & Tasks]
     Home --> AI[06 - AI Instructions]
+    Home --> Pitfalls[08 - Pitfalls & Review]
     
     Sockets <--> Types
     Math --> UI
     Score --> State
     AI -. Guides .-> Team
+    Pitfalls -. Informs .-> State
+    Pitfalls -. Informs .-> UI
 ```
 
 ## System Architecture
@@ -43,3 +46,4 @@ graph TD
 * [[05 - Team & Roadmap/Sprint Roadmap|Milestones & Sprint Plan]]
 * [[06 - AI Guidelines/AI Agent Instructions & Contract|AI Agent Coding Contract (CRITICAL)]]
 * [[07 - Content Bank/Starter Topics & Word Pairs|Starter Deck (Ready-to-use JSON)]]
+* [[08 - Pitfalls & Open Decisions/Potential Problems & Critical Review|Potential Problems & Critical Review]]
