@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Psychic Plane: Case File</title>
+  <meta name="description" content="Psychic Plane: one of you has seen the hidden point. One clue. Can the rest of you find it?">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="board.css">
+  <style>
+    /* ===== Tokens (from STYLE_GUIDE.md) ===== */
+    @property --r { syntax: '<length>'; inherits: false; initial-value: 0px; }
+    :root {
+      --ink: #141112;
+      --char: #2a2627;
+      --smoke: #7d7a78;
+      --fog: #bdb9b4;
+      --paper: #e9e4da;
+      --paper-2: #f3efe6;
+      --red: #b3202a;
+      --red-dark: #7a1a1f;
+      --lamp: 1;
+
+      --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+      --type: "Special Elite", "Courier Prime", "Courier New", monospace;
+      --mono: "Courier Prime", "Courier New", monospace;
+
+      /* variables read by base.css / board.css */
+      --bg: var(--ink);
+      --panel: var(--paper);
+      --line: var(--ink);
+      --text: var(--paper);
+      --muted: var(--fog);
+      --accent: var(--red);
+      --radius: 2px;
+      --backdrop: #0a0809d9;
+
+      --face: #e4ded2;
+      --needle: var(--ink);
+      --marker: var(--ink);
+      --marker-stroke: var(--paper);
+      --q-tl: var(--ink); --q-tr: transparent; --q-bl: transparent; --q-br: var(--ink);
+      --q-opacity: 0.05;
+      --axis-line: #8f8a84;
+      --zone-2: #b2aca3;
+      --zone-3: #5e5a58;
+      --zone-4: var(--red);
+      --miss: var(--red);
+      --board-shadow: 0 18px 30px #000a;
+      --lbl-radius: 0;
+      --lbl-top-bg: var(--paper); --lbl-bottom-bg: var(--paper); --lbl-left-bg: var(--paper); --lbl-right-bg: var(--paper);
+      --lbl-top: var(--ink); --lbl-bottom: var(--ink); --lbl-left: var(--ink); --lbl-right: var(--ink);
+      color-scheme: dark;
+    }
+
+    html { overflow-x: clip; }
+    body {
+      margin: 0;
+      background: var(--ink);
+      color: var(--paper);
+      font: 400 1.125rem/1.55 var(--serif);
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    ::selection { background: var(--red); color: var(--paper); }
+
+    /* ===== Analog surface: grain, scratches ===== */
+    .grain {
+      position: fixed; inset: -100%;
+      z-index: 50; pointer-events: none;
+      background-repeat: repeat;
+      opacity: 0.075;
+      animation: grain 0.5s steps(6) infinite;
+    }
+    @keyframes grain {
+      0% { transform: translate(0, 0); }   17% { transform: translate(-7%, 4%); }
+      33% { transform: translate(5%, -6%); } 50% { transform: translate(-3%, 8%); }
+      67% { transform: translate(8%, 2%); }  83% { transform: translate(-6%, -4%); }
+      100% { transform: translate(2%, 5%); }
+    }
+    .scratch {
+      position: fixed; top: 0; bottom: 0; width: 1px;
+      z-index: 51; pointer-events: none;
+      background: linear-gradient(transparent, #e9e4da55 20%, #e9e4da22 70%, transparent);
+      opacity: 0;
+    }
+    .scratch.on { opacity: 1; }
+    .dust { position: fixed; z-index: 51; pointer-events: none; width: 3px; height: 2px; border-radius: 50%; background: #e9e4da88; opacity: 0; }
+    .dust.on { opacity: 1; }
+
+    /* ===== Buttons ===== */
+    .btn {
+      padding: 13px 22px 12px;
+      border: 1px solid #e9e4da66;
+      border-radius: 2px;
+      background: transparent;
+      color: var(--paper);
+      font: 700 0.85rem/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .btn .ripple { display: none; }
+    .btn::after {
+      content: ""; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 1px;
+      background: var(--red); transform: scaleX(0); transform-origin: left;
+      transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .btn:hover { border-color: var(--paper); }
+    .btn:hover::after { transform: scaleX(1); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--red); border-color: var(--red); color: var(--paper); }
+    .btn.primary::after { background: var(--paper); }
+    .btn.primary:hover { background: #c4252f; border-color: #c4252f; }
+    .btn.ghost { border-color: transparent; padding-inline: 12px; color: var(--fog); }
+    .btn.big { padding: 17px 28px 16px; font-size: 0.95rem; }
+    .btn.big::after { bottom: 9px; }
+
+    /* ===== Nav ===== */
+    nav.top {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 24px;
+      padding: 14px max(16px, 4vw);
+      background: linear-gradient(#141112f2, #141112d9);
+      border-bottom: 1px solid #e9e4da14;
+      backdrop-filter: blur(6px);
+    }
+    .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: italic 500 1.45rem/1 var(--serif); letter-spacing: 0.01em; }
+    .logo svg { width: 26px; height: 26px; animation: spin 9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .nav-links { display: flex; gap: 22px; margin-left: 8px; }
+    .nav-links a { font: 0.78rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; color: var(--fog); padding: 6px 0; background: linear-gradient(var(--red), var(--red)) left bottom / 0 1px no-repeat; transition: background-size 0.22s cubic-bezier(0.2, 0, 0, 1), color 0.2s; }
+    .nav-links a:hover { color: var(--paper); background-size: 100% 1px; }
+    .nav-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .nav-actions .btn { padding: 10px 16px 9px; font-size: 0.75rem; flex-shrink: 0; }
+    .nav-actions .btn::after { bottom: 4px; left: 10px; right: 10px; }
+    .nav-actions .btn.ghost { min-width: 104px; }
+
+    /* ===== Hero ===== */
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      align-items: center;
+      gap: clamp(24px, 4vw, 64px);
+      padding: clamp(32px, 6vh, 72px) max(16px, 4vw) 0;
+      min-height: min(calc(100svh - 64px), 900px);
+    }
+    .hero-text { padding-bottom: 72px; max-width: 640px; }
+    .kicker {
+      display: inline-flex; gap: 14px; align-items: center;
+      font: 0.78rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--fog);
+    }
+    .kicker b { color: var(--red); font-weight: 700; }
+    .kicker::before { content: ""; width: 34px; height: 1px; background: var(--red); }
+    h1 {
+      margin: 22px 0 26px;
+      font: italic 400 clamp(2.9rem, 6.4vw, 5.6rem)/0.98 var(--serif);
+      letter-spacing: -0.015em;
+      color: #d9d3c8;
+      text-wrap: balance;
+    }
+    h1 .red { color: var(--red); }
+    h1 .ch { opacity: 0; }
+    h1 .ch.on { opacity: 1; animation: strike 0.18s steps(2); }
+    @keyframes strike { 0% { color: #fff; } }
+    h1 .cursor { display: inline-block; width: 0.06em; height: 0.8em; background: var(--red); margin-left: 0.04em; vertical-align: -0.04em; animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .lead { font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: #c9c3b8; max-width: 33em; }
+    .lead em { color: var(--paper); }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+    .strips { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 30px; padding: 0; list-style: none; }
+    .strip {
+      background: var(--paper); color: var(--ink);
+      font: 0.95rem/1 var(--type);
+      padding: 6px 10px 5px;
+      clip-path: polygon(0 6%, 4% 0, 97% 4%, 100% 50%, 98% 100%, 3% 94%, 1% 60%);
+      box-shadow: 0 2px 0 #0006;
+    }
+    .strip:nth-child(1) { rotate: -2deg; } .strip:nth-child(2) { rotate: 1.5deg; } .strip:nth-child(3) { rotate: -0.6deg; }
+
+    /* the arch scene */
+    .scene {
+      position: relative;
+      align-self: end;
+      height: min(calc(100svh - 120px), 820px);
+      min-height: 480px;
+      animation: weave 0.6s steps(3) infinite;
+    }
+    @keyframes weave { 0% { translate: 0 0; } 33% { translate: 0.6px -0.4px; } 66% { translate: -0.4px 0.5px; } }
+    .arch {
+      position: absolute; inset: 0 6% 0 14%;
+      border-radius: 999px 999px 0 0;
+      overflow: hidden;
+      background: linear-gradient(#f1ece3 0%, #d8d2c8 38%, #a7a29c 70%, #6f6b69 100%);
+      filter: brightness(var(--lamp));
+      box-shadow: 0 0 0 1px #e9e4da10, 0 0 120px #e9e4da12;
+    }
+    .arch svg.city { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .fog { position: absolute; left: -50%; width: 200%; pointer-events: none; background-repeat: repeat-x; }
+    .fog.f1 { bottom: 26%; height: 30%; background-image: radial-gradient(ellipse 22% 55% at 25% 50%, #e9e4dab0, transparent 70%), radial-gradient(ellipse 18% 45% at 70% 60%, #e9e4da90, transparent 70%); background-size: 50% 100%; animation: drift 90s linear infinite; }
+    .fog.f2 { bottom: 6%; height: 34%; background-image: radial-gradient(ellipse 25% 50% at 40% 55%, #d6d0c6a0, transparent 70%), radial-gradient(ellipse 15% 40% at 85% 40%, #d6d0c680, transparent 70%); background-size: 50% 100%; animation: drift 60s linear infinite reverse; }
+    .fog.f3 { bottom: -6%; height: 26%; background-image: radial-gradient(ellipse 30% 60% at 50% 60%, #8d8984c0, transparent 70%); background-size: 50% 100%; animation: drift 40s linear infinite; }
+    @keyframes drift { to { transform: translateX(-50%); } }
+    .phantom { opacity: 0; transition: opacity 0.05s; }
+    .phantom.seen { opacity: 0.85; }
+    .figure {
+      position: absolute; left: 0; bottom: 0;
+      height: 74%; width: auto;
+      overflow: visible;
+    }
+    .glow {
+      position: absolute; pointer-events: none;
+      width: 220px; height: 220px; margin: -110px 0 0 -110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffd7a066 0%, #d9846833 30%, transparent 65%);
+      opacity: calc(var(--lamp) * 0.95);
+      mix-blend-mode: screen;
+    }
+    .smoke { fill: none; stroke: #e9e4da; stroke-width: 1.4; stroke-linecap: round; opacity: 0.35; stroke-dasharray: 60 240; animation: smoke 7s linear infinite; }
+    .smoke.s2 { animation-delay: -3.5s; opacity: 0.22; }
+    @keyframes smoke { from { stroke-dashoffset: 300; } to { stroke-dashoffset: 0; } }
+    .caption {
+      position: absolute; right: 6%; bottom: -30px;
+      font: 0.78rem/1.3 var(--mono); color: var(--smoke); text-align: right;
+    }
+
+    /* ===== Sections ===== */
+    section { padding: clamp(80px, 11vw, 140px) max(16px, 4vw) 0; }
+    .sec-head { max-width: 720px; margin-bottom: 44px; }
+    .sec-head .kicker { margin-bottom: 14px; }
+    h2 { font: italic 400 clamp(2.2rem, 4.6vw, 3.8rem)/1.02 var(--serif); letter-spacing: -0.01em; color: #d9d3c8; text-wrap: balance; }
+    h2 .red { color: var(--red); }
+    .sec-head p { margin-top: 14px; color: #bdb7ad; max-width: 34em; }
+
+    /* ===== Exhibit A: the demo ===== */
+    .exhibit {
+      display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: clamp(28px, 5vw, 72px); align-items: center;
+    }
+    .case-card {
+      background: var(--paper); color: var(--ink);
+      padding: 30px 30px 28px;
+      rotate: -1.2deg;
+      box-shadow: 0 24px 40px -18px #000, inset 0 0 60px #a8946e33;
+      position: relative;
+    }
+    .case-card .tag { font: 0.75rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--red); }
+    .case-card .who { margin-top: 18px; font: 0.95rem var(--type); color: #4a4542; }
+    .demo-clue { font: italic 500 clamp(1.8rem, 3vw, 2.4rem)/1.1 var(--serif); margin: 6px 0 18px; }
+    .demo-clue::before { content: "\201C"; color: var(--red); }
+    .demo-clue::after { content: "\201D"; color: var(--red); }
+    .case-card .how { font: 0.98rem/1.5 var(--mono); color: #3a3634; border-top: 1px dashed #14111255; padding-top: 14px; }
+    .case-card .how kbd { font: inherit; border: 1px solid #14111266; padding: 0 4px; }
+    .demo-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+    .case-card .btn { color: var(--ink); border-color: #14111288; }
+    .case-card .btn.primary { color: var(--paper); border-color: var(--red); }
+    .case-card .btn:not(.primary)::after { background: var(--red); }
+    .demo-result { text-align: left; font: 1rem var(--mono); color: #3a3634; min-height: 1.6em; margin-top: 16px; }
+    .demo-result b { font: 700 1.3rem var(--mono); }
+    .demo-result.pts-2 b { color: #5e5a58; }
+    .demo-result.pts-0 b { color: #8f8a84; }
+    .pin { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e3545d, var(--red) 45%, var(--red-dark)); box-shadow: 1px 3px 3px #0008; z-index: 2; }
+    .case-card > .pin { top: 10px; left: 50%; margin-left: -7px; }
+
+    .board-paper { position: relative; padding: 8px 0; }
+    .board-wrap { gap: 12px; }
+    .axis-label { font: 1rem/1.1 var(--type); box-shadow: 0 2px 0 #0007; padding: 7px 12px 6px; }
+    .axis-label.top { rotate: -1.5deg; } .axis-label.bottom { rotate: 1deg; }
+    .axis-label.left { padding: 12px 6px; } .axis-label.right { padding: 12px 6px; }
+    .axis-label.placed { animation: place 0.25s cubic-bezier(0.2, 0, 0, 1) both; }
+    @keyframes place { from { opacity: 0; translate: 0 -10px; } }
+    .board-face { filter: url(#paper); }
+    .board .ring { stroke: var(--ink); stroke-width: 0.25; }
+    .rings { transition: opacity 0.5s, transform 0.8s cubic-bezier(0.2, 0, 0, 1); }
+    .rings text { font-family: var(--mono); font-size: 3.4px; }
+    .rings text:nth-of-type(1) { fill: var(--ink); }
+    .rings text:nth-of-type(2), .rings text:nth-of-type(3) { fill: var(--paper); }
+    .miss-line { stroke-width: 0.8; stroke-dasharray: 1; stroke-dashoffset: 1; stroke-linecap: butt; opacity: 1; transition: none; }
+    .miss-line.show { opacity: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 0.6s linear 0.55s; }
+    .marker-halo { opacity: 0.18; }
+    .board.interactive .marker-halo { animation-duration: 2.6s; }
+
+    /* ===== The method: conspiracy board ===== */
+    .cork {
+      position: relative;
+      background: radial-gradient(ellipse at 50% 30%, #1f1b1c, #110e0f 70%);
+      border: 1px solid #e9e4da12;
+      padding: clamp(56px, 7vw, 90px) clamp(16px, 4vw, 56px) clamp(48px, 6vw, 80px);
+      overflow: hidden;
+    }
+    .cork svg.strings { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
+    .string { stroke: var(--red); stroke-width: 2; fill: none; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(1px 2px 0 #0009); }
+    .cork.drawn .string { stroke-dashoffset: 0; transition: stroke-dashoffset 0.55s linear var(--d, 0s); }
+    .notes { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 48px); align-items: start; }
+    .note {
+      position: relative; z-index: 2;
+      background: var(--paper); color: var(--ink);
+      padding: 34px 24px 24px;
+      box-shadow: 0 20px 30px -16px #000;
+    }
+    .note:nth-child(1) { rotate: -2deg; }
+    .note:nth-child(2) { rotate: 1.4deg; margin-top: 110px; }
+    .note:nth-child(3) { rotate: -0.8deg; margin-top: 28px; }
+    .note .pin { top: 10px; left: 50%; margin-left: -7px; }
+    .note .no { font: 0.75rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--red); }
+    .note h3 { font: italic 500 1.7rem/1.1 var(--serif); margin: 8px 0 10px; }
+    .note p { font: 0.98rem/1.5 var(--mono); color: #3a3634; }
+    .note ul { list-style: none; padding: 0; margin: 12px 0 0; font: 0.92rem/1.7 var(--mono); }
+    .note li b { display: inline-block; width: 1.6em; color: var(--red); }
+    .note.tug { animation: tug 0.12s steps(2); }
+    @keyframes tug { 50% { translate: 1px -1px; } }
+    .scrap { position: absolute; z-index: 0; background: #cfc9bf; box-shadow: 0 6px 12px #0008; }
+    .scrap.txt { background: #d8d2c7 repeating-linear-gradient(#0000 0 7px, #14111266 7px 8px) 10px 12px / calc(100% - 20px) calc(100% - 20px) no-repeat; }
+    .scrap.photo { background: linear-gradient(155deg, #8f8a84, #3a3634); filter: url(#dither) contrast(1.2); }
+    .scrap .pin { top: -5px; left: 50%; margin-left: -7px; }
+    .target-card {
+      position: relative; z-index: 2;
+      width: 190px; margin: 56px auto 0;
+      background: var(--paper); color: var(--ink);
+      padding: 12px 12px 14px; rotate: 2deg;
+      box-shadow: 0 20px 30px -16px #000;
+      text-align: center;
+    }
+    .target-card .pin { top: -6px; left: 50%; margin-left: -7px; }
+    .target-card svg { display: block; width: 100%; height: auto; background: #2a2627; }
+    .target-card .spiral { transform-origin: 50% 50%; transform-box: fill-box; animation: spin 8s linear infinite; }
+    .target-card span { display: block; margin-top: 10px; font: 0.95rem var(--type); }
+
+    /* ===== Persons of interest ===== */
+    .suspects { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(16px, 2.4vw, 32px); }
+    .suspect { position: relative; }
+    .suspect .photo { position: relative; background: #2a2627; padding: 10px 10px 0; box-shadow: 0 20px 30px -16px #000; }
+    .suspect svg { display: block; width: 100%; height: auto; filter: url(#dither) contrast(1.15); }
+    .suspect:nth-child(odd) .photo { rotate: -1deg; } .suspect:nth-child(even) .photo { rotate: 1.2deg; }
+    .redact {
+      position: absolute; left: 50%; top: 31%;
+      translate: -50% 0;
+      background: var(--paper); color: var(--ink);
+      font: clamp(0.95rem, 1.5vw, 1.15rem)/1 var(--type);
+      padding: 7px 12px 6px; white-space: nowrap;
+      box-shadow: 0 3px 0 #0007;
+      rotate: var(--tilt, -3deg);
+    }
+    .reveal-on-view .redact { opacity: 0; translate: -50% -16px; rotate: 0deg; }
+    .reveal-on-view.seen .redact { opacity: 1; translate: -50% 0; rotate: var(--tilt, -3deg); transition: opacity 0.2s, translate 0.25s cubic-bezier(0.2, 0, 0, 1), rotate 0.25s cubic-bezier(0.2, 0, 0, 1); transition-delay: var(--d, 0s); }
+    .suspect .file { margin-top: 18px; font: 0.95rem/1.5 var(--mono); color: #bdb7ad; }
+    .suspect .file b { display: block; font: 0.72rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+
+    /* ===== CTA ===== */
+    .cta { text-align: center; padding-bottom: 40px; }
+    .cta h2 { font-size: clamp(2.8rem, 7vw, 6rem); }
+    .cta p { margin: 18px auto 0; max-width: 30em; color: #bdb7ad; }
+    .cta-stage { position: relative; display: inline-block; margin-top: 44px; padding: 26px 0 70px; }
+    .cta-stage .btn { position: relative; z-index: 1; }
+    .loop { position: absolute; left: 50%; bottom: 0; width: min(560px, 92vw); translate: -50% 0; height: auto; overflow: visible; }
+    .loop path { fill: none; stroke: var(--red-dark); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: url(#bleed); }
+    .loop.seen path { stroke-dashoffset: 0; transition: stroke-dashoffset 1.8s cubic-bezier(0.2, 0, 0, 1) 0.3s; }
+
+    footer {
+      display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; align-items: center;
+      margin-top: 90px; padding: 26px max(16px, 4vw) calc(30px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #e9e4da14;
+      font: 0.8rem var(--mono); letter-spacing: 0.08em; color: var(--smoke);
+    }
+    footer nav { display: flex; gap: 20px; }
+    footer a { text-decoration: none; } footer a:hover { color: var(--paper); text-decoration: underline; text-decoration-color: var(--red); }
+
+    /* ===== Modal + toast (paper file) ===== */
+    .modal {
+      background: var(--paper); color: var(--ink);
+      border: 0; border-radius: 2px;
+      rotate: -0.6deg;
+      box-shadow: 0 30px 60px -20px #000, inset 0 0 60px #a8946e33;
+      animation: drop 0.32s cubic-bezier(0.2, 0, 0, 1);
+    }
+    @keyframes drop { from { opacity: 0; translate: 0 -14px; rotate: -3deg; } }
+    .modal h2 { font: italic 500 2rem/1.05 var(--serif); color: var(--ink); }
+    .modal p { color: #4a4542; font-family: var(--mono); font-size: 0.95rem; }
+    .modal .field span { font: 0.75rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
+    .modal input { background: var(--paper-2); color: var(--ink); border: 1px solid #14111288; border-radius: 0; font-family: var(--type); }
+    .modal .code-boxes input { font: 1.9rem var(--type); }
+    .modal .btn { color: var(--ink); border-color: #14111288; }
+    .modal .btn.primary { color: var(--paper); border-color: var(--red); }
+    .modal .btn:not(.primary)::after { background: var(--red); }
+    .room-code { font: 2.8rem/1 var(--type); color: var(--red); }
+    .toast { font: 0.95rem var(--type); border-radius: 0; box-shadow: 0 4px 0 #0008; }
+
+    /* ===== Intro: match strike, iris open ===== */
+    .iris {
+      position: fixed; inset: 0; z-index: 40; cursor: pointer;
+      --mx: 70%; --my: 55%;
+      background: radial-gradient(circle at var(--mx) var(--my), transparent 0, transparent var(--r), #0a0809 calc(var(--r) + 14vmax));
+    }
+    .iris.open { animation: iris 1.5s cubic-bezier(0.2, 0, 0, 1) forwards; }
+    @keyframes iris { from { --r: 0px; } to { --r: 160vmax; } }
+    .iris .spark { position: absolute; left: var(--mx); top: var(--my); width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fff3d6; box-shadow: 0 0 12px 4px #ffcf8a; opacity: 0; }
+    .iris.strike .spark { animation: spark 0.45s steps(3) forwards; }
+    @keyframes spark { 0% { opacity: 1; transform: scale(0.6); } 33% { opacity: 0.3; transform: scale(1.6); } 66% { opacity: 1; transform: scale(1); } 100% { opacity: 1; transform: scale(2.4); } }
+    .iris .skip { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; font: 0.75rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: #7d7a7888; }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; min-height: 0; }
+      .hero-text { padding-bottom: 0; }
+      .scene { height: min(78vh, 600px); min-height: 420px; width: min(100%, 520px); justify-self: center; }
+      .caption { bottom: -26px; }
+      .exhibit { grid-template-columns: 1fr; }
+      .case-card { max-width: 560px; }
+      .suspects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .nav-links { display: none; }
+      .notes { grid-template-columns: 1fr; gap: 40px; }
+      .note:nth-child(n) { margin-top: 0; width: 90%; }
+      .note:nth-child(2) { margin-left: auto; }
+      .scrap.hide-sm { display: none; }
+    }
+    @media (max-width: 480px) {
+      .hide-sm { display: none; }
+      nav.top { gap: 12px; }
+      .logo { font-size: 1.15rem; gap: 8px; }
+      .logo svg { width: 22px; height: 22px; }
+      .nav-actions { gap: 4px; }
+      .nav-actions .btn { padding-inline: 10px; letter-spacing: 0.08em; }
+      .nav-actions .btn.ghost { min-width: 0; padding-inline: 6px; }
+      .case-card { padding: 28px 18px 22px; }
+      .axis-label { font-size: 0.85rem; }
+      .redact { font-size: 0.85rem; padding: 6px 8px 5px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .grain, .scratch, .dust, .scene, .logo svg, .smoke, .target-card .spiral { animation: none !important; }
+      .phantom { display: none; }
+      h1 .ch { opacity: 1; }
+      .string, .loop path, .miss-line { stroke-dashoffset: 0 !important; }
+      .miss-line:not(.show) { opacity: 0 !important; }
+      .reveal-on-view .redact { opacity: 1; translate: -50% 0; rotate: var(--tilt, -3deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- shared SVG filters: paper texture, photocopy dither, ink bleed -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0.12 0" result="t"/><feComposite in="t" in2="SourceGraphic" operator="in" result="tt"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="tt"/></feMerge></filter>
+    <filter id="dither" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="saturate" values="0" result="s"/><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 0 1" result="g"/><feComposite in="s" in2="g" operator="arithmetic" k1="0" k2="1" k3="0.45" k4="-0.22" result="m"/><feComponentTransfer in="m"><feFuncR type="discrete" tableValues="0.07 0.2 0.36 0.55 0.75 0.9"/><feFuncG type="discrete" tableValues="0.066 0.19 0.35 0.54 0.74 0.89"/><feFuncB type="discrete" tableValues="0.07 0.18 0.33 0.51 0.7 0.85"/><feFuncA type="identity"/></feComponentTransfer></filter>
+    <filter id="bleed"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter>
+  </svg>
+
+  <div class="grain" id="grain" aria-hidden="true"></div>
+  <div class="scratch" id="scratch" aria-hidden="true"></div>
+  <div class="dust" id="dust" aria-hidden="true"></div>
+
+  <nav class="top" aria-label="Main">
+    <a class="logo" href="#top" aria-label="Psychic Plane, back to top">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 20m0 0a1.5 1.5 0 0 1 3 0a4 4 0 0 1-7 2a6.5 6.5 0 0 1 10-8a9.5 9.5 0 0 1-3 15a12.5 12.5 0 0 1-16-9a15.5 15.5 0 0 1 12-17" fill="none" stroke="#b3202a" stroke-width="2.4" stroke-linecap="round"/></svg>
+      Psychic Plane
+    </a>
+    <div class="nav-links">
+      <a href="#exhibit">Exhibit A</a>
+      <a href="#how">The method</a>
+      <a href="#features">Persons of interest</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">Sound on</button>
+      <button class="btn hide-sm" data-action="join">Join room</button>
+      <button class="btn primary" data-action="create">Play now</button>
+    </div>
+  </nav>
+
+  <main id="top">
+    <!-- ===== HERO ===== -->
+    <header class="hero">
+      <div class="hero-text">
+        <p class="kicker"><span>Case no. <b>0417</b></span><span>3–10 players</span></p>
+        <h1 id="headline" aria-label="One of you has seen it. Can you find it?">One of you has seen it. Can you <span class="red">find it?</span></h1>
+        <p class="lead">Psychic Plane is a party guessing game. Each round, one player, <em>the psychic</em>, secretly sees a point on a board between two pairs of opposites. They give one clue. Everyone else marks where they think the point is. The closest guess takes the points.</p>
+        <div class="hero-ctas">
+          <button class="btn primary big" data-action="create">Create a room</button>
+          <button class="btn big" data-action="join">Join with a code</button>
+        </div>
+        <ul class="strips" aria-label="Good to know">
+          <li class="strip">free to play</li>
+          <li class="strip">no downloads</li>
+          <li class="strip">works on phones</li>
+        </ul>
+      </div>
+
+      <div class="scene" id="scene" aria-hidden="true">
+        <div class="arch">
+          <svg class="city" id="city" viewBox="0 0 600 900" preserveAspectRatio="xMidYMax slice"></svg>
+          <div class="fog f1"></div>
+          <div class="fog f2"></div>
+          <div class="fog f3"></div>
+        </div>
+        <svg class="figure" id="figure" viewBox="0 0 220 440">
+          <!-- coat -->
+          <path d="M44 182 Q50 140 86 128 L132 128 Q168 140 176 182 L204 440 L16 440 Z" fill="#0d0b0c"/>
+          <!-- belt + lapel hints, rim light on the side facing the arch -->
+          <path d="M30 300 L192 300" stroke="#1c1819" stroke-width="5"/>
+          <path d="M110 136 L96 230 M110 136 L124 230" stroke="#1c1819" stroke-width="3"/>
+          <path d="M176 184 L203 436" stroke="#e9e4da" stroke-opacity="0.35" stroke-width="2" fill="none"/>
+          <!-- raised collar -->
+          <path d="M70 140 L88 100 L110 136 L132 100 L150 140 L132 150 L110 140 L88 150 Z" fill="#0d0b0c"/>
+          <!-- head in shadow under the brim -->
+          <path d="M88 82 L132 82 L128 118 Q110 132 92 118 Z" fill="#0d0b0c"/>
+          <!-- hat -->
+          <path d="M72 80 Q70 40 92 34 Q110 40 128 34 Q150 40 148 80 Z" fill="#0d0b0c"/>
+          <ellipse cx="110" cy="80" rx="64" ry="9" fill="#0d0b0c"/>
+          <path d="M150 74 Q166 77 174 80" stroke="#e9e4da" stroke-opacity="0.4" stroke-width="1.5" fill="none"/>
+          <path d="M74 70 L146 70" stroke="#2a2627" stroke-width="5"/>
+          <!-- arm raised, cupped hands at the chin -->
+          <path d="M150 170 Q172 200 150 222 Q128 230 118 196 Q114 150 122 132 Q136 128 142 140 Z" fill="#0d0b0c"/>
+          <path d="M104 126 Q112 114 126 120 Q132 132 122 140 Q108 142 104 126 Z" fill="#141112"/>
+          <!-- cigarette + ember -->
+          <path d="M116 117 L130 112" stroke="#d9d3c8" stroke-width="2.2" stroke-linecap="round"/>
+          <circle id="ember" cx="131" cy="111.5" r="2" fill="#ffb066"/>
+          <!-- smoke -->
+          <path class="smoke" d="M132 108 C140 90 124 80 136 62 C148 44 130 32 142 12 C150 -2 140 -14 150 -30"/>
+          <path class="smoke s2" d="M132 108 C126 92 142 78 132 60 C122 42 140 30 130 10 C124 -4 134 -18 126 -34"/>
+        </svg>
+        <div class="glow" id="glow"></div>
+        <p class="caption">“A clue was given at the door<br>of the old cathedral.”</p>
+      </div>
+    </header>
+
+    <!-- ===== EXHIBIT A: demo board ===== -->
+    <section id="exhibit">
+      <div class="sec-head">
+        <p class="kicker"><span>Exhibit A</span></p>
+        <h2>Try a round. <span class="red">Right here.</span></h2>
+      </div>
+      <div class="exhibit">
+        <div class="case-card">
+          <span class="pin" aria-hidden="true"></span>
+          <p class="tag">Statement of the psychic</p>
+          <p class="who">Ari saw the hidden point and says:</p>
+          <p class="demo-clue" id="demo-clue"></p>
+          <p class="how">Where does that belong between the four words? Drag the dot or tap the board, then reveal. Keyboard: <kbd>arrows</kbd> move, <kbd>Enter</kbd> reveals.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal the answer</button>
+            <button class="btn" data-action="shuffle">New card</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </div>
+        <div class="board-paper">
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== THE METHOD: how to play ===== -->
+    <section id="how">
+      <div class="sec-head">
+        <p class="kicker"><span>The method</span></p>
+        <h2>Three steps. <span class="red">One connection.</span></h2>
+        <p>Every round follows the same thread, from the psychic's secret to the closest guess.</p>
+      </div>
+      <div class="cork" id="cork">
+        <svg class="strings" id="strings" aria-hidden="true"></svg>
+        <div class="scrap txt hide-sm" style="width:90px;height:70px;left:3%;top:6%;rotate:-6deg" data-pin="s1"><span class="pin"></span></div>
+        <div class="scrap photo hide-sm" style="width:64px;height:78px;right:4%;top:8%;rotate:5deg" data-pin="s2"><span class="pin"></span></div>
+        <div class="scrap txt" style="width:110px;height:56px;left:6%;bottom:10%;rotate:3deg" data-pin="s3"><span class="pin"></span></div>
+        <div class="scrap photo" style="width:70px;height:60px;right:7%;bottom:14%;rotate:-4deg" data-pin="s4"><span class="pin"></span></div>
+        <div class="notes">
+          <article class="note" data-pin="n1">
+            <span class="pin"></span>
+            <p class="no">Step 1</p>
+            <h3>The psychic peeks</h3>
+            <p>One player sees where the hidden point sits between two pairs of opposites, like <i>funny / unfunny</i> and <i>ugly / cute</i>.</p>
+          </article>
+          <article class="note" data-pin="n2">
+            <span class="pin"></span>
+            <p class="no">Step 2</p>
+            <h3>One clue</h3>
+            <p>They say one thing that belongs at that spot. "A pug in a hot dog costume." Nothing more.</p>
+          </article>
+          <article class="note" data-pin="n3">
+            <span class="pin"></span>
+            <p class="no">Step 3</p>
+            <h3>Everyone marks it</h3>
+            <p>Each player places a dot in secret. Then the point is revealed:</p>
+            <ul>
+              <li><b>4</b>bullseye</li>
+              <li><b>3</b>very close</li>
+              <li><b>2</b>in the zone</li>
+            </ul>
+          </article>
+        </div>
+        <figure class="target-card" data-pin="t">
+          <span class="pin"></span>
+          <svg viewBox="0 0 120 90" aria-hidden="true"><rect width="120" height="90" fill="#2a2627"/><path class="spiral" d="M60 45m0 0a2 2 0 0 1 4 0a5 5 0 0 1-9 2a8 8 0 0 1 13-9a11 11 0 0 1-4 18a14 14 0 0 1-19-10a17 17 0 0 1 14-20a20 20 0 0 1 22 13" fill="none" stroke="#e9e4da" stroke-width="2" stroke-linecap="round"/><circle cx="60" cy="45" r="2.5" fill="#b3202a"/></svg>
+          <span>the hidden point</span>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===== PERSONS OF INTEREST: features ===== -->
+    <section id="features">
+      <div class="sec-head">
+        <p class="kicker"><span>Persons of interest</span></p>
+        <h2>What you should <span class="red">know.</span></h2>
+      </div>
+      <div class="suspects reveal-on-view" id="suspects">
+        <div class="suspect"><div class="photo" data-bust="0"><span class="redact" style="--tilt:-3deg;--d:0s">plays alone</span></div><p class="file"><b>Subject 01</b>No teams. Every player is on their own, and the best guesser wins.</p></div>
+        <div class="suspect"><div class="photo" data-bust="1"><span class="redact" style="--tilt:2.5deg;--d:0.12s">fits in a pocket</span></div><p class="file"><b>Subject 02</b>Plays in any phone browser. Nothing to install.</p></div>
+        <div class="suspect"><div class="photo" data-bust="2"><span class="redact" style="--tilt:-1.5deg;--d:0.24s">never twice the same</span></div><p class="file"><b>Subject 03</b>Any two pairs of opposites can be combined, so no two boards are alike.</p></div>
+        <div class="suspect"><div class="photo" data-bust="3"><span class="redact" style="--tilt:3deg;--d:0.36s">four letters</span></div><p class="file"><b>Subject 04</b>A 4-letter room code brings everyone in within seconds.</p></div>
+      </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="cta">
+      <p class="kicker" style="justify-content:center"><span>Gather your crew</span></p>
+      <h2>The case is <span class="red">open.</span></h2>
+      <p>Create a room, send the four-letter code to your friends, and find out who really has the gift.</p>
+      <div class="cta-stage">
+        <button class="btn primary big" data-action="create">Create a room</button>
+        <svg class="loop" id="loop" viewBox="0 0 560 90" aria-hidden="true"><path pathLength="1" d="M300 30 C200 18 60 26 40 52 C24 74 160 84 300 80 C440 76 540 66 520 44 C504 26 420 22 360 26"/></svg>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>© 2026 Psychic Plane · case file kept by students</span>
+    <nav aria-label="Footer">
+      <a href="#how">Rules</a>
+      <a href="#" data-action="soon">Privacy</a>
+      <a href="#" data-action="soon">Contact</a>
+    </nav>
+  </footer>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    window.LANDING = {
+      wave: 'sine',
+      chime: [220, 262, 330, 440],
+      revealLabel: 'Reveal the answer',
+      againLabel: 'Next case',
+      soundLabels: ['Sound on', 'Sound off'],
+      results: { 4: 'Bullseye. You read their mind.', 3: 'Close. Very close.', 2: 'A warm trail.', 0: 'Cold case.' },
+      lobbyMsg: "The lobby isn't built yet",
+      onCard() {
+        document.querySelectorAll('.axis-label').forEach((el, i) => {
+          el.classList.remove('placed');
+          void el.offsetWidth;
+          el.style.animationDelay = i * 0.06 + 's';
+          el.classList.add('placed');
+        });
+      },
+    };
+  </script>
+  <script src="common.js"></script>
+  <script>
+  (() => {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const q = s => document.querySelector(s);
+
+    // ---------- Film grain: one noise tile made in a canvas ----------
+    (() => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 180;
+      const g = c.getContext('2d');
+      const img = g.createImageData(180, 180);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = Math.random() * 255;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+        img.data[i + 3] = Math.random() < 0.5 ? 255 : 0;
+      }
+      g.putImageData(img, 0, 0);
+      q('#grain').style.backgroundImage = `url(${c.toDataURL()})`;
+    })();
+
+    // ---------- The city inside the arch (seeded, so it's the same every visit) ----------
+    function seeded(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+    function skyline(rnd, w, base, minH, maxH, spireChance) {
+      let d = `M0 ${base}`, crosses = '';
+      for (let x = 0; x < w;) {
+        const kind = rnd();
+        if (kind < spireChance) {                       // tower with a spire
+          const bw = 18 + rnd() * 26, bh = maxH * (0.55 + rnd() * 0.45), sp = 50 + rnd() * 110;
+          const top = base - bh, tip = top - sp, cx = x + bw / 2;
+          d += ` L${x} ${top} L${x + 3} ${top} L${x + 3} ${top - 8} L${cx} ${tip} L${x + bw - 3} ${top - 8} L${x + bw - 3} ${top} L${x + bw} ${top}`;
+          if (rnd() < 0.6) crosses += `M${cx - 1} ${tip - 14}h2v14h-2zM${cx - 5} ${tip - 10}h10v2h-10z`;
+          x += bw;
+        } else if (kind < spireChance + 0.15) {          // pointed pinnacles
+          const bw = 8 + rnd() * 8, bh = minH + rnd() * (maxH - minH) * 0.6;
+          d += ` L${x} ${base - bh} L${x + bw / 2} ${base - bh - 26 - rnd() * 30} L${x + bw} ${base - bh}`;
+          x += bw;
+        } else {                                          // roofs with chimneys
+          const bw = 34 + rnd() * 60, bh = minH + rnd() * (maxH - minH) * 0.45;
+          const top = base - bh;
+          d += ` L${x} ${top}`;
+          if (rnd() < 0.5) { const c = x + 6 + rnd() * (bw - 16); d += ` L${c} ${top} L${c} ${top - 12} L${c + 6} ${top - 12} L${c + 6} ${top}`; }
+          d += ` L${x + bw} ${top}`;
+          x += bw;
+        }
+      }
+      return d + ` L${w} ${base} Z` + crosses;
+    }
+    (() => {
+      const rnd = seeded(41);
+      const far = skyline(rnd, 600, 560, 40, 170, 0.32);
+      const mid = skyline(rnd, 600, 640, 70, 220, 0.22);
+      // near street: two façades in perspective, a stair with a rail, a figure on the stairs
+      q('#city').innerHTML = `
+        <path d="${far}" fill="#b9b4ad"/>
+        <path d="${mid}" fill="#8c8884"/>
+        <rect y="560" width="600" height="340" fill="#8c8884"/>
+        <path d="M0 120 L150 330 L150 900 L0 900 Z" fill="#5c5856"/>
+        <path d="M600 160 L430 350 L430 900 L600 900 Z" fill="#4f4b49"/>
+        <path d="M40 300 L40 900 M90 370 L90 900 M520 330 L520 900" stroke="#3a3634" stroke-width="3"/>
+        <g fill="#3a3634">
+          <path d="M60 420 q20 -30 40 0 v70 h-40z M60 560 q20 -30 40 0 v70 h-40z"/>
+          <path d="M470 440 q20 -30 40 0 v70 h-40z M470 590 q20 -30 40 0 v70 h-40z"/>
+        </g>
+        <path d="M150 900 L250 690 L370 690 L430 900 Z" fill="#6f6b69"/>
+        <g stroke="#4a4644" stroke-width="2">${Array.from({ length: 9 }, (_, i) => { const y = 700 + i * 23, s = i * 5; return `<line x1="${246 - s * 2}" y1="${y}" x2="${372 + s}" y2="${y}"/>`; }).join('')}</g>
+        <path d="M262 690 L190 900 M262 690 L262 660 M220 790 L220 765 M190 900 L190 880" stroke="#2a2627" stroke-width="3" fill="none"/>
+        <path d="M262 660 L190 860" stroke="#2a2627" stroke-width="3"/>
+        <g class="phantom" id="phantom" fill="#2a2627">
+          <ellipse cx="318" cy="636" rx="11" ry="3"/><path d="M311 636 q7 -14 14 0z"/>
+          <path d="M309 640 L327 640 L331 700 L305 700Z"/>
+        </g>`;
+    })();
+
+    // ---------- Busts for "persons of interest" ----------
+    const BUSTS = [
+      // man in fedora
+      `<path d="M30 240 Q36 170 100 160 Q164 170 170 240Z" fill="#3a3634"/><path d="M88 150 L112 150 L110 170 L90 170Z" fill="#8f8a84"/>
+       <ellipse cx="100" cy="112" rx="30" ry="38" fill="#a9a49d"/><path d="M60 82 Q100 74 140 82 L132 70 Q130 40 100 40 Q70 40 68 70Z" fill="#1c1819"/><ellipse cx="100" cy="82" rx="50" ry="8" fill="#1c1819"/>
+       <path d="M86 180 L100 210 L114 180" fill="#d8d2c7"/><path d="M96 186 L104 186 L102 226 L98 226Z" fill="#1c1819"/>`,
+      // woman with curls
+      `<path d="M28 240 Q36 176 100 168 Q164 176 172 240Z" fill="#2f2b2c"/><path d="M90 150 L110 150 L108 172 L92 172Z" fill="#9c978f"/>
+       ${[[70, 90], [62, 112], [66, 136], [80, 70], [100, 62], [120, 70], [134, 90], [138, 114], [132, 138]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="17" fill="#1c1819"/>`).join('')}
+       <ellipse cx="100" cy="112" rx="27" ry="35" fill="#b3aea6"/><path d="M76 92 Q100 70 126 94 Q120 74 100 72 Q80 74 76 92Z" fill="#1c1819"/>
+       <path d="M80 182 Q100 200 120 182" stroke="#d8d2c7" stroke-width="6" fill="none"/>`,
+      // bob haircut, high collar
+      `<path d="M30 240 Q38 176 100 166 Q162 176 170 240Z" fill="#454142"/><path d="M90 148 L110 148 L108 170 L92 170Z" fill="#9c978f"/>
+       <path d="M64 128 Q60 64 100 60 Q140 64 136 128 L124 132 L124 96 L76 96 L76 132Z" fill="#141112"/>
+       <ellipse cx="100" cy="110" rx="26" ry="34" fill="#aaa59e"/><path d="M74 100 Q80 66 100 68 Q122 66 128 98 Q112 80 74 100Z" fill="#141112"/>
+       <path d="M78 172 L100 196 L122 172 L114 168 L100 182 L86 168Z" fill="#e1dbd0"/>`,
+      // slick hair, tie
+      `<path d="M26 240 Q34 172 100 162 Q166 172 174 240Z" fill="#2a2627"/><path d="M89 148 L111 148 L109 170 L91 170Z" fill="#8f8a84"/>
+       <ellipse cx="100" cy="108" rx="29" ry="37" fill="#a29d96"/><path d="M70 98 Q70 64 100 62 Q132 62 130 96 Q116 76 90 82 Q78 86 70 98Z" fill="#1c1819"/>
+       <path d="M84 172 L100 200 L116 172" fill="#cfc9bf"/><path d="M96 178 L104 178 L106 232 L100 240 L94 232Z" fill="#141112"/>`,
+    ];
+    document.querySelectorAll('[data-bust]').forEach(el => {
+      const i = +el.dataset.bust;
+      el.insertAdjacentHTML('afterbegin', `<svg viewBox="0 0 200 240" aria-hidden="true">
+        <defs><linearGradient id="bg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a857f"/><stop offset="1" stop-color="#4a4644"/></linearGradient></defs>
+        <rect width="200" height="240" fill="url(#bg${i})"/>${BUSTS[i]}</svg>`);
+    });
+
+    // ---------- Red strings on the cork board ----------
+    const cork = q('#cork'), strings = q('#strings');
+    const LINKS = [['n1', 'n2'], ['n2', 'n3'], ['n1', 't'], ['n2', 't'], ['n3', 't'], ['s1', 'n1'], ['s2', 'n3'], ['s3', 't'], ['s4', 'n3']];
+    function layoutStrings() {
+      const box = cork.getBoundingClientRect();
+      const at = id => {
+        const pin = cork.querySelector(`[data-pin="${id}"] > .pin`);
+        if (!pin || !pin.offsetParent) return null;
+        const r = pin.getBoundingClientRect();
+        return [r.left + r.width / 2 - box.left, r.top + r.height / 2 - box.top];
+      };
+      strings.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+      strings.innerHTML = LINKS.map(([a, b], i) => {
+        const p = at(a), r = at(b);
+        if (!p || !r) return '';
+        return `<line class="string" pathLength="1" style="--d:${i * 0.2}s" x1="${p[0]}" y1="${p[1]}" x2="${r[0]}" y2="${r[1]}"/>`;
+      }).join('');
+    }
+    layoutStrings();
+    new ResizeObserver(layoutStrings).observe(cork);
+    document.fonts?.ready.then(layoutStrings);
+
+    // ---------- Things that happen when scrolled into view ----------
+    const io = new IntersectionObserver(entries => entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      io.unobserve(el);
+      if (el === cork) {
+        cork.classList.add('drawn');
+        // each note gives a tiny tug when its string arrives
+        cork.querySelectorAll('.note, .target-card').forEach((n, i) => setTimeout(() => {
+          n.classList.add('tug');
+          setTimeout(() => n.classList.remove('tug'), 150);
+          blip(1400 + i * 60, 0.015, 'square', 0.02);
+        }, 550 + i * 400));
+      } else el.classList.add('seen');
+    }), { threshold: 0.35 });
+    [cork, q('#suspects'), q('#loop')].forEach(el => io.observe(el));
+
+    // ---------- Demo board: draw the red string from your dot to the answer ----------
+    q('.miss-line').setAttribute('pathLength', '1');
+
+    // ---------- Typewriter headline (red words last, after a pause) ----------
+    const h1 = q('#headline');
+    function typeHeadline() {
+      if (reduce) return;
+      const parts = [...h1.childNodes].map(n => ({ text: n.textContent, red: n.nodeType === 1 }));
+      h1.innerHTML = parts.map(p => {
+        const chars = [...p.text].map(ch => `<span class="ch">${ch === ' ' ? ' ' : esc(ch)}</span>`).join('');
+        return p.red ? `<span class="red">${chars}</span>` : chars;
+      }).join('') + '<span class="cursor"></span>';
+      [...h1.children].forEach(c => c.setAttribute('aria-hidden', 'true'));
+      const chars = [...h1.querySelectorAll('.ch')];
+      const redStart = chars.findIndex(c => c.closest('.red'));
+      let t = 0;
+      chars.forEach((c, i) => {
+        if (i === redStart) t += 520;            // the beat before the key words
+        t += c.textContent === ' ' ? 30 : 34 + Math.random() * 38;
+        setTimeout(() => c.classList.add('on'), t);
+      });
+      setTimeout(() => h1.querySelector('.cursor')?.remove(), t + 2600);
+    }
+
+    // ---------- Gas-lamp flicker, the ember, and the one who is only there sometimes ----------
+    const root = document.documentElement, phantom = q('#phantom'), ember = q('#ember');
+    function placeGlow() {
+      const s = q('#scene').getBoundingClientRect(), e = ember.getBoundingClientRect();
+      const g = q('#glow');
+      g.style.left = e.left + e.width / 2 - s.left + 'px';
+      g.style.top = e.top + e.height / 2 - s.top + 'px';
+    }
+    placeGlow();
+    addEventListener('resize', placeGlow);
+    if (!reduce) {
+      (function flicker() {
+        const r = Math.random();
+        const dim = r < 0.12;
+        root.style.setProperty('--lamp', dim ? (0.78 + Math.random() * 0.1).toFixed(2) : (0.95 + Math.random() * 0.05).toFixed(2));
+        ember.setAttribute('r', (1.6 + Math.random() * 0.9).toFixed(2));
+        if (dim && Math.random() < 0.35) {        // the figure on the stairs: only between flickers
+          phantom.classList.toggle('seen');
+        }
+        setTimeout(flicker, dim ? 60 + Math.random() * 90 : 200 + Math.random() * 900);
+      })();
+      // a scratch or a speck of dust every few seconds
+      (function blemish() {
+        const s = Math.random() < 0.5 ? q('#scratch') : q('#dust');
+        s.style.left = Math.random() * 100 + 'vw';
+        if (s.id === 'dust') s.style.top = Math.random() * 100 + 'vh';
+        s.classList.add('on');
+        setTimeout(() => s.classList.remove('on'), 80 + Math.random() * 80);
+        setTimeout(blemish, 4000 + Math.random() * 6000);
+      })();
+    }
+
+    // ---------- Intro: dark, a match is struck, the iris opens ----------
+    if (reduce) {
+      typeHeadline();
+    } else {
+      const iris = document.createElement('div');
+      iris.className = 'iris';
+      iris.setAttribute('aria-hidden', 'true');
+      iris.innerHTML = '<span class="spark"></span><span class="skip">click to skip</span>';
+      const e = ember.getBoundingClientRect();
+      if (e.top < innerHeight) {
+        iris.style.setProperty('--mx', e.left + e.width / 2 + 'px');
+        iris.style.setProperty('--my', e.top + e.height / 2 + 'px');
+      } else {                                     // on phones the figure is below the fold: strike in the middle
+        iris.style.setProperty('--mx', '50%');
+        iris.style.setProperty('--my', '45%');
+      }
+      document.body.appendChild(iris);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        iris.remove();
+        typeHeadline();
+      };
+      iris.addEventListener('click', finish);
+      addEventListener('keydown', finish, { once: true });
+      setTimeout(() => { iris.classList.add('strike'); blip(2600, 0.05, 'sawtooth', 0.015); }, 450);
+      setTimeout(() => iris.classList.add('open'), 950);
+      setTimeout(finish, 2300);
+    }
+  })();
+  </script>
+</body>
+</html>

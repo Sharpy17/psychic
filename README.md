@@ -126,8 +126,8 @@ To add a button, give it `class="btn"` (plus `primary` / `ghost` / `big`) and a
 
 ## Style versions (`prototype/variants/`)
 
-Eleven alternative looks for the same landing page, to compare against `landing.html` and pick a favourite.
-Open **`prototype/variants/index.html`**: it links to all twelve versions.
+Twelve alternative looks for the same landing page, to compare against `landing.html` and pick a favourite.
+Open **`prototype/variants/index.html`**: it links to all thirteen versions.
 
 | Version | File | Idea |
 |---|---|---|
@@ -143,6 +143,7 @@ Open **`prototype/variants/index.html`**: it links to all twelve versions.
 | 10. Sketchbook | `notebook.html` | Lined paper, handwriting, sticky notes and tape |
 | 11. Aurora glass | `glass.html` | Frosted-glass panels over drifting colour light |
 | 12. Treasure map | `treasure.html` | Parchment, compass rose, pirate riddles, dig for the gold |
+| 13. Noir case file | `noir.html` | Occult film noir from `STYLE_GUIDE.md`: match-lit intro, detective under a Gothic arch, red-string evidence board, redacted suspects |
 
 Every version is fully playable (demo board, Create / Join pop-ups, sounds) and works on phones.
 They share one script, `common.js` (the board and pop-up logic from `landing.html`, made configurable),
