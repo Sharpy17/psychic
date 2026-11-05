@@ -1,0 +1,94 @@
+{{head}}
+  <script>document.documentElement.dataset.motion = 'smooth'; /* intro runs at full frame rate here */</script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Ultra&display=swap">
+{{css}}
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+{{stage}}
+  <div class="sheet">
+    <div class="creases" aria-hidden="true"></div>
+
+{{topline}}
+
+    <main>
+      <!-- The circus title and the tickets sit at the top, so they're on screen when the page opens.
+           The tickets hang over the bottom edge of the bill, as if pinned on top of it. -->
+      <section class="playbill" id="playbill" aria-label="Tonight’s show">
+        <div class="bill-bg" aria-hidden="true">
+          <div class="rays"></div>
+          <div class="spot"></div>
+          <div class="bulbs" id="bulbs"></div>
+        </div>
+        <span class="corner tl" aria-hidden="true">✦</span><span class="corner tr" aria-hidden="true">✦</span>
+
+        <p class="arc" data-arc="620">★ The Greatest Mind-Reading Show on Earth ★</p>
+        <div class="names">
+          <span class="bill-small">The astonishing</span>
+          <span class="bill-row">
+            <span class="bill-huge">Psychic</span>
+            <span class="bill-amp">&amp;</span>
+            <span class="bill-huge red">Plane</span>
+          </span>
+        </div>
+        <p class="ribbon"><span>One clue · One dot · No refunds</span></p>
+
+        <div class="tickets-slot" id="tickets-slot">
+        <div class="tickets" id="tickets">
+          <div class="tk">
+            <button class="ticket" data-action="create"><small>Admit 3 to 10</small><b>Create a room</b><i>No. 000417</i></button>
+          </div>
+          <div class="tk">
+            <form class="ticket alt stub" id="stub" autocomplete="off" novalidate>
+              <label for="code-0"><small>Have a code? Type it in</small></label>
+              <span class="slots" role="group" aria-label="4-letter room code">
+                <input id="code-0" maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 1"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 2"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 3"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 4">
+              </span>
+              <i class="stub-note" id="stub-note" aria-live="polite">No. 000418 · 4th letter seats you</i>
+            </form>
+          </div>
+        </div>
+        </div>
+      </section>
+      <p class="bill-fine">No downloads. No accounts. Children, goslings and houseplants welcome.</p>
+
+      <!-- The picture desk: a smaller halftone photo on the left (new on every visit), the story on the right. -->
+      <article class="desk">
+        <div class="desk-pic">
+          <figure class="lead-photo develop">
+            <canvas class="photo" id="photo" data-cell="4.4" aria-label="Halftone staff photo"></canvas>
+            <span class="plate"><b id="plate">Plate 1 of 5</b><span class="sc" id="kicker">Exclusive</span></span>
+            <button class="next-photo" id="next-photo" type="button">Another photo ↻</button>
+          </figure>
+          <p class="caption" id="caption">Staff photo. <i>(Picture desk)</i></p>
+          <div class="contact" aria-label="Contact sheet">
+            <div class="contact-head"><b class="sc">Contact sheet</b><span>Roll 26 · Pick a frame</span></div>
+            <div class="frames" id="frames"></div>
+          </div>
+        </div>
+
+        <div class="desk-copy">
+          <h2 class="headline" id="headline">Local Friends Caught Reading Each Other’s Minds</h2>
+          <p class="deck" id="deck">Experts baffled as a single clue leads an entire group to the very same dot</p>
+          <div class="byline sc">By our Picture Desk, from the front row · Doors at 8:02 p.m.</div>
+          <div class="story">
+            <p>Ladies, gentlemen and undecided parties: each round, one brave performer, the “psychic”, is shown a secret point on a board marked with two pairs of opposites. <i>Funny</i> and <i>Unfunny</i>. <i>Ugly</i> and <i>Cute</i>.</p>
+            <p>They may offer the audience a single clue. Not two. One. The audience then marks, in secret, where they believe the point lies, and the closest guesses earn the most points.</p>
+            <p>“It took thirty seconds to learn,” said one player, “and three hours to stop arguing about whether a goose is scary.” No downloads or accounts are required.</p>
+            <p>Our photographers have been sent to every show in town. They report the same thing each time: one clue, one dot, and a room full of people pointing at it.</p>
+          </div>
+        </div>
+      </article>
+
+      <div class="front">
+{{coupon}}
+      </div>
+
+{{lower}}
+{{footer}}
+
+  <script src="../picture/scenes.js"></script>
+  <script src="showbill.js"></script>
+{{scripts}}
+</body>
+</html>

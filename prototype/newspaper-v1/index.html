@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Psychic Plane</title>
+  <script>
+    // Decide the intro before first paint: it plays on every visit, except for reduced motion.
+    (function () {
+      var d = document.documentElement;
+      var mode = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'full';
+      d.classList.add('js');
+      d.dataset.intro = mode;
+      if (mode !== 'none') {
+        d.classList.add('intro-on');
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Special+Elite&family=UnifrakturMaguntia&display=swap">
+  <link rel="stylesheet" href="../variants/base.css">
+  <link rel="stylesheet" href="../variants/board.css">
+  <link rel="stylesheet" href="page.css">
+  <link rel="stylesheet" href="intro.css">
+</head>
+<body>
+  <div class="sheet">
+    <div class="creases" aria-hidden="true"></div>
+
+    <div class="topline">
+      <span class="sc">Late Edition</span>
+      <nav>
+        <span class="links"><a href="#how">How to play</a><a href="#classifieds">Classifieds</a></span>
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn primary" data-action="create">Play</button>
+      </nav>
+    </div>
+
+    <header class="masthead" id="top">
+      <div class="ear left"><b class="sc">Weather</b><span>80% chance of mind-reading. Light clues, clearing by midnight.</span></div>
+      <div class="title">
+        <h1>The Psychic Plane</h1>
+        <p class="motto">“All the clues that are fit to guess”</p>
+      </div>
+      <div class="ear right"><b class="sc">Est. 2026</b><span>Price: one clue. Delivered to 3–10 readers.</span></div>
+      <div class="stamp" aria-hidden="true"><span>Extra!</span></div>
+    </header>
+
+    <div class="dateline sc"><span>Vol. I · No. 1</span><span id="today">Game Night Edition</span><span>Free · For 3–10 readers</span></div>
+
+    <div class="stop-press" aria-live="off">
+      <b>Stop press</b>
+      <span class="ticker"><span id="ticker">Psychic predicts own victory; nobody surprised.</span><i class="caret"></i></span>
+    </div>
+
+    <main>
+      <div class="front">
+        <div class="lead">
+          <div class="kicker sc">Mind-reading · Exclusive</div>
+          <h2 class="headline">Local Friends Caught Reading Each Other’s Minds</h2>
+          <p class="deck">Experts baffled as a single clue leads an entire group to the very same dot</p>
+          <div class="byline sc">By our Party Games Correspondent · Filed 8:02 p.m.</div>
+
+          <figure class="photo-fig">
+            <canvas class="photo" aria-label="Halftone photo: two people facing each other, a single dot between them"></canvas>
+            <figcaption>Two readers, moments before a bullseye. <i>(Staff photo)</i></figcaption>
+          </figure>
+
+          <div class="story">
+            <p>A new party game is sweeping living rooms and video calls alike. Each round, one player, the “psychic”, is shown a secret point on a board marked with two pairs of opposites, such as <i>Funny</i> and <i>Unfunny</i>, or <i>Ugly</i> and <i>Cute</i>.</p>
+            <p>The psychic may offer just one clue. The remaining players then mark, in secret, where they believe the point lies. When the target is revealed, the closest guesses earn the most points.</p>
+            <p>“It took thirty seconds to learn,” said one player, “and three hours to stop arguing about whether a goose is scary.” No downloads or accounts are required.</p>
+          </div>
+
+          <div class="hero-ctas">
+            <button class="btn primary big" data-action="create">Create a room</button>
+            <button class="btn big" data-action="join">Join with a code</button>
+          </div>
+        </div>
+
+        <aside class="coupon" aria-label="Try the board">
+          <span class="scissors" aria-hidden="true">✂</span>
+          <h2 class="sc">Today’s Puzzle</h2>
+          <p class="sub">Ari, our resident psychic, offers this clue:</p>
+          <div class="demo-clue" id="demo-clue"></div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Pencil in your guess, then check the answer.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal answer</button>
+            <button class="btn" data-action="shuffle">Next puzzle</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </aside>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title" data-print><small class="sc">Rules of play</small>How the Game Is Played</h2>
+        <div class="cols3">
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><path d="M10 36c20-26 80-26 100 0c-20 26-80 26-100 0z"/><circle cx="60" cy="36" r="13"/><circle cx="60" cy="36" r="4" class="fill"/><path d="M22 12l8 9M60 4v11M98 12l-8 9"/></svg>
+            <h3><span class="num">I.</span> The Psychic Takes a Peek</h3>
+            <p>One player privately sees where the target sits between two pairs of opposing words. Nobody else may look.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><path d="M14 10h92a6 6 0 0 1 6 6v28a6 6 0 0 1-6 6H48l-18 14v-14H14a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z"/><path d="M26 25h68M26 35h46"/></svg>
+            <h3><span class="num">II.</span> A Single Clue Is Given</h3>
+            <p>Something that belongs at that exact spot. A pug in a hot dog costume, for instance: rather cute, and somewhat funny.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><circle cx="74" cy="22" r="9" class="red"/><path d="M44 46l6 6M50 46l-6 6M68 48l6 6M74 48l-6 6M70 18l8 8M78 18l-8 8"/></svg>
+            <h3><span class="num">III.</span> Readers Place Their Marks</h3>
+            <p>Every other player marks the board in secret. Then all is revealed. A bullseye earns four points; the highest total wins.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="classifieds">
+        <h2 class="sec-title" data-print><small class="sc">Classifieds</small>Wanted: Game Night</h2>
+        <div class="classifieds">
+          <div class="ad" data-print><b class="sc">Every Player for Themselves</b><div class="rule"></div><p>No teams. Private guesses. Live scores. Apply within.</p></div>
+          <div class="ad" data-print><b class="sc">Phone Friendly</b><div class="rule"></div><p>Plays on any phone. No app store, no account required.</p></div>
+          <div class="ad tall" data-print><b class="sc">Lost</b><div class="rule"></div><p>One marker. Last seen drifting toward <i>Cute</i>. Answers to “dot”.</p><p class="reward">Reward: 4 points</p></div>
+          <div class="ad" data-print><b class="sc">Endless Cards</b><div class="rule"></div><p>Any two axes may be combined. Write your own, too.</p></div>
+          <div class="ad" data-print><b class="sc">Four-Letter Rooms</b><div class="rule"></div><p>Share one code. Friends join in seconds. Inquire today.</p></div>
+          <div class="ad inverse" data-print><b class="sc">Psychic Wanted</b><div class="rule"></div><p>Must be vague, but not too vague. No experience necessary.</p></div>
+          <div class="ad" data-print><b class="sc">For Sale</b><div class="rule"></div><p>Strong opinions on whether a goose is scary. Barely used.</p></div>
+        </div>
+      </section>
+
+      <section class="letters">
+        <h2 class="sec-title" data-print><small class="sc">Letters to the editor</small>Readers Respond</h2>
+        <div class="letter-row">
+          <blockquote data-print><p>“My brother and I scored a bullseye on <i>kale chips</i>. We have not spoken since. It was worth it.”</p><cite>A reader, Tuesday</cite></blockquote>
+          <blockquote data-print><p>“I gave the clue <i>my landlord</i>. Everyone knew exactly where to go. I fear for my landlord.”</p><cite>A reader, by email</cite></blockquote>
+        </div>
+      </section>
+
+      <div class="extra">
+        <h2 class="shout" data-shout>Extra! Extra!</h2>
+        <p>Start a room and read all about your friends.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+
+    <footer>
+      <span>© 2026 The Psychic Plane · A student publication · Printed on recycled pixels</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <div class="film" aria-hidden="true">
+    <div class="film-tint tint"></div>
+    <div class="film-vignette vignette"></div>
+    <div class="film-grain grain"></div>
+    <canvas class="film-dirt"></canvas>
+  </div>
+
+  <div class="intro" id="intro">
+    <div class="intro-desk"></div>
+    <div class="props" aria-hidden="true">
+      <span class="coffee"></span>
+      <span class="coffee two"></span>
+      <svg class="prop mug" viewBox="0 0 130 100">
+        <defs>
+          <radialGradient id="coffee" cx="42%" cy="40%"><stop offset="0" stop-color="#5a3519"/><stop offset=".7" stop-color="#2b160a"/><stop offset="1" stop-color="#1a0c05"/></radialGradient>
+          <radialGradient id="cup" cx="40%" cy="35%"><stop offset="0" stop-color="#f4eee0"/><stop offset="1" stop-color="#b9b0a0"/></radialGradient>
+        </defs>
+        <path d="M86 38h18a14 14 0 0 1 0 28H86" fill="none" stroke="#cfc7b6" stroke-width="9"/>
+        <circle cx="50" cy="52" r="44" fill="url(#cup)"/>
+        <circle cx="50" cy="52" r="36" fill="url(#coffee)"/>
+        <ellipse cx="38" cy="40" rx="12" ry="6" fill="#fff" opacity=".16" transform="rotate(-30 38 40)"/>
+        <circle cx="50" cy="52" r="36" fill="none" stroke="#7a4a26" stroke-width="1.5" opacity=".6"/>
+      </svg>
+      <svg class="prop crystal" viewBox="0 0 120 120">
+        <defs>
+          <radialGradient id="orb" cx="36%" cy="32%"><stop offset="0" stop-color="#f1ecff"/><stop offset=".35" stop-color="#9d93c4"/><stop offset=".8" stop-color="#3b3360"/><stop offset="1" stop-color="#1c1730"/></radialGradient>
+          <radialGradient id="brass" cx="40%" cy="35%"><stop offset="0" stop-color="#e2b766"/><stop offset="1" stop-color="#6b4818"/></radialGradient>
+        </defs>
+        <circle cx="60" cy="60" r="56" fill="url(#brass)"/>
+        <circle cx="60" cy="60" r="56" fill="none" stroke="#3a250a" stroke-width="2" stroke-dasharray="3 5"/>
+        <circle cx="60" cy="60" r="45" fill="url(#orb)"/>
+        <path d="M38 70c10-14 30-4 40-18" fill="none" stroke="#e8e2ff" stroke-width="1.2" opacity=".35"/>
+        <ellipse cx="45" cy="42" rx="11" ry="6" fill="#fff" opacity=".7" transform="rotate(-35 45 42)"/>
+      </svg>
+      <svg class="prop glasses" viewBox="0 0 170 70">
+        <path d="M2 14L24 28M168 14l-22 14" stroke="#1a120c" stroke-width="3" fill="none"/>
+        <circle cx="50" cy="38" r="25" fill="#ffffff12" stroke="#1a120c" stroke-width="4"/>
+        <circle cx="120" cy="38" r="25" fill="#ffffff12" stroke="#1a120c" stroke-width="4"/>
+        <path d="M75 34q10-8 20 0" stroke="#1a120c" stroke-width="3.5" fill="none"/>
+        <path d="M36 26q8-6 16-4M106 26q8-6 16-4" stroke="#fff" stroke-width="2" opacity=".35" fill="none"/>
+      </svg>
+      <div class="prop note">Ari’s clue?<br><s>a goose</s><br>“airport sushi”</div>
+      <div class="prop clipping"><b>LOCAL MAN</b><i></i><i></i><i></i><i></i></div>
+      <svg class="prop clip" viewBox="0 0 24 64"><path d="M16 14v34a6 6 0 0 1-12 0V10a8 8 0 0 1 16 0v38a10 10 0 0 1-20 0V18" fill="none" stroke="#c9ccd1" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="prop clip two" viewBox="0 0 24 64"><path d="M16 14v34a6 6 0 0 1-12 0V10a8 8 0 0 1 16 0v38a10 10 0 0 1-20 0V18" fill="none" stroke="#b9bcc2" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <div class="prop inkpad"><span></span></div>
+      <svg class="prop stamper" viewBox="0 0 70 70">
+        <rect x="8" y="8" width="54" height="54" rx="4" fill="#7b4a26"/>
+        <rect x="8" y="8" width="54" height="54" rx="4" fill="none" stroke="#3f230f" stroke-width="2"/>
+        <circle cx="35" cy="35" r="17" fill="#9a6235"/>
+        <circle cx="31" cy="31" r="6" fill="#c08550" opacity=".7"/>
+      </svg>
+      <span class="pencil-wrap"><span class="pencil"></span></span>
+      <span class="shavings"></span>
+    </div>
+    <canvas class="intro-canvas" aria-hidden="true"></canvas>
+    <div class="intro-dark"></div>
+    <!-- data-settle: the page's level for each layer (see .film in page.css), reached at hand-off -->
+    <div class="intro-tint tint" data-settle="0.45"></div>
+    <div class="intro-vignette vignette" data-settle="0.45"></div>
+    <div class="intro-grain grain" data-settle="0.4"></div>
+    <canvas class="intro-film" aria-hidden="true" data-settle="0.45"></canvas>
+    <p class="intro-hint" aria-hidden="true">tap the paper to open it</p>
+    <button class="intro-skip" type="button">Skip ›</button>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="page.js"></script>
+  <script src="../variants/common.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="intro.js"></script>
+</body>
+</html>

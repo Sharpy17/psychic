@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Psychic Plane Editions</title>
+<style>
+  :root {
+    --paper: #f3eee2; --ink: #1b1b1b; --muted: #55504a; --red: #b3261e; --wood: #2f2017;
+    color-scheme: light;
+  }
+  body { margin: 0; background: var(--wood) radial-gradient(ellipse 70% 55% at 40% 20%, #ffcf8a1a, transparent 70%); color: var(--ink); font: 17px/1.5 "Old Standard TT", Georgia, serif; }
+  .page { max-width: 1000px; margin: 28px auto 48px; background: var(--paper); box-shadow: 0 30px 60px -30px #000, inset 0 0 80px #b08d5a33; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 36px max(16px, env(safe-area-inset-left, 0px)); }
+  @media (min-width: 700px) { .page { padding-inline: 44px; } }
+  header { text-align: center; border-bottom: 3px double var(--ink); padding-bottom: 14px; }
+  h1 { font: 400 clamp(2.2rem, 7vw, 4rem)/1 "UnifrakturMaguntia", "Old English Text MT", serif; margin: 0; }
+  header p { margin: 8px 0 0; font-style: italic; color: var(--muted); }
+  .kicker { font-variant: small-caps; letter-spacing: 0.15em; color: var(--red); font-weight: 700; margin: 0 0 6px; }
+  ol { list-style: none; padding: 0; margin: 26px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 18px; }
+  li { border: 1px solid var(--ink); padding: 18px 18px 16px; display: grid; gap: 8px; align-content: start; background: #f8f4ea; }
+  li h2 { margin: 0; font: 900 1.6rem/1.1 "Playfair Display", Georgia, serif; text-wrap: balance; }
+  li .no { font: 0.8rem "Special Elite", "Courier New", monospace; color: var(--muted); }
+  li p { margin: 0; color: #2b2925; }
+  a.read { justify-self: start; margin-top: 6px; color: var(--paper); background: var(--ink); text-decoration: none; padding: 8px 16px 9px; font: 700 1rem "Playfair Display", Georgia, serif; font-variant: small-caps; letter-spacing: 0.08em; box-shadow: 3px 3px 0 var(--red); }
+  a.read:hover { background: var(--red); box-shadow: 3px 3px 0 var(--ink); }
+  footer { margin-top: 24px; font-size: 0.85rem; color: var(--muted); text-align: center; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@900&family=Special+Elite&family=UnifrakturMaguntia&display=swap">
+
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="kicker">Four editions · Same paper, different front page</p>
+    <h1>The Psychic Plane</h1>
+    <p>Each edition opens with the crumpled-paper intro, then shows its own front page.</p>
+  </header>
+  <ol>
+    <li>
+      <span class="no">Edition A</span>
+      <h2>The Picture Desk</h2>
+      <p>A big halftone staff photo leads the page, with a headline to match. A new photo on every reload: a houseplant champion, a crowd staring at a dot, a paper plane bullseye, a huddle, a goose standoff. There's also a contact sheet to pick from.</p>
+      <a class="read" href="picture/index.html">Read edition A →</a>
+    </li>
+    <li>
+      <span class="no">Edition B</span>
+      <h2>The Big Top</h2>
+      <p>A wood-type circus playbill printed in two inks: lettering on an arc, a turning sunburst, blinking bulbs and ticket stubs for buttons.</p>
+      <a class="read" href="bigtop/index.html">Read edition B →</a>
+    </li>
+    <li>
+      <span class="no">Edition C</span>
+      <h2>The Tabloid</h2>
+      <p>The loud weekly: a red logo block, a stacked screamer headline, a cut-out photo with the dot circled, and a "shock claim" sticker.</p>
+      <a class="read" href="tabloid/index.html">Read edition C →</a>
+    </li>
+    <li>
+      <span class="no">Edition D</span>
+      <h2>Sunday Funnies</h2>
+      <p>The comics section in three inks: a four-panel strip that teaches the game, plus a word search and horoscopes.</p>
+      <a class="read" href="funnies/index.html">Read edition D →</a>
+    </li>
+    <li>
+      <span class="no">Edition E · A + B</span>
+      <h2>The Showbill</h2>
+      <p>The Big Top's circus title and ticket buttons up top, so you can start a game straight away, then the Picture Desk's halftone photo, contact sheet and story. A ticket-booth bar slides up when you scroll past the tickets, so Create and Join always stay on screen.</p>
+      <a class="read" href="showbill/index.html">Read edition E →</a>
+    </li>
+  </ol>
+  <footer>Prototype · Every edition keeps the try-it board, rules, classifieds and letters from the broadsheet.</footer>
+</div>
+</body>
+</html>

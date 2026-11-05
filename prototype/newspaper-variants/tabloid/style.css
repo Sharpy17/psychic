@@ -1,0 +1,150 @@
+/* Tabloid: the loud weekly. Condensed screamer type, a red masthead block, a cut-out photo. */
+:root {
+  --bg: #efece4;
+  --panel: #f6f4ee;
+  --f-scream: "Anton", "Impact", "Haettenschweiler", "Arial Narrow Bold", sans-serif;
+}
+
+/* ---------- Masthead ---------- */
+.tab-top {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+  padding-block: 22px 16px;
+  border-bottom: 4px solid var(--text);
+}
+.logo {
+  background: var(--red);
+  color: var(--bg);
+  padding: 10px 18px 12px;
+  transform: rotate(-1.2deg);
+  box-shadow: 5px 5px 0 var(--text);
+  align-self: start;
+}
+.logo h1 { font: 400 clamp(2.6rem, 6.4vw, 4.8rem)/0.9 var(--f-scream); text-transform: uppercase; letter-spacing: 0.01em; }
+.logo-the, .logo-weekly { display: block; font: 700 0.85rem var(--f-head); letter-spacing: 0.3em; text-transform: uppercase; }
+.logo-weekly { margin-top: 6px; border-top: 2px solid var(--bg); padding-top: 4px; }
+.tab-side { display: grid; gap: 10px; align-content: space-between; min-width: 0; }
+.tab-side .motto { font: italic 400 1.1rem var(--f-head); color: var(--muted); }
+.teasers { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.teasers li { border: 2px solid var(--text); padding: 8px 10px; font: 400 1rem/1.15 var(--f-scream); text-transform: uppercase; letter-spacing: 0.01em; }
+.teasers li i { color: var(--red); font-style: normal; }
+.teasers b { display: inline-block; background: var(--text); color: var(--bg); font: 400 0.75rem var(--f-type); padding: 1px 5px; margin-right: 4px; vertical-align: 2px; }
+.tab-side nav { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.tab-side nav a { text-decoration: none; padding: 4px 8px; font-size: 0.9rem; }
+.tab-side nav a:hover { color: var(--red); }
+.tab-side .btn { padding: 6px 14px 8px; font-size: 0.95rem; }
+.tab-top .stamp { left: 250px; right: auto; top: 196px; }
+
+.stop-press b { background: var(--red); }
+
+/* ---------- The splash ---------- */
+.splash {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(20px, 3vw, 40px);
+  padding-block: 28px 40px;
+  border-bottom: 4px solid var(--text);
+}
+.splash > * { min-width: 0; }
+.exclusive {
+  display: inline-block;
+  background: var(--text);
+  color: var(--bg);
+  font: 400 1.05rem var(--f-scream);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 4px 12px 5px;
+  transform: rotate(-2deg);
+}
+.scream { display: flex; flex-direction: column; font-family: var(--f-scream); font-weight: 400; text-transform: uppercase; line-height: 0.86; margin-top: 14px; }
+.scream span { display: block; }
+.scream .l1 { font-size: clamp(2.6rem, 6vw, 4.8rem); }
+.scream .l2 { font-size: clamp(3.6rem, 9vw, 7.4rem); color: var(--red); }
+.scream .l3 { font-size: clamp(4.4rem, 11.5vw, 9.6rem); text-shadow: 5px 5px 0 #1b1b1b33; }
+.strap { font: 700 clamp(1.15rem, 2vw, 1.45rem)/1.25 var(--f-head); margin-top: 16px; max-width: 30ch; }
+.strap u { text-decoration-color: var(--red); text-decoration-thickness: 4px; text-underline-offset: 3px; }
+.bullets { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 6px; }
+.bullets li { font: 400 1.2rem var(--f-scream); text-transform: uppercase; letter-spacing: 0.02em; }
+.bullets li::before { content: "▶"; color: var(--red); margin-right: 10px; font-size: 0.8em; }
+
+.cutout {
+  position: relative;
+  margin: 18px 0 0;
+  align-self: start;
+  background: #fff;
+  padding: 10px 10px 8px;
+  transform: rotate(2.2deg);
+  box-shadow: 4px 6px 0 #1b1b1b33, 0 0 0 1px #1b1b1b33;
+}
+.cutout .photo { aspect-ratio: 5 / 4; border: 0; }
+.cutout figcaption { font: 0.8rem var(--f-type); padding-top: 6px; color: #333; }
+.cutout .ring {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 22%;
+  aspect-ratio: 1.1;
+  transform: translate(-50%, -42%) rotate(-8deg);
+  border: 4px solid var(--red);
+  border-radius: 50% 45% 52% 48%;
+}
+.cutout .arrow {
+  position: absolute;
+  right: -6%;
+  top: 4%;
+  font: 400 1.5rem var(--f-scream);
+  color: var(--red);
+  background: var(--bg);
+  padding: 2px 10px;
+  transform: rotate(6deg);
+  box-shadow: 2px 2px 0 var(--text);
+}
+.cutout .arrow svg { position: absolute; left: -46px; top: 30px; width: 80px; height: 50px; fill: none; stroke: var(--red); stroke-width: 4; stroke-linecap: round; transform: scaleX(-1); }
+
+.burst-sticker {
+  position: absolute;
+  right: 41%;
+  top: 36%;
+  width: 140px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: var(--red);
+  color: #fff;
+  clip-path: polygon(50% 0, 59% 14%, 75% 6%, 76% 24%, 94% 25%, 86% 41%, 100% 50%, 86% 59%, 94% 75%, 76% 76%, 75% 94%, 59% 86%, 50% 100%, 41% 86%, 25% 94%, 24% 76%, 6% 75%, 14% 59%, 0 50%, 14% 41%, 6% 25%, 24% 24%, 25% 6%, 41% 14%);
+  transform: rotate(-12deg);
+}
+.burst-sticker span { font: 400 1.5rem/0.95 var(--f-scream); text-transform: uppercase; text-align: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .burst-sticker { animation: wobble-sticker 0.8s steps(1) infinite; }
+}
+@keyframes wobble-sticker { 50% { transform: rotate(-6deg) scale(1.05); } }
+
+/* ---------- Below ---------- */
+.front .headline, .sec-title { font-family: var(--f-scream); font-weight: 400; text-transform: uppercase; letter-spacing: 0.01em; }
+.sec-title small { font-family: var(--f-body); text-transform: none; }
+.story p:first-child::first-letter { font-family: var(--f-scream); font-weight: 400; font-size: 4.4rem; line-height: 0.86; padding-top: 2px; }
+.quote-box { margin-top: 22px; background: var(--text); color: var(--bg); padding: 16px 20px; transform: rotate(-0.8deg); }
+.quote-box p { font: 400 1.5rem/1.15 var(--f-scream); text-transform: uppercase; }
+.quote-box i { color: #ff8a7e; font-style: normal; }
+.quote-box cite { color: #c9c3b6; }
+.shout { font-family: var(--f-scream); font-weight: 400; text-transform: uppercase; }
+.coupon h2 { font-family: var(--f-scream); font-weight: 400; }
+
+@media (max-width: 960px) {
+  .teasers { grid-template-columns: 1fr; }
+  .splash { grid-template-columns: 1fr; }
+  .burst-sticker { right: 6%; top: 4%; width: 110px; }
+  .burst-sticker span { font-size: 1.1rem; }
+  .cutout { max-width: 560px; }
+}
+@media (max-width: 680px) {
+  .tab-top { grid-template-columns: 1fr; }
+  .logo { justify-self: start; }
+  .teasers { display: none; }
+  .tab-top .stamp { left: auto; right: 4%; top: 30px; }
+  .cutout .arrow { right: 4%; }
+}

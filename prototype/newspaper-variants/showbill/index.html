@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Psychic Plane</title>
+  <script>
+    // Decide the intro before first paint: it plays on every visit, except for reduced motion.
+    (function () {
+      var d = document.documentElement;
+      var mode = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'full';
+      d.classList.add('js');
+      d.dataset.intro = mode;
+      if (mode !== 'none') {
+        d.classList.add('intro-on');
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Special+Elite&family=UnifrakturMaguntia&display=swap">
+  <script>document.documentElement.dataset.motion = 'smooth'; /* intro runs at full frame rate here */</script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Ultra&display=swap">
+  <link rel="stylesheet" href="../../variants/base.css">
+  <link rel="stylesheet" href="../../variants/board.css">
+  <link rel="stylesheet" href="../shared/page.css">
+  <link rel="stylesheet" href="../shared/intro.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script src="../shared/stage.js"></script>
+  <div class="sheet">
+    <div class="creases" aria-hidden="true"></div>
+
+    <div class="topline">
+      <span class="sc">Late Edition</span>
+      <nav>
+        <span class="links"><a href="#how">How to play</a><a href="#classifieds">Classifieds</a></span>
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn primary" data-action="create">Play</button>
+      </nav>
+    </div>
+
+    <header class="masthead" id="top">
+      <div class="ear left"><b class="sc">Weather</b><span>80% chance of mind-reading. Light clues, clearing by midnight.</span></div>
+      <div class="title">
+        <h1>The Psychic Plane</h1>
+        <p class="motto">“All the clues that are fit to guess”</p>
+      </div>
+      <div class="ear right"><b class="sc">Est. 2026</b><span>Price: one clue. Delivered to 3–10 readers.</span></div>
+      <div class="stamp" aria-hidden="true"><span>Extra!</span></div>
+    </header>
+
+    <div class="dateline sc"><span>Vol. I · No. 1</span><span id="today">Game Night Edition</span><span>Free · For 3–10 readers</span></div>
+
+    <div class="stop-press" aria-live="off">
+      <b>Stop press</b>
+      <span class="ticker"><span id="ticker">Psychic predicts own victory; nobody surprised.</span><i class="caret"></i></span>
+    </div>
+
+    <main>
+      <!-- The circus title and the tickets sit at the top, so they're on screen when the page opens.
+           The tickets hang over the bottom edge of the bill, as if pinned on top of it. -->
+      <section class="playbill" id="playbill" aria-label="Tonight’s show">
+        <div class="bill-bg" aria-hidden="true">
+          <div class="rays"></div>
+          <div class="spot"></div>
+          <div class="bulbs" id="bulbs"></div>
+        </div>
+        <span class="corner tl" aria-hidden="true">✦</span><span class="corner tr" aria-hidden="true">✦</span>
+
+        <p class="arc" data-arc="620">★ The Greatest Mind-Reading Show on Earth ★</p>
+        <div class="names">
+          <span class="bill-small">The astonishing</span>
+          <span class="bill-row">
+            <span class="bill-huge">Psychic</span>
+            <span class="bill-amp">&amp;</span>
+            <span class="bill-huge red">Plane</span>
+          </span>
+        </div>
+        <p class="ribbon"><span>One clue · One dot · No refunds</span></p>
+
+        <div class="tickets-slot" id="tickets-slot">
+        <div class="tickets" id="tickets">
+          <div class="tk">
+            <button class="ticket" data-action="create"><small>Admit 3 to 10</small><b>Create a room</b><i>No. 000417</i></button>
+          </div>
+          <div class="tk">
+            <form class="ticket alt stub" id="stub" autocomplete="off" novalidate>
+              <label for="code-0"><small>Have a code? Type it in</small></label>
+              <span class="slots" role="group" aria-label="4-letter room code">
+                <input id="code-0" maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 1"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 2"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 3"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 4">
+              </span>
+              <i class="stub-note" id="stub-note" aria-live="polite">No. 000418 · 4th letter seats you</i>
+            </form>
+          </div>
+        </div>
+        </div>
+      </section>
+      <p class="bill-fine">No downloads. No accounts. Children, goslings and houseplants welcome.</p>
+
+      <!-- The picture desk: a smaller halftone photo on the left (new on every visit), the story on the right. -->
+      <article class="desk">
+        <div class="desk-pic">
+          <figure class="lead-photo develop">
+            <canvas class="photo" id="photo" data-cell="4.4" aria-label="Halftone staff photo"></canvas>
+            <span class="plate"><b id="plate">Plate 1 of 5</b><span class="sc" id="kicker">Exclusive</span></span>
+            <button class="next-photo" id="next-photo" type="button">Another photo ↻</button>
+          </figure>
+          <p class="caption" id="caption">Staff photo. <i>(Picture desk)</i></p>
+          <div class="contact" aria-label="Contact sheet">
+            <div class="contact-head"><b class="sc">Contact sheet</b><span>Roll 26 · Pick a frame</span></div>
+            <div class="frames" id="frames"></div>
+          </div>
+        </div>
+
+        <div class="desk-copy">
+          <h2 class="headline" id="headline">Local Friends Caught Reading Each Other’s Minds</h2>
+          <p class="deck" id="deck">Experts baffled as a single clue leads an entire group to the very same dot</p>
+          <div class="byline sc">By our Picture Desk, from the front row · Doors at 8:02 p.m.</div>
+          <div class="story">
+            <p>Ladies, gentlemen and undecided parties: each round, one brave performer, the “psychic”, is shown a secret point on a board marked with two pairs of opposites. <i>Funny</i> and <i>Unfunny</i>. <i>Ugly</i> and <i>Cute</i>.</p>
+            <p>They may offer the audience a single clue. Not two. One. The audience then marks, in secret, where they believe the point lies, and the closest guesses earn the most points.</p>
+            <p>“It took thirty seconds to learn,” said one player, “and three hours to stop arguing about whether a goose is scary.” No downloads or accounts are required.</p>
+            <p>Our photographers have been sent to every show in town. They report the same thing each time: one clue, one dot, and a room full of people pointing at it.</p>
+          </div>
+        </div>
+      </article>
+
+      <div class="front">
+        <aside class="coupon" aria-label="Try the board">
+          <span class="scissors" aria-hidden="true">✂</span>
+          <h2 class="sc">Today’s Puzzle</h2>
+          <p class="sub">Ari, our resident psychic, offers this clue:</p>
+          <div class="demo-clue" id="demo-clue"></div>
+          <div class="board-wrap">
+            <span class="axis-label top" id="demo-top"></span>
+            <span class="axis-label left" id="demo-left"></span>
+            <div class="board-slot" id="board-slot"></div>
+            <span class="axis-label right" id="demo-right"></span>
+            <span class="axis-label bottom" id="demo-bottom"></span>
+          </div>
+          <p class="hint">Pencil in your guess, then check the answer.</p>
+          <div class="demo-foot">
+            <button class="btn primary" data-action="reveal" id="reveal-btn">Reveal answer</button>
+            <button class="btn" data-action="shuffle">Next puzzle</button>
+          </div>
+          <p class="demo-result" id="demo-result" aria-live="polite"></p>
+        </aside>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title" data-print><small class="sc">Rules of play</small>How the Game Is Played</h2>
+        <div class="cols3">
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><path d="M10 36c20-26 80-26 100 0c-20 26-80 26-100 0z"/><circle cx="60" cy="36" r="13"/><circle cx="60" cy="36" r="4" class="fill"/><path d="M22 12l8 9M60 4v11M98 12l-8 9"/></svg>
+            <h3><span class="num">I.</span> The Psychic Takes a Peek</h3>
+            <p>One player privately sees where the target sits between two pairs of opposing words. Nobody else may look.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><path d="M14 10h92a6 6 0 0 1 6 6v28a6 6 0 0 1-6 6H48l-18 14v-14H14a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z"/><path d="M26 25h68M26 35h46"/></svg>
+            <h3><span class="num">II.</span> A Single Clue Is Given</h3>
+            <p>Something that belongs at that exact spot. A pug in a hot dog costume, for instance: rather cute, and somewhat funny.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><circle cx="74" cy="22" r="9" class="red"/><path d="M44 46l6 6M50 46l-6 6M68 48l6 6M74 48l-6 6M70 18l8 8M78 18l-8 8"/></svg>
+            <h3><span class="num">III.</span> Readers Place Their Marks</h3>
+            <p>Every other player marks the board in secret. Then all is revealed. A bullseye earns four points; the highest total wins.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="classifieds">
+        <h2 class="sec-title" data-print><small class="sc">Classifieds</small>Wanted: Game Night</h2>
+        <div class="classifieds">
+          <div class="ad" data-print><b class="sc">Every Player for Themselves</b><div class="rule"></div><p>No teams. Private guesses. Live scores. Apply within.</p></div>
+          <div class="ad" data-print><b class="sc">Phone Friendly</b><div class="rule"></div><p>Plays on any phone. No app store, no account required.</p></div>
+          <div class="ad tall" data-print><b class="sc">Lost</b><div class="rule"></div><p>One marker. Last seen drifting toward <i>Cute</i>. Answers to “dot”.</p><p class="reward">Reward: 4 points</p></div>
+          <div class="ad" data-print><b class="sc">Endless Cards</b><div class="rule"></div><p>Any two axes may be combined. Write your own, too.</p></div>
+          <div class="ad" data-print><b class="sc">Four-Letter Rooms</b><div class="rule"></div><p>Share one code. Friends join in seconds. Inquire today.</p></div>
+          <div class="ad inverse" data-print><b class="sc">Psychic Wanted</b><div class="rule"></div><p>Must be vague, but not too vague. No experience necessary.</p></div>
+          <div class="ad" data-print><b class="sc">For Sale</b><div class="rule"></div><p>Strong opinions on whether a goose is scary. Barely used.</p></div>
+        </div>
+      </section>
+
+      <section class="letters">
+        <h2 class="sec-title" data-print><small class="sc">Letters to the editor</small>Readers Respond</h2>
+        <div class="letter-row">
+          <blockquote data-print><p>“My brother and I scored a bullseye on <i>kale chips</i>. We have not spoken since. It was worth it.”</p><cite>A reader, Tuesday</cite></blockquote>
+          <blockquote data-print><p>“I gave the clue <i>my landlord</i>. Everyone knew exactly where to go. I fear for my landlord.”</p><cite>A reader, by email</cite></blockquote>
+        </div>
+      </section>
+
+      <div class="extra">
+        <h2 class="shout" data-shout>Extra! Extra!</h2>
+        <p>Start a room and read all about your friends.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+    <footer>
+      <span>© 2026 The Psychic Plane · A student publication · Printed on recycled pixels</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <script src="../picture/scenes.js"></script>
+  <script src="showbill.js"></script>
+  <script src="../shared/page.js"></script>
+  <script src="../../variants/common.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../shared/intro.js"></script>
+</body>
+</html>

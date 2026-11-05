@@ -1,0 +1,166 @@
+/* Big Top: a wood-type circus playbill, printed in two inks on the front page. */
+:root {
+  --f-wood: "Ultra", "Rockwell Extra Bold", "Arial Black", serif;
+  --f-circus: "Rye", "Playfair Display", Georgia, serif;
+}
+
+/* ---------- The playbill ---------- */
+.playbill {
+  position: relative;
+  margin-top: 22px;
+  padding: clamp(28px, 4vw, 48px) clamp(16px, 4vw, 56px) clamp(30px, 4vw, 44px);
+  border: 3px solid var(--text);
+  outline: 1px solid var(--text);
+  outline-offset: -10px;
+  text-align: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(ellipse 60% 50% at 50% 42%, #fbf6e8, transparent 75%);
+}
+section.playbill { border-bottom: 3px solid var(--text); }
+/* Light bulbs around the frame, blinking in turn. */
+.playbill::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 7px solid transparent;
+  border-image: radial-gradient(circle, var(--text) 0 2.5px, transparent 3px) 0 0 / 7px / 0 round;
+  background: none;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.playbill::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 7px solid transparent;
+  border-image: radial-gradient(circle, var(--red) 0 2.5px, transparent 3px) 0 0 / 7px / 0 round;
+  pointer-events: none;
+  animation: bulbs 0.66s steps(1) infinite;
+}
+@keyframes bulbs { 50% { opacity: 0; } }
+
+.burst { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; fill: #b3261e0f; }
+@media (prefers-reduced-motion: no-preference) {
+  .burst { animation: spin 24s steps(96) infinite; transform-origin: 50% 50%; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.corner { position: absolute; font-size: 1.6rem; line-height: 1; color: var(--red); }
+.corner.tl { left: 30px; top: 28px; } .corner.tr { right: 30px; top: 28px; }
+.corner.bl { left: 30px; bottom: 28px; } .corner.br { right: 30px; bottom: 28px; }
+
+.arc { position: relative; margin: 0 auto; font: 400 clamp(1.05rem, 2.2vw, 1.6rem)/1 var(--f-circus); color: var(--red); letter-spacing: 0.02em; white-space: nowrap; }
+.arc.bent span { position: absolute; left: 50%; top: 0; transform-origin: 50% 100%; }
+
+.bill-the { font: italic 400 1rem var(--f-body); color: var(--muted); margin-top: 4px; }
+.tonight {
+  font: 400 clamp(3.4rem, 12vw, 9.5rem)/0.92 var(--f-wood);
+  color: var(--red);
+  letter-spacing: 0.01em;
+  text-shadow: 4px 4px 0 var(--text), 0 0 1px #b3261e;
+  margin-top: 6px;
+}
+.tonight span { display: inline-block; white-space: pre; }
+.tonight.live span { animation: shout 0.42s steps(1) infinite; animation-delay: calc(var(--i) * -0.07s); }
+
+.names { display: flex; flex-direction: column; align-items: center; margin-top: 18px; }
+.names .bill-small { position: relative; z-index: 1; background: radial-gradient(closest-side, #f6f0e0 70%, transparent); padding-inline: 12px; }
+.bill-small { font: 700 clamp(0.85rem, 1.6vw, 1.1rem)/1.6 var(--f-head); letter-spacing: 0.35em; text-transform: uppercase; }
+.bill-small::before, .bill-small::after { content: "—"; margin-inline: 0.6em; color: var(--red); }
+.bill-huge {
+  font: 400 clamp(3.2rem, 13vw, 10.5rem)/1 var(--f-circus);
+  color: var(--text);
+  transform: scaleY(1.12);
+  text-shadow: 3px 3px 0 var(--bg), 6px 6px 0 var(--red);
+  margin-block: 0.06em 0.12em;
+}
+.bill-huge.red { color: var(--red); text-shadow: 3px 3px 0 var(--bg), 6px 6px 0 var(--text); }
+
+.gasps { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 18px; margin-top: 20px; }
+.gasps span {
+  font: 400 clamp(1rem, 2.4vw, 1.5rem)/1 var(--f-wood);
+  text-transform: uppercase;
+  padding: 8px 14px 9px;
+  border: 2px solid var(--text);
+  background: var(--bg);
+  transform: rotate(-4deg);
+  box-shadow: 3px 3px 0 var(--text);
+}
+.gasps span:nth-child(2) { transform: rotate(3deg); background: var(--text); color: var(--bg); }
+.gasps span:nth-child(3) { transform: rotate(-2deg); color: var(--red); }
+
+.ribbon { margin: 26px auto 0; display: inline-block; position: relative; }
+.ribbon span {
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: var(--red);
+  color: var(--bg);
+  font: 400 clamp(0.9rem, 1.8vw, 1.15rem)/1 var(--f-circus);
+  letter-spacing: 0.08em;
+  padding: 10px 26px 11px;
+}
+.ribbon::before, .ribbon::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  width: 34px;
+  height: 100%;
+  background: #7f1913;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 10px 50%);
+}
+.ribbon::before { left: -22px; }
+.ribbon::after { right: -22px; transform: scaleX(-1); }
+
+.feature { max-width: 46ch; margin: 22px auto 0; font-size: 1.08rem; }
+.feature b { font: 400 1.05em var(--f-circus); color: var(--red); letter-spacing: 0.03em; }
+
+/* ---------- Ticket CTAs ---------- */
+.tickets { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-top: 28px; }
+.ticket {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 220px;
+  padding: 12px 34px 12px;
+  color: var(--bg);
+  background: var(--text);
+  border: 0;
+  /* Punched notches on both short edges. */
+  -webkit-mask: radial-gradient(circle at 0 50%, #0000 11px, #000 12px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 11px, #000 12px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 50%, #0000 11px, #000 12px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 11px, #000 12px) right / 51% 100% no-repeat;
+  transform: rotate(-1.5deg);
+  transition: transform 0.12s steps(2), background 0.15s;
+}
+.ticket.alt { background: var(--red); transform: rotate(1.5deg); }
+.ticket:hover { transform: rotate(0) scale(1.04); }
+.ticket:active { transform: scale(0.97); }
+.ticket::before { content: ""; position: absolute; inset: 5px 18px; border: 1px dashed #f3eee288; pointer-events: none; }
+.ticket small { font: 400 0.72rem var(--f-type); letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.85; }
+.ticket b { font: 400 1.35rem/1.1 var(--f-circus); letter-spacing: 0.03em; }
+.ticket i { font: 400 0.7rem var(--f-type); opacity: 0.7; font-style: normal; }
+.bill-fine { margin-top: 18px; font-size: 0.85rem; color: var(--muted); font-style: italic; }
+
+/* ---------- Below the bill ---------- */
+.front { padding-top: 34px; }
+.front .headline { font-family: var(--f-circus); font-weight: 400; font-size: clamp(1.9rem, 3.8vw, 2.9rem); line-height: 1.05; }
+.story p:first-child::first-letter { font-family: var(--f-wood); font-weight: 400; }
+.acts { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 10px; }
+.acts li { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; align-items: baseline; padding: 10px 14px; border: 1px solid var(--line); border-left: 6px solid var(--red); font: 700 1.2rem var(--f-head); }
+.acts li b { font: 400 0.95rem var(--f-circus); color: var(--red); grid-row: span 2; }
+.acts li span { font: 400 0.95rem var(--f-body); color: var(--muted); }
+
+.sec-title { font-family: var(--f-circus); font-weight: 400; }
+.shout { font-family: var(--f-wood); font-weight: 400; text-shadow: 3px 3px 0 var(--text); }
+.coupon h2 { font-family: var(--f-circus); font-weight: 400; }
+
+@media (max-width: 680px) {
+  .corner { display: none; }
+  .playbill { outline-offset: -6px; }
+  .playbill::before, .playbill::after { inset: 10px; }
+  .ticket { min-width: 0; width: 100%; }
+  .tonight { text-shadow: 3px 3px 0 var(--text); }
+  .bill-huge { text-shadow: 2px 2px 0 var(--bg), 3px 3px 0 var(--red); }
+  .bill-huge.red { text-shadow: 2px 2px 0 var(--bg), 3px 3px 0 var(--text); }
+}
