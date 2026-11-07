@@ -1,0 +1,92 @@
+/* The square board and its four labels (same as landing.html, with colours as variables).
+   Each variant themes it by setting these on :root:
+   --face, --needle, --accent, --zone-2/3/4, --q-tl/tr/bl/br, --q-opacity, --axis-line,
+   --ring-text, --miss, --shield, --shield-text, --board-shadow,
+   --lbl-top/-bottom/-left/-right (text) and --lbl-*-bg (background). */
+
+.board-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 440px) auto;
+  justify-content: center;
+  grid-template-areas:
+    ".    top    .    "
+    "left board  right"
+    ".    bottom .    ";
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+}
+.board-slot { grid-area: board; width: 100%; max-width: 440px; }
+
+.axis-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: var(--lbl-radius, 10px);
+  text-align: center;
+  line-height: 1.2;
+}
+.axis-label.top { grid-area: top; background: var(--lbl-top-bg, #ff5c8d26); color: var(--lbl-top, #ffadc6); }
+.axis-label.bottom { grid-area: bottom; background: var(--lbl-bottom-bg, #ffd35c22); color: var(--lbl-bottom, #ffe28f); }
+.axis-label.left { grid-area: left; writing-mode: vertical-rl; transform: rotate(180deg); background: var(--lbl-left-bg, #9b7bff29); color: var(--lbl-left, #cdbdff); padding: 12px 6px; }
+.axis-label.right { grid-area: right; writing-mode: vertical-rl; background: var(--lbl-right-bg, #3fd8c726); color: var(--lbl-right, #9ff0e6); padding: 12px 6px; }
+
+.board {
+  width: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(var(--board-shadow, 0 6px 18px #0005));
+}
+.board.interactive { cursor: crosshair; touch-action: none; }
+.board.dragging { cursor: grabbing; }
+.board:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+
+.board-face { fill: var(--face); }
+.q { opacity: var(--q-opacity, 0.13); }
+.q-tl { fill: var(--q-tl, #ff5c8d); }
+.q-tr { fill: var(--q-tr, #ff9e45); }
+.q-bl { fill: var(--q-bl, #9b7bff); }
+.q-br { fill: var(--q-br, #3fd8c7); }
+.axis-line { stroke: var(--axis-line, #b9aa8a); stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+
+.target, .marker { transform-box: view-box; }
+.rings {
+  opacity: 0;
+  transform: scale(0.3);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.3s, transform 0.55s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.rings.show { opacity: 1; transform: scale(1); }
+.ring.r2 { fill: var(--zone-2); }
+.ring.r3 { fill: var(--zone-3); }
+.ring.r4 { fill: var(--zone-4); }
+.rings text { font-size: 3.6px; font-weight: 800; fill: var(--ring-text, #3a1630); text-anchor: middle; }
+
+.miss-line {
+  stroke: var(--miss, #2b2550);
+  stroke-width: 0.7;
+  stroke-dasharray: 1.5 1.2;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.3s 0.35s;
+}
+.miss-line.show { opacity: 0.75; }
+
+.shield { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.shield rect { fill: var(--shield, #2b2560); }
+.shield text { font-size: 30px; font-weight: 800; fill: var(--shield-text, #4a4290); text-anchor: middle; }
+.board.shielded .shield { opacity: 1; }
+
+.marker { transition: transform 0.15s ease-out, opacity 0.2s; }
+.board.dragging .marker { transition: opacity 0.2s; }
+.marker.hidden { opacity: 0; }
+.marker-dot { fill: var(--marker, var(--needle)); stroke: var(--marker-stroke, #fff); stroke-width: 1.2; }
+.marker-halo { fill: var(--marker, var(--needle)); opacity: 0.25; transform-box: fill-box; transform-origin: center; }
+.board.interactive .marker-halo { animation: halo 1.4s ease-in-out infinite; }
+@keyframes halo { 50% { transform: scale(1.6); opacity: 0.05; } }
+
+@media (max-width: 420px) {
+  .axis-label { font-size: 0.85rem; }
+}

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="The Psychic Plane: read your friends' minds by mail and win a ticket to the circus. A party game for 2 or more.">
+  <title>The Psychic Plane</title>
+  <script>
+  // Decide the intro before first paint: it plays on every visit, except for reduced motion.
+  (function () {
+  var d = document.documentElement;
+  var inGame = false;
+  try { inGame = !!sessionStorage.getItem('pp-session'); } catch (e) {}
+  var mode = inGame || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'full';
+  d.classList.add('js');
+  d.dataset.intro = mode;
+  if (mode !== 'none') {
+  d.classList.add('intro-on');
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  }
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Special+Elite&family=UnifrakturMaguntia&display=swap">
+  <script>document.documentElement.dataset.motion = 'smooth'; /* intro runs at full frame rate here */</script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Ultra&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/board.css">
+  <link rel="stylesheet" href="css/page.css">
+  <link rel="stylesheet" href="css/intro.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <script src="js/stage.js"></script>
+  <div class="sheet">
+    <div class="creases" aria-hidden="true"></div>
+
+    <div class="topline">
+      <span class="sc">Late Edition</span>
+      <nav>
+        <span class="links"><a href="#how">How to play</a><a href="#classifieds">Classifieds</a></span>
+        <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
+        <button class="btn primary" data-action="create">Play</button>
+      </nav>
+    </div>
+
+    <header class="masthead" id="top">
+      <div class="ear left"><b class="sc">Weather</b><span>80% chance of mind-reading. Light clues, clearing by midnight.</span></div>
+      <div class="title">
+        <h1>The Psychic Plane</h1>
+        <p class="motto">“All the clues that are fit to guess”</p>
+      </div>
+      <div class="ear right"><b class="sc">Est. 2026</b><span>Price: one clue. Prize: one circus ticket. Two readers or more.</span></div>
+      <div class="stamp" aria-hidden="true"><span>Extra!</span></div>
+    </header>
+
+    <div class="dateline sc"><span>Vol. I · No. 1</span><span id="today">Game Night Edition</span><span>Free · For 2 or more readers</span></div>
+
+    <div class="stop-press" aria-live="off">
+      <b>Stop press</b>
+      <span class="ticker"><span id="ticker">Psychic predicts own victory; nobody surprised.</span><i class="caret"></i></span>
+    </div>
+
+    <main>
+      <!-- The circus title and the tickets sit at the top, so they're on screen when the page opens.
+           The tickets hang over the bottom edge of the bill, as if pinned on top of it. -->
+      <section class="playbill" id="playbill" aria-label="Tonight’s show">
+        <div class="bill-bg" aria-hidden="true">
+          <div class="rays"></div>
+          <div class="spot"></div>
+          <div class="bulbs" id="bulbs"></div>
+        </div>
+        <span class="corner tl" aria-hidden="true">✦</span><span class="corner tr" aria-hidden="true">✦</span>
+
+        <p class="arc" data-arc="620">★ The Greatest Mind-Reading Show on Earth ★</p>
+        <div class="names">
+          <span class="bill-small">The astonishing</span>
+          <span class="bill-row">
+            <span class="bill-huge">Psychic</span>
+            <span class="bill-amp">&amp;</span>
+            <span class="bill-huge red">Plane</span>
+          </span>
+        </div>
+        <p class="ribbon"><span>Four clues · One circus ticket</span></p>
+
+        <div class="tickets-slot" id="tickets-slot">
+        <div class="tickets" id="tickets">
+          <div class="tk">
+            <button class="ticket" data-action="create"><small>Admit 2 or more</small><b>Create a room</b><i>No. 000417</i></button>
+          </div>
+          <div class="tk">
+            <form class="ticket alt stub" id="stub" autocomplete="off" novalidate>
+              <label for="code-0"><small>Have a code? Type it in</small></label>
+              <span class="slots" role="group" aria-label="4-character room code">
+                <input id="code-0" maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 1"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 2"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 3"><input maxlength="1" placeholder="·" autocapitalize="characters" spellcheck="false" aria-label="Letter 4">
+              </span>
+              <i class="stub-note" id="stub-note" aria-live="polite">No. 000418 · 4th character seats you</i>
+            </form>
+          </div>
+        </div>
+        </div>
+      </section>
+      <p class="bill-fine">Top of the leaderboard wins a ticket to the circus. No downloads. No accounts. <a href="#slot">Try a sample entry</a>.</p>
+
+      <!-- The picture desk: a smaller halftone photo on the left (new on every visit), the story on the right. -->
+      <article class="desk">
+        <div class="desk-pic">
+          <figure class="lead-photo develop">
+            <canvas class="photo" id="photo" data-cell="4.4" aria-label="Halftone staff photo"></canvas>
+            <span class="plate"><b id="plate">Plate 1 of 5</b><span class="sc" id="kicker">Exclusive</span></span>
+            <button class="next-photo" id="next-photo" type="button">Another photo ↻</button>
+          </figure>
+          <p class="caption" id="caption">Staff photo. <i>(Picture desk)</i></p>
+          <div class="contact" aria-label="Contact sheet">
+            <div class="contact-head"><b class="sc">Contact sheet</b><span>Roll 26 · Pick a frame</span></div>
+            <div class="frames" id="frames"></div>
+          </div>
+        </div>
+
+        <div class="desk-copy">
+          <h2 class="headline" id="headline">Local Friends Caught Reading Each Other’s Minds</h2>
+          <p class="deck" id="deck">Experts baffled as a single clue leads an entire group to the very same dot</p>
+          <div class="byline sc">By our Contest Desk, from the front row · Entries close after round four</div>
+          <div class="story">
+            <p>Ladies, gentlemen and undecided parties: the circus is coming, and one seat is up for grabs. To win it, you must read your friends’ minds by mail, head to head, free for all or in teams.</p>
+            <p>Each round, one brave performer, the “psychic”, is shown a secret point on a board marked with two pairs of opposites, and offers a single clue. The guessers mark where they believe the point lies. Nobody sees an answer.</p>
+            <p>After four rounds, every entry is clipped, sealed and mailed. Then you wait. The reply shows every clue, every target and every mark, with a leaderboard at the end. The top name takes the ticket.</p>
+            <p>“It took thirty seconds to learn,” said one player, “and three hours to stop arguing about whether a goose is scary.” No downloads or accounts are required.</p>
+          </div>
+        </div>
+      </article>
+
+      <div class="front">
+        <div class="slot" id="slot">
+          <aside class="coupon" id="entry" aria-label="Sample contest entry">
+            <span class="scissors" aria-hidden="true">✂</span>
+            <p class="coupon-kicker">★ Win a ticket to the circus ★</p>
+            <h2>Contest Entry Form</h2>
+            <p class="sub">Clue <span id="clue-no">1</span> of 4. Ari, our resident psychic, offers:</p>
+            <div class="demo-clue" id="demo-clue"></div>
+            <div class="board-wrap">
+              <span class="axis-label top" id="demo-top"></span>
+              <span class="axis-label left" id="demo-left"></span>
+              <div class="board-slot" id="board-slot"></div>
+              <span class="axis-label right" id="demo-right"></span>
+              <span class="axis-label bottom" id="demo-bottom"></span>
+            </div>
+            <p class="hint">A Free for All sample. Drag the dot or tap the board. No answers until your reply comes by mail.</p>
+            <div class="demo-foot">
+              <button class="btn primary" type="button" id="mark-btn">Mark it, on to clue 2</button>
+            </div>
+            <div class="entry-row">
+              <span class="entry-label">Your marks</span>
+              <div class="thumbs" id="thumbs" aria-hidden="true"></div>
+            </div>
+            <p class="coupon-fine">No refunds. Void where prohibited by geese.</p>
+          </aside>
+          <div class="hole">
+            <div class="hole-note">
+              <b>Mailed!</b>
+              <p>A hole in the paper, and your reply in hand.</p>
+              <div class="hole-actions">
+                <button class="btn primary" type="button" id="read-reply">Read your reply</button>
+                <button class="btn" type="button" id="enter-again">Enter again</button>
+              </div>
+            </div>
+          </div>
+          <p class="visually-hidden" id="contest-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <section id="how">
+        <h2 class="sec-title" data-print><small class="sc">Rules of play</small>How the Game Is Played</h2>
+        <div class="cols3">
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><path d="M10 36c20-26 80-26 100 0c-20 26-80 26-100 0z"/><circle cx="60" cy="36" r="13"/><circle cx="60" cy="36" r="4" class="fill"/><path d="M22 12l8 9M60 4v11M98 12l-8 9"/></svg>
+            <h3><span class="num">I.</span> The Psychic Gives One Clue</h3>
+            <p>A psychic privately sees where the target sits between two pairs of opposing words, then offers a single clue. Who plays psychic depends on the ring you choose.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><path d="M44 46l6 6M50 46l-6 6M68 48l6 6M74 48l-6 6M70 18l8 8M78 18l-8 8"/></svg>
+            <h3><span class="num">II.</span> Four Rounds, No Answers</h3>
+            <p>The guessers mark the board within 60 seconds. No target, no score, not a hint. After round four, all the marks go in the mail together.</p>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="16" y="10" width="88" height="52"/><path d="M16 10l44 30 44-30"/><rect x="84" y="15" width="14" height="16" class="red"/></svg>
+            <h3><span class="num">III.</span> The Reply Names a Winner</h3>
+            <p>It shows every clue, every target and every mark. A bullseye earns 1,000 points. The top of the leaderboard wins the ticket to the circus, with one each for a winning team.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="modes">
+        <h2 class="sec-title" data-print>A Three-Ring Circus</h2>
+        <div class="cols3 ring-cards">
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><circle cx="24" cy="24" r="10"/><path d="M8 62c0-14 7-22 16-22s16 8 16 22"/><circle cx="96" cy="24" r="10"/><path d="M80 62c0-14 7-22 16-22s16 8 16 22"/><path d="M42 20h34m-7-6 7 6-7 6" class="red"/><path d="M78 38H44m7-6-7 6 7 6" class="red"/></svg>
+            <p class="ring-no sc">Ring one</p>
+            <h3>Head to Head</h3>
+            <p class="ring-who">2 players</p>
+            <p>You are both psychic and guesser. You each write a clue at the same moment, swap, then each guess the other’s clue at the same moment. You score for how close your own guess lands.</p>
+            <button class="btn" type="button" data-action="create" data-mode="duel">Play Head to Head</button>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><circle cx="60" cy="22" r="10" class="red"/><path d="M45 56c0-13 7-20 15-20s15 7 15 20" class="red"/><circle cx="20" cy="30" r="7"/><path d="M9 56c0-10 5-16 11-16s11 6 11 16"/><circle cx="100" cy="30" r="7"/><path d="M89 56c0-10 5-16 11-16s11 6 11 16"/><path d="M4 66h112" class="dash"/></svg>
+            <p class="ring-no sc">Ring two</p>
+            <h3>Free for All</h3>
+            <p class="ring-who">3 to 8 players</p>
+            <p>A psychic is drawn at random each round, and everyone else guesses the same clue. Nobody goes twice until everyone has had a turn. The psychic earns the average of the others’ scores.</p>
+            <button class="btn" type="button" data-action="create" data-mode="free">Play Free for All</button>
+          </article>
+          <article data-print>
+            <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><circle cx="14" cy="40" r="7"/><circle cx="34" cy="40" r="7"/><path d="M4 66c0-10 5-14 10-14s10 4 10 14M24 66c0-10 5-14 10-14s10 4 10 14"/><circle cx="86" cy="40" r="7"/><circle cx="106" cy="40" r="7"/><path d="M76 66c0-10 5-14 10-14s10 4 10 14M96 66c0-10 5-14 10-14s10 4 10 14"/><path d="M42 6h36a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H66l-6 7-6-7H42a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" class="red"/><path d="M47 16h26" class="dash"/></svg>
+            <p class="ring-no sc">Ring three</p>
+            <h3>Team Against Team</h3>
+            <p class="ring-who">4 or more, at least 2 on each team</p>
+            <p>Both teams chase the same secret target, each with its own psychic, and both clues are in plain view. Write something only your team will get, like an inside joke. Make it too obvious and the other team can use it too. Each team scores the average of its marks.</p>
+            <button class="btn" type="button" data-action="create" data-mode="teams">Play Team Against Team</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="classifieds">
+        <h2 class="sec-title" data-print><small class="sc">Classifieds</small>Wanted: Game Night</h2>
+        <div class="classifieds">
+          <div class="ad" data-print><b class="sc">Three Rings Daily</b><div class="rule"></div><p>Head to head, free for all or in teams. Sealed guesses. Apply within.</p></div>
+          <div class="ad" data-print><b class="sc">Phone Friendly</b><div class="rule"></div><p>Plays on any phone. No app store, no account required.</p></div>
+          <div class="ad tall" data-print><b class="sc">Lost</b><div class="rule"></div><p>One marker. Last seen drifting toward <i>Cute</i>. Answers to “dot”.</p><p class="reward">Reward: 1,000 points</p></div>
+          <div class="ad" data-print><b class="sc">Endless Cards</b><div class="rule"></div><p>Any two axes may be combined. Write your own, too.</p></div>
+          <div class="ad" data-print><b class="sc">Four-Character Rooms</b><div class="rule"></div><p>Share one 4-character code. Friends join in seconds. Inquire today.</p></div>
+          <div class="ad inverse" data-print><b class="sc">Psychic Wanted</b><div class="rule"></div><p>Must be vague, but not too vague. No experience necessary.</p></div>
+          <div class="ad" data-print><b class="sc">For Sale</b><div class="rule"></div><p>Strong opinions on whether a goose is scary. Barely used.</p></div>
+        </div>
+      </section>
+
+      <section class="letters">
+        <h2 class="sec-title" data-print><small class="sc">Letters to the editor</small>Readers Respond</h2>
+        <div class="letter-row">
+          <blockquote data-print><p>“My brother and I scored a bullseye on <i>kale chips</i>. We have not spoken since. It was worth it.”</p><cite>A reader, Tuesday</cite></blockquote>
+          <blockquote data-print><p>“I gave the clue <i>my landlord</i>. Everyone knew exactly where to go. I fear for my landlord.”</p><cite>A reader, by email</cite></blockquote>
+        </div>
+      </section>
+
+      <div class="extra">
+        <h2 class="shout" data-shout>Extra! Extra!</h2>
+        <p>Start a room. Four clues, one envelope, one ticket to the circus.</p>
+        <button class="btn primary big" data-action="create">Create a room</button>
+      </div>
+    </main>
+    <section id="game" aria-label="Your game" aria-live="off"></section>
+    <footer>
+      <span>© 2026 The Psychic Plane · A student publication · The ticket and the mail are make-believe, and it all happens on screen</span>
+      <nav>
+        <a href="#how">Rules</a>
+        <a href="#" data-action="soon">Privacy</a>
+        <a href="#" data-action="soon">Contact</a>
+      </nav>
+    </footer>
+  </div>
+
+  <!-- Ad space on the desk. Swap each .ad-slot's contents for the real ad. -->
+  <aside class="ad-rail left" aria-label="Advertisement"><div class="ad-slot" data-ad-slot="left"><small>Advertisement</small><b>Your ad here</b><span class="ad-size"></span></div></aside>
+  <aside class="ad-rail right" aria-label="Advertisement"><div class="ad-slot" data-ad-slot="right"><small>Advertisement</small><b>Your ad here</b><span class="ad-size"></span></div></aside>
+
+  <dialog class="reply" id="reply" aria-labelledby="reply-title">
+    <div class="reply-paper">
+      <p class="reply-head"><b>The Psychic Plane</b><span class="sc">Contest Desk · By return of mail</span></p>
+      <h2 class="reply-title" id="reply-title" tabindex="-1" autofocus>Here are your results</h2>
+
+      <section id="reveal-view" class="reply-paper" style="padding:0;border:0" aria-labelledby="reveal-count">
+        <p class="reply-intro">Dear reader, your entry reached us safely. We’ll open the clues one at a time.</p>
+        <p class="reveal-heading"><span id="reveal-count">Clue 1 of 4</span>: <em id="reveal-clue"></em></p>
+        <div class="reply-body">
+          <div class="board-wrap" id="reveal-chart"></div>
+          <ul class="roster" id="roster"></ul>
+        </div>
+        <p class="reveal-note" id="reveal-note"></p>
+        <div class="reply-actions">
+          <button class="btn primary" type="button" id="reveal-next">Show this clue now</button>
+          <button class="btn" type="button" id="reveal-skip">Skip to the winner</button>
+        </div>
+      </section>
+
+      <section id="final-view" class="reply-paper" style="padding:0;border:0" hidden aria-labelledby="reply-title">
+        <div class="standings-wrap">
+          <table class="standings">
+            <thead id="standings-head"></thead>
+            <tbody id="standings-body"></tbody>
+          </table>
+        </div>
+        <div id="final-rest" class="reply-paper" style="padding:0">
+          <div class="prize">
+            <p class="prize-line" id="prize-line"></p>
+            <div class="ticket alt prize-ticket" id="prize-ticket"><small>Admit one</small><b>The Circus</b><i id="prize-name"></i></div>
+            <p class="prize-you" id="prize-you"></p>
+            <p class="tie-note" id="tie-note" hidden></p>
+          </div>
+          <h3 class="answers-title">Every mark, clue by clue</h3>
+          <p class="answers-key">On each chart, the red X is you, the black dot is the target, and the letters are the other players.</p>
+          <div class="answers" id="answers"></div>
+          <p class="reply-note" id="reply-note"></p>
+          <div class="reply-actions">
+            <button class="btn primary" type="button" id="reply-again">Enter again</button>
+            <button class="btn" type="button" id="reply-close">Close the letter</button>
+          </div>
+        </div>
+      </section>
+      <p class="visually-hidden" id="reply-status" role="status" aria-live="polite"></p>
+    </div>
+  </dialog>
+
+  <script src="js/scenes.js"></script>
+  <script src="js/showbill.js"></script>
+  <script src="js/page.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/mail.js"></script>
+  <script src="js/reply.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="socket.io/socket.io.js"></script>
+  <script src="js/game.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="js/intro.js"></script>
+</body>
+</html>
