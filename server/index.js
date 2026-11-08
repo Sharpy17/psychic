@@ -135,7 +135,10 @@ io.on('connection', (socket) => {
 
   on('room:mode', ({ mode }) => { const r = seated(); G.setMode(r, socket.data.playerId, mode); sync(r); });
   on('room:team', ({ team }) => { const r = seated(); G.setTeam(r, socket.data.playerId, team); sync(r); });
+  on('room:settings', ({ topicSet, rounds }) => { const r = seated(); G.setSettings(r, socket.data.playerId, { topicSet, rounds }); sync(r); });
+  on('clue:nice', ({ psychicId }) => { const r = seated(); const res = G.niceClue(r, socket.data.playerId, String(psychicId ?? '')); sync(r); return res; });
   on('game:start', () => { const r = seated(); G.startGame(r, socket.data.playerId); sync(r); });
+  on('psychic:reroll', () => { const r = seated(); G.rerollSheet(r, socket.data.playerId); sync(r); });
   on('clue:submit', ({ text }) => { const r = seated(); G.submitClue(r, socket.data.playerId, text); sync(r); });
   on('mark:submit', ({ x, y }) => { const r = seated(); G.submitMark(r, socket.data.playerId, { x, y }); sync(r); });
   on('game:again', () => { const r = seated(); G.playAgain(r, socket.data.playerId); sync(r); });

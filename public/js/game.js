@@ -27,6 +27,9 @@
   let tickTimer = null;
   let replyHandled = false;
   let mailing = false;
+  let rerolling = false; // True while your own reroll is on its way, so you aren't told about it.
+  let lastDeal = null; // Which deal of the board is on screen, so a reroll can be announced.
+  let niceSeen = 0; // Nods on your own clue this round, so a new one can be announced.
 
   /* Connecting ------------------------------------------------------------ */
 
@@ -50,7 +53,7 @@
 
   const send = (event, payload = {}) => new Promise((resolve) => {
     if (!socket) { resolve({ ok: false, error: 'Not connected.' }); return; }
-    socket.timeout(8000).emit(event, payload, (err, res) => {
+    socket.timeout(20000).emit(event, payload, (err, res) => {
       resolve(err ? { ok: false, error: 'The server did not answer. Check your connection and try again.' } : res);
     });
   });
@@ -63,7 +66,8 @@
   async function enter(event, payload) {
     if (!connect()) return { ok: false, error: 'The game server is not running on this copy of the page. Run npm start.' };
     if (!socket.connected) {
-      await new Promise((resolve) => { socket.once('connect', resolve); setTimeout(resolve, 5000); });
+      // Generous wait: over a relayed link (e.g. Tailscale DERP) the handshake can take many seconds.
+      await new Promise((resolve) => { socket.once('connect', resolve); setTimeout(resolve, 20000); });
       if (!socket.connected) return { ok: false, error: 'Could not reach the game server. Try again in a moment.' };
     }
     const res = await send(event, payload);
@@ -99,7 +103,14 @@
       renderReply();
     } else {
       replyHandled = false;
-      const key = `play:${view.roundNumber}:${view.phase}:${view.task.kind}`;
+      // A reroll deals a new board, so it counts as a new screen.
+      const key = `play:${view.roundNumber}:${view.phase}:${view.task.kind}:${view.task.deal ?? 0}`;
+      const deal = `${view.roundNumber}:${view.task.deal ?? 0}`;
+      if (lastDeal && lastDeal.split(':')[0] === deal.split(':')[0] && lastDeal !== deal && view.phase === 'WRITING' && !rerolling) {
+        toast('The psychic rerolled: new board and topic.');
+        PPMail.paperSound(0.12, 0.16);
+      }
+      lastDeal = deal;
       setStage(key, playHtml, bindPlay);
       refreshPlay();
     }
@@ -110,7 +121,10 @@
     if (key === stageKey) return false;
     const fresh = !stageKey;
     stageKey = key;
+    const typed = document.getElementById('clue-input')?.value ?? '';
     screen.innerHTML = html();
+    const input = document.getElementById('clue-input');
+    if (input && typed) input.value = typed;
     if (fresh) scrollTo({ top: 0, behavior: 'instant' });
     bind();
     return true;
@@ -139,6 +153,21 @@
       <div class="lobby-main">
         <h2 class="lobby-title" id="lobby-title"></h2>
         <fieldset class="mode-pick" id="lobby-modes"><legend>The ring</legend></fieldset>
+        <fieldset class="mode-pick topic-pick" id="lobby-topics"><legend>The topics</legend></fieldset>
+        <fieldset class="rounds-pick" id="lobby-rounds">
+          <legend>The length of the show</legend>
+          <div class="rounds-per" id="rounds-per">
+            <label><input type="radio" name="rounds-per" value="game"><span>Rounds in all</span></label>
+            <label><input type="radio" name="rounds-per" value="player"><span>Turns as psychic, each</span></label>
+          </div>
+          <div class="rounds-row">
+            <button class="btn step" type="button" data-step="-1" aria-label="One fewer">−</button>
+            <output id="rounds-n" aria-live="polite"></output>
+            <button class="btn step" type="button" data-step="1" aria-label="One more">+</button>
+            <span id="rounds-unit"></span>
+          </div>
+          <p class="rounds-total" id="rounds-total"></p>
+        </fieldset>
         <div id="lobby-players"></div>
         <p class="lobby-problem" id="lobby-problem" role="status"></p>
         <div class="lobby-actions">
@@ -165,10 +194,46 @@
     document.getElementById('start-game').addEventListener('click', () => act('game:start'));
     document.getElementById('leave-room').addEventListener('click', leaveRoom);
     document.getElementById('lobby-modes').addEventListener('change', (e) => act('room:mode', { mode: e.target.value }));
+    document.getElementById('lobby-topics').addEventListener('change', (e) => act('room:settings', { topicSet: e.target.value }));
+    const rounds = document.getElementById('lobby-rounds');
+    rounds.addEventListener('change', (e) => {
+      if (e.target.name !== 'rounds-per') return;
+      const per = e.target.value;
+      act('room:settings', { rounds: { per, n: per === 'player' ? 1 : 4 } });
+    });
+    rounds.addEventListener('click', (e) => {
+      const step = e.target.closest('[data-step]');
+      if (!step) return;
+      const { per, n } = view.settings.rounds;
+      const max = per === 'player' ? view.limits.laps : view.limits.rounds;
+      const next = Math.max(1, Math.min(max, n + Number(step.dataset.step)));
+      if (next !== n) { blip(next > n ? 700 : 520, 0.04, 'square', 0.03); act('room:settings', { rounds: { per, n: next } }); }
+    });
   }
   screen.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-team-join]');
     if (btn) act('room:team', { team: btn.dataset.teamJoin });
+    if (e.target.closest('#reroll')) {
+      const btn = e.target.closest('#reroll');
+      btn.disabled = true;
+      rerolling = true;
+      blip(330, 0.05, 'square', 0.04);
+      act('psychic:reroll').then((r) => {
+        rerolling = false;
+        if (r.ok) PPMail.paperSound(0.16, 0.2);
+        else btn.disabled = false;
+      });
+    }
+    const nice = e.target.closest('[data-nice]');
+    if (nice && !nice.dataset.pending) {
+      // Flips at once, so it feels instant on a slow link; the server's answer settles it.
+      const on = nice.getAttribute('aria-pressed') !== 'true';
+      nice.setAttribute('aria-pressed', String(on));
+      nice.classList.toggle('is-on', on);
+      if (on) { nice.classList.remove('pop'); void nice.offsetWidth; nice.classList.add('pop'); blip(880, 0.06); PPMail.thud?.(); }
+      nice.dataset.pending = '1';
+      act('clue:nice', { psychicId: nice.dataset.nice }).finally(() => { delete nice.dataset.pending; if (view?.task) refreshNice(); });
+    }
   });
 
   async function leaveRoom() {
@@ -193,6 +258,8 @@
     });
     modes.classList.toggle('is-locked', !isHost);
 
+    refreshSettings(isHost);
+
     const list = document.getElementById('lobby-players');
     if (view.mode === 'teams') {
       const team = (id, name) => {
@@ -210,6 +277,42 @@
     document.getElementById('lobby-problem').textContent = view.startProblem ?? (isHost ? 'Everyone is here. Raise the curtain when you are ready.' : 'Everyone is here. The curtain rises soon.');
   }
 
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  function refreshSettings(isHost) {
+    const topics = document.getElementById('lobby-topics');
+    if (!topics.querySelector('input')) {
+      topics.innerHTML = '<legend>The topics</legend>' + view.topicSets.map((t) =>
+        `<label><input type="radio" name="room-topics" value="${esc(t.id)}"><span><b>${esc(t.name)}</b><small>${esc(t.blurb)}</small></span></label>`).join('');
+    }
+    topics.querySelectorAll('input').forEach((input) => {
+      input.checked = input.value === view.settings.topicSet;
+      input.disabled = !isHost;
+    });
+    topics.classList.toggle('is-locked', !isHost);
+
+    const { per, n } = view.settings.rounds;
+    const isFree = view.mode === 'free';
+    const box = document.getElementById('lobby-rounds');
+    box.classList.toggle('is-locked', !isHost);
+    document.getElementById('rounds-per').hidden = !isFree;
+    box.querySelectorAll('input[name="rounds-per"]').forEach((input) => {
+      input.checked = input.value === per;
+      input.disabled = !isHost;
+    });
+    const max = per === 'player' ? view.limits.laps : view.limits.rounds;
+    box.querySelectorAll('[data-step]').forEach((b) => {
+      b.hidden = !isHost;
+      b.disabled = Number(b.dataset.step) < 0 ? n <= 1 : n >= max;
+    });
+    document.getElementById('rounds-n').textContent = n;
+    document.getElementById('rounds-unit').textContent = per === 'player' ? (n === 1 ? 'turn each' : 'turns each') : (n === 1 ? 'round' : 'rounds');
+    const here = view.players.filter((p) => p.connected).length;
+    document.getElementById('rounds-total').textContent = per === 'player'
+      ? `Everyone is psychic ${n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`}: ${plural(view.totalRounds, 'round', 'rounds')} with ${plural(here, 'player', 'players')}.`
+      : (view.mode === 'duel' ? 'Each round, you both write a clue and guess the other one.' : '');
+  }
+
   /* Playing ---------------------------------------------------------------- */
 
   const prompts = {
@@ -219,7 +322,7 @@
         const other = view.players.find((p) => p.id !== view.you.id)?.name ?? 'Your rival';
         return `You are the psychic for this star. ${other} is writing a clue of their own at the same moment.`;
       }
-      return 'You are the psychic. Write one clue that belongs right on the star.';
+      return view.task.topic ? `You are the psychic. Name ${view.task.topic.toLowerCase()} that belongs right on the star.` : 'You are the psychic. Write one clue that belongs right on the star.';
     },
     wrote: () => 'Your clue is sealed. Waiting for the other clues to come in.',
     'await-clue': () => {
@@ -239,7 +342,7 @@
     if (task.kind === 'write') {
       return `<form class="clue-write" id="clue-form" autocomplete="off">
           <label for="clue-input">Your clue</label>
-          <input id="clue-input" maxlength="60" placeholder="One clue. Keep it short." autocomplete="off" enterkeyhint="send">
+          <input id="clue-input" maxlength="60" placeholder="${task.topic ? esc(`Name ${task.topic.toLowerCase()}`) : 'One clue. Keep it short.'}" autocomplete="off" enterkeyhint="send">
         </form>`;
     }
     if (task.kind === 'wrote') return `<div class="demo-clue">${esc(task.clue)}</div>`;
@@ -250,6 +353,8 @@
       return `<p class="${ours ? 'is-ours' : ''}"><small>${ours ? 'Your psychic' : 'Rival psychic'}, ${esc(c.name)}</small><b>${esc(c.text ?? 'No clue came in time.')}</b></p>`;
     }).join('')}</div>`;
   }
+
+  const topicHtml = () => (view.task.topic ? `<span class="topic-tag"><small>Topic</small> ${esc(view.task.topic)}</span>` : '');
 
   function subHtml() {
     const { task } = view;
@@ -262,9 +367,25 @@
 
   function buttonHtml() {
     const kind = view.task.kind;
-    if (kind === 'write') return '<button class="btn primary" type="submit" form="clue-form" id="game-action">Seal my clue</button>';
-    if (kind === 'mark') return `<button class="btn primary" type="button" id="game-action">${view.roundNumber === view.totalRounds ? 'Seal my last mark' : 'Seal my mark'}</button>`;
-    return '';
+    if (kind === 'write') {
+      const left = view.task.rerollsLeft;
+      const reroll = left
+        ? '<button class="btn reroll" type="button" id="reroll"><span class="nice-star" aria-hidden="true">⟳</span> Reroll board &amp; topic <small>1 left</small></button>'
+        : '<button class="btn reroll" type="button" disabled>Reroll used <small>0 left</small></button>';
+      return `<button class="btn primary" type="submit" form="clue-form" id="game-action">Seal my clue</button>${reroll}`;
+    }
+    if (kind === 'mark') return `<button class="btn primary" type="button" id="game-action">${view.roundNumber === view.totalRounds ? 'Seal my last mark' : 'Seal my mark'}</button>${niceHtml()}`;
+    return niceHtml();
+  }
+
+  // "Nice clue!" buttons for every clue on your board that isn't yours, and a tally for your own.
+  function niceHtml() {
+    const { clues } = view.task;
+    if (!clues) return '';
+    const others = clues.filter((c) => !c.own && c.text);
+    const buttons = others.map((c) => `<button class="btn nice" type="button" data-nice="${esc(c.id)}" aria-pressed="false"><span class="nice-star" aria-hidden="true">★</span> Nice clue${others.length > 1 ? `<small>${esc(c.name)}</small>` : ''}</button>`).join('');
+    const tally = clues.some((c) => c.own) ? '<p class="nice-count" id="nice-count" aria-live="polite"></p>' : '';
+    return buttons + tally;
   }
 
   const playHtml = () => {
@@ -276,7 +397,7 @@
           <span class="scissors" aria-hidden="true">✂</span>
           <p class="coupon-kicker">★ Win a ticket to the circus ★</p>
           <h2>Contest Entry Form</h2>
-          <p class="sub">${subHtml()}</p>
+          <p class="sub">${subHtml()}${topicHtml()}</p>
           ${clueHtml()}
           <div class="board-wrap">
             <span class="axis-label top">${esc(card.top)}</span>
@@ -304,6 +425,7 @@
   function bindPlay() {
     const { task } = view;
     sentAtZero = false;
+    niceSeen = view.task.clues?.find((c) => c.own)?.nice ?? 0;
     let pos = task.mark ? toBoard(task.mark) : { x: 50, y: 50 };
     let lastTick = pos;
     board = createBoard(document.getElementById('game-board'), {
@@ -358,7 +480,30 @@
     svg.appendChild(g);
   }
 
+  function refreshNice() {
+    const { clues } = view.task;
+    if (!clues) return;
+    clues.forEach((c) => {
+      const btn = screen.querySelector(`[data-nice="${CSS.escape(c.id)}"]`);
+      if (btn && !btn.dataset.pending) { btn.setAttribute('aria-pressed', String(c.nicedByYou)); btn.classList.toggle('is-on', c.nicedByYou); }
+    });
+    const own = clues.find((c) => c.own);
+    const tally = document.getElementById('nice-count');
+    if (own && tally) {
+      const n = own.nice ?? 0;
+      tally.textContent = n ? `★ ${n === 1 ? 'One player' : `${n} players`} said nice clue` : '';
+      tally.classList.toggle('is-on', n > 0);
+      if (n > niceSeen) {
+        toast('Someone thinks that’s a nice clue!');
+        CFG.chime.slice(0, 2).forEach((f, i) => setTimeout(() => blip(f, 0.08), i * 80));
+        tally.classList.remove('pop'); void tally.offsetWidth; tally.classList.add('pop');
+      }
+      niceSeen = n;
+    }
+  }
+
   function refreshPlay() {
+    refreshNice();
     document.getElementById('game-thumbs').innerHTML = Array.from({ length: view.totalRounds }, (_, i) => {
       const m = view.yourMarks[i];
       return PPMail.thumb(m ? toBoard(m) : null, i === view.roundNumber - 1);
@@ -473,14 +618,15 @@
       heading: raw.mode === 'duel'
         ? `Round ${sheet.round + 1} of ${raw.rounds}, ${sheet.clues[0].playerId === me ? 'your clue' : `${sheet.clues[0].name}’s clue`}`
         : `Clue ${sheet.round + 1} of ${raw.rounds}`,
-      clues: sheet.clues.map((c) => ({ label: raw.mode === 'duel' ? null : c.team ? `${c.name} of ${teamName[c.team]}` : c.name, text: c.text })),
+      clues: sheet.clues.map((c) => ({ label: raw.mode === 'duel' ? null : c.team ? `${c.name} of ${teamName[c.team]}` : c.name, text: c.text, nice: c.nice ?? [] })),
       card: sheet.card,
+      topic: sheet.topic ?? null,
       target: toBoard(sheet.target),
       marks: sheet.marks.map((m) => {
         const at = m.x === null ? { x: null, y: null } : toBoard(m);
         return { name: m.name, ...at, tier: m.tier, points: m.points, distance: m.distance, isYou: m.playerId === me, team: m.team };
       }),
-      psychics: sheet.clues.map((c) => ({ name: c.name, points: c.points, isYou: c.playerId === me })),
+      psychics: sheet.clues.map((c) => ({ name: c.name, points: c.points, isYou: c.playerId === me, resonance: !!c.resonance })),
     }));
 
     const isTeams = raw.mode === 'teams';
@@ -519,8 +665,14 @@
     if (isTeams) youLine = you ? `Your team, ${you.name}, finished ${ordinal} with ${score} points. Here is every answer again.` : 'Here is every answer again.';
     else youLine = you ? `You finished ${ordinal} with ${score} points. Here is every answer again.` : 'Here is every answer again.';
 
+    // The clue with the most nods across the whole game. Level tops share it.
+    const all = raw.sheets.flatMap((sh) => sh.clues.filter((c) => c.text && c.nice?.length));
+    const best = Math.max(0, ...all.map((c) => c.nice.length));
+    const nicest = best ? all.filter((c) => c.nice.length === best).map((c) => ({ text: c.text, name: c.playerId === me ? 'you' : c.name, count: best })) : [];
+
     return {
       sheets,
+      nicest,
       columns: Array.from({ length: raw.rounds }, (_, i) => (raw.mode === 'duel' ? `Round ${i + 1}` : `Clue ${i + 1}`)),
       columnsLabel: isTeams ? 'Team' : 'Player',
       standings,

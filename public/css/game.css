@@ -153,3 +153,95 @@ html:not(.in-game) #game { display: none; }
   .lobby-actions .btn { flex: 1 1 auto; }
   .reply-intro { display: none; }
 }
+
+/* ---------- Lobby settings: topics and the length of the show ---------- */
+.topic-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.topic-pick legend { grid-column: 1 / -1; }
+.topic-pick span { height: 100%; padding-block: 6px 7px; }
+.topic-pick b { font-size: 1rem; }
+@media (max-width: 420px) { .topic-pick { grid-template-columns: 1fr; } }
+
+.rounds-pick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.rounds-pick legend { padding: 0; margin-bottom: 8px; font-weight: 700; }
+.rounds-per { display: inline-flex; flex-wrap: wrap; justify-self: start; border: 1.5px solid var(--text); }
+.rounds-per[hidden] { display: none; }
+.rounds-per label { position: relative; cursor: pointer; }
+.rounds-per label + label { border-left: 1.5px solid var(--text); }
+.rounds-per input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.rounds-per span { display: block; padding: 5px 12px 6px; font: 400 0.86rem var(--f-type); }
+.rounds-per input:hover + span { background: #1b1b1b0d; }
+.rounds-per input:checked + span { background: var(--text); color: var(--bg); }
+.rounds-per input:focus-visible + span { outline: 2px solid var(--red); outline-offset: 2px; }
+.rounds-pick.is-locked .rounds-per label:not(:has(input:checked)) { display: none; }
+.rounds-pick.is-locked .rounds-per label + label { border-left: 0; }
+.rounds-pick.is-locked .rounds-per input { cursor: default; }
+.rounds-row { display: flex; align-items: center; gap: 10px; }
+.rounds-row output { min-width: 1.6em; text-align: center; font: 400 2.2rem/1 var(--f-circus); color: var(--red); font-variant-numeric: tabular-nums; }
+.rounds-row span { font: 400 1rem var(--f-type); }
+.btn.step { width: 38px; height: 38px; padding: 0; font: 700 1.3rem/1 var(--f-head); }
+.btn.step[hidden] { display: none; }
+.rounds-total { font: italic 400 0.86rem/1.35 var(--f-body); color: var(--muted); min-height: 1.35em; }
+.rounds-total:empty { display: none; }
+
+/* ---------- The topic on the entry form ---------- */
+.topic-tag {
+  display: table;
+  margin: 6px auto 0;
+  padding: 2px 10px 3px;
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font: 700 1rem/1.25 var(--f-head);
+  rotate: -1deg;
+}
+.topic-tag small { margin-right: 4px; font: 400 0.7rem var(--f-type); letter-spacing: 0.1em; text-transform: uppercase; }
+@media (min-width: 961px) { .front .coupon .topic-tag { margin-left: 0; } }
+
+/* ---------- "Nice clue!" ---------- */
+.demo-foot { flex-wrap: wrap; align-items: center; }
+.demo-foot .btn.nice {
+  flex: 0 1 auto;
+  gap: 6px;
+  padding: 7px 14px 8px;
+  border: 1.5px dashed var(--text);
+  background: transparent;
+  color: var(--text);
+  font: 400 1rem/1.1 var(--f-circus);
+  box-shadow: none;
+}
+.btn.nice small { font: 400 0.72rem var(--f-type); opacity: 0.8; }
+.btn.nice .nice-star { color: var(--red); transition: transform 0.2s; }
+.btn.nice:hover { background: #1b1b1b0d; }
+.btn.nice.is-on { border-style: solid; border-color: var(--red); background: var(--red); color: var(--bg); }
+.btn.nice.is-on .nice-star { color: var(--bg); transform: rotate(-14deg) scale(1.2); }
+.btn.nice.pop, .nice-count.pop { animation: nice-pop 0.38s steps(4) both; }
+@keyframes nice-pop { 0% { scale: 1.35; rotate: -4deg; } 60% { scale: 0.95; } 100% { scale: 1; rotate: 0deg; } }
+.nice-count { flex-basis: 100%; margin: 0; font: 400 1rem/1.3 var(--f-circus); color: var(--red); }
+.nice-count:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .btn.nice.pop, .nice-count.pop { animation: none; } }
+@media (max-width: 680px) { .demo-foot .btn.nice { flex: 1 1 auto; } }
+
+/* Long shows: the row of little marks wraps instead of running off the form. */
+.front .thumbs { flex-wrap: wrap; }
+
+/* The reply: the topic and the nods. */
+.reply-topic { display: block; font: 400 0.8rem var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); }
+.nice-tag { display: inline-block; margin-left: 6px; padding: 0 6px 1px; border: 1px solid var(--red); color: var(--red); font: 400 0.76rem/1.4 var(--f-type); font-style: normal; white-space: nowrap; vertical-align: middle; }
+.nicest { text-align: center; font: 400 1rem/1.35 var(--f-body); }
+.nicest b { font-family: var(--f-circus); font-weight: 400; color: var(--red); }
+
+/* ---------- The Psychic Reroll: the same dashed look as "Nice clue" ---------- */
+.demo-foot .btn.reroll {
+  flex: 0 1 auto;
+  gap: 6px;
+  padding: 7px 14px 8px;
+  border: 1.5px dashed var(--text);
+  background: transparent;
+  color: var(--text);
+  font: 400 1rem/1.1 var(--f-circus);
+  box-shadow: none;
+}
+.btn.reroll small { font: 400 0.72rem var(--f-type); opacity: 0.8; }
+.btn.reroll .nice-star { color: var(--red); font-family: var(--f-head); }
+.btn.reroll:not(:disabled):hover { background: #1b1b1b0d; }
+.btn.reroll:disabled { border-style: dotted; opacity: 0.5; }
+@media (max-width: 680px) { .demo-foot .btn.reroll { flex: 1 1 auto; } }

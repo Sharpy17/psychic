@@ -20,7 +20,18 @@ The page itself, including the sample entry on the front page, is in `public/`.
 
 ## The three modes
 
-Every game is 4 rounds, a clue has 90 seconds and a mark has 60. Marks and targets stay secret until
+A game is 4 rounds unless the host changes it in the lobby (1 to 12). In Free for All the host can
+instead give everyone 1 to 3 turns as psychic, so the game runs that many times the number of players.
+A clue has 90 seconds and a mark has 60.
+
+**Topics:** the host picks a topic set in the lobby (Grab Bag, Everyday Things, Food & Drink, Pop
+Culture, Creatures & Nature, People & Places, or Anything Goes). Each round deals a board suited to
+the set and a topic such as "A dessert", and the psychic's clue must be one. Sets live in
+`server/cards.js`.
+
+**Nice clue:** while a clue is on the board, anyone guessing it (and the rival psychic in team games)
+can give it a nod. It scores nothing. The psychic sees how many nods came in, never who gave them,
+and the reply names the fans and crowns the nicest clue. Marks and targets stay secret until
 the reply, in every mode.
 
 | Mode | Players | How it plays | Scoring |
@@ -29,9 +40,15 @@ the reply, in every mode.
 | **Free for All** | 3 to 8 | A psychic is drawn at random, and everyone else guesses | Guessers score their own marks, and the psychic earns the average |
 | **Team Against Team** | 4 or more, at least 2 per team | Each team has a psychic, both teams chase one shared target, and both clues are visible to everyone | A team's round score is the average of its marks |
 
-**Points:** within 15 units of the target earns 1,000 (Bullseye), within 35 earns 750 (Excellent),
-within 60 earns 500 (Great), within 90 earns 250 (Close), and further earns 50 (Miss). The chart runs
-from -100 to +100 on each axis. A player who leaves no mark scores 0.
+**Points** (the team's scoring, from Sharpy17/psychic): within 15 units of the target earns 1,000
+(Bullseye), within 35 earns 750 (Close), within 60 earns 500 (Warm), within 90 earns 250 (Edge), and
+further earns 0 (Miss). The chart runs from -100 to +100 on each axis. A player who leaves no mark scores 0.
+In Free for All the psychic earns the average of the guessers, plus a 250 **Psychic Resonance** bonus
+when two or more of them hit the Bullseye.
+
+**Reroll:** once per turn, while writing, a psychic can swap the board, topic and target for new ones.
+It can't be undone, and the clock keeps running. In team games both psychics share the board, so a
+reroll changes it for both, and it's refused once either psychic has sealed a clue.
 
 **Psychics** are drawn at random, with no repeats until everyone has had a turn. In team games this
 happens within each team.

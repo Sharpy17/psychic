@@ -3,10 +3,10 @@
 (() => {
   const TIERS = [
     { name: 'Bullseye', limit: 15, points: 1000 },
-    { name: 'Excellent', limit: 35, points: 750 },
-    { name: 'Great', limit: 60, points: 500 },
-    { name: 'Close', limit: 90, points: 250 },
-    { name: 'Miss', limit: Infinity, points: 50 },
+    { name: 'Close', limit: 35, points: 750 },
+    { name: 'Warm', limit: 60, points: 500 },
+    { name: 'Edge', limit: 90, points: 250 },
+    { name: 'Miss', limit: Infinity, points: 0 },
   ];
   const RIVALS = ['Marge', 'Dev', 'Sam'];
   // Targets suit their clues and stay within the game's +/-85 bounds (7.5 to 92.5 on this board).
@@ -81,14 +81,15 @@
         const s = scoreFor(pin, c.target);
         return { name, x: pin.x, y: pin.y, tier: s.tier, points: s.points, distance: s.distance, isYou: p === 0, team: null };
       });
-      const psychicPoints = Math.round(scored.reduce((sum, m) => sum + m.points, 0) / scored.length);
+      const resonance = scored.filter((m) => m.tier === 'Bullseye').length >= 2; // The team's +250 bonus.
+      const psychicPoints = Math.round(scored.reduce((sum, m) => sum + m.points, 0) / scored.length) + (resonance ? 250 : 0);
       return {
         heading: `Clue ${i + 1} of ${CARDS.length}`,
         clues: [{ label: 'Ari', text: c.clue }],
         card: c,
         target: c.target,
         marks: scored,
-        psychics: [{ name: 'Ari', points: psychicPoints, isYou: false }],
+        psychics: [{ name: 'Ari', points: psychicPoints, isYou: false, resonance }],
       };
     });
     const standings = players.map((name, p) => {

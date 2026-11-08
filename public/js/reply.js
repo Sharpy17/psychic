@@ -1,12 +1,12 @@
 // The reply letter: opens one clue at a time, then the leaderboard and the ticket. The sample
 // round and real games both use it, and pass in the same shape of data (board coordinates):
 //
-//   sheets:    [{ heading, clues: [{ label, text }], card, target,
+//   sheets:    [{ heading, topic?, clues: [{ label, text, nice?: [names] }], card, target,
 //                 marks: [{ name, x, y, tier, points, distance, isYou, team }],
-//                 psychics: [{ name, points, isYou }] }]
+//                 psychics: [{ name, points, isYou, resonance? }] }]
 //   columns:   ['Clue 1', ...]
 //   standings: [{ name, perRound, total, isYou, isWinner, members }], best first
-//   prizeLine, prizeName, youLine, note, tieNote
+//   prizeLine, prizeName, youLine, note, tieNote, nicest?: [{ text, name, count }]
 (() => {
   const RING_RADII = [45, 30, 17.5, 7.5]; // The scoring limits, in board units.
   const X_PATH = 'M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6';
@@ -83,7 +83,12 @@
     return `<span class="axis-label top">${esc(c.top)}</span><span class="axis-label left">${esc(c.left)}</span><div class="board-slot">${chartSvg(sheet, false)}</div><span class="axis-label right">${esc(c.right)}</span><span class="axis-label bottom">${esc(c.bottom)}</span>`;
   };
   const clueText = (clue) => clue.text ?? 'No clue came in time.';
-  const clueLines = (sheet) => sheet.clues.map((c) => `<span class="reveal-clue-line">${c.label ? `<span class="clue-by">${esc(c.label)}:</span> ` : ''}<em>${esc(clueText(c))}</em></span>`).join('');
+  const niceTag = (clue) => {
+    const n = clue.nice?.length ?? 0;
+    return n ? `<span class="nice-tag" title="${esc(`Nice clue from ${clue.nice.join(', ')}`)}">★ Nice clue${n > 1 ? ` ×${n}` : ''}</span>` : '';
+  };
+  const topicLine = (sheet) => (sheet.topic ? `<span class="reply-topic">Topic: ${esc(sheet.topic)}</span>` : '');
+  const clueLines = (sheet) => topicLine(sheet) + sheet.clues.map((c) => `<span class="reveal-clue-line">${c.label ? `<span class="clue-by">${esc(c.label)}:</span> ` : ''}<em>${esc(clueText(c))}</em>${niceTag(c)}</span>`).join('');
 
   function showSheet(i) {
     const sheet = data.sheets[i];
@@ -141,7 +146,7 @@
       run() {
         if (p.points === null || p.points === undefined) return;
         const line = roster.querySelector(`[data-psychic="${i2}"]`);
-        line.querySelector('.roster-result').textContent = 'Psychic, earns the average';
+        line.querySelector('.roster-result').textContent = p.resonance ? 'Psychic: the average, plus 250 for two Bullseyes' : 'Psychic, earns the average';
         line.querySelector('.roster-total').textContent = number(p.points);
       },
     }));
@@ -179,6 +184,15 @@
     byId('prize-you').textContent = data.youLine;
     byId('tie-note').textContent = data.tieNote ?? '';
     byId('tie-note').hidden = !data.tieNote;
+    const nicest = byId('nicest-clue');
+    if (nicest) {
+      const list = data.nicest ?? [];
+      const nods = (n) => (n === 1 ? 'one nod' : `${n} nods`);
+      nicest.innerHTML = list.length
+        ? `<b>★ Nicest clue ★</b><br>${list.map((c) => `“${esc(c.text)}” by ${esc(c.name)}`).join(' and ')}, with ${nods(list[0].count)}`
+        : '';
+      nicest.hidden = !list.length;
+    }
     byId('reply-note').textContent = data.note ?? '';
     byId('reply-note').hidden = !data.note;
 
@@ -187,7 +201,7 @@
       const line = you
         ? (hasMark(you) ? `You: ${you.tier}, ${number(you.points)} points, ${away(you.distance)} away.` : 'You left no mark.')
         : (sheet.psychics.some((p) => p.isYou) ? 'You were the psychic.' : '');
-      const clues = sheet.clues.map((c) => `<h3>${c.label ? `<span class="clue-by">${esc(c.label)}:</span> ` : ''}${esc(clueText(c))}</h3>`).join('');
+      const clues = topicLine(sheet) + sheet.clues.map((c) => `<h3>${c.label ? `<span class="clue-by">${esc(c.label)}:</span> ` : ''}${esc(clueText(c))}${niceTag(c)}</h3>`).join('');
       const c = sheet.card;
       return `<div class="answer">${chartSvg(sheet, true)}<div>${clues}<p>${esc(c.left)} to ${esc(c.right)}, ${esc(c.top)} to ${esc(c.bottom)}</p><p class="you-result">${esc(line)}</p></div></div>`;
     }).join('');

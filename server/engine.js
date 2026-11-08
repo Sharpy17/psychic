@@ -12,7 +12,7 @@
 // The reply, with everything in it, exists only after the last round.
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { CARDS } from './cards.js';
+import { TOPIC_SETS, DEFAULT_TOPIC_SET } from './cards.js';
 
 export const MODES = {
   duel: { name: 'Head to Head', min: 2, max: 2 },
@@ -21,7 +21,11 @@ export const MODES = {
   teams: { name: 'Team Against Team', min: 4, max: 100 },
 };
 export const TEAMS = { lions: 'The Lions', tigers: 'The Tigers' };
-export const ROUNDS = 4;
+export const ROUNDS = 4; // The default length of a game.
+export const MAX_ROUNDS = 12; // When the host sets a fixed number of rounds.
+export const MAX_LAPS = 3; // Free for All: how many turns as psychic each player can be given.
+export const MAX_TOTAL_ROUNDS = 24;
+export { TOPIC_SETS };
 export const WRITE_MS = 90_000;
 export const MARK_MS = 60_000;
 export const GRACE_MS = 2_000; // Lets a mark sent at the final second arrive.
@@ -31,11 +35,15 @@ export const MAX_NAME = 16;
 
 const TIERS = [
   { name: 'Bullseye', limit: 15, points: 1000 },
-  { name: 'Excellent', limit: 35, points: 750 },
-  { name: 'Great', limit: 60, points: 500 },
-  { name: 'Close', limit: 90, points: 250 },
-  { name: 'Miss', limit: Infinity, points: 50 },
+  { name: 'Close', limit: 35, points: 750 },
+  { name: 'Warm', limit: 60, points: 500 },
+  { name: 'Edge', limit: 90, points: 250 },
+  { name: 'Miss', limit: Infinity, points: 0 },
 ];
+// The team's tiers (Sharpy17/psychic, engine.ts), scaled from their -1..1 chart to ours.
+// "Psychic Resonance": a psychic whose round has this many Bullseyes earns the bonus on top.
+export const RESONANCE_BULLSEYES = 2;
+export const RESONANCE_BONUS = 250;
 const MAX_DISTANCE = Math.hypot(200, 200); // Counted for a missing mark when breaking ties.
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -93,7 +101,11 @@ export function createRoom({ code, name, mode = 'free', random = Math.random }) 
     roundIndex: -1,
     rounds: [],
     deck: [],
+    topicDeck: [],
     bags: {},
+    // rounds.per is 'game' (n rounds in all) or 'player' (Free for All: each player is psychic n times).
+    settings: { topicSet: DEFAULT_TOPIC_SET, rounds: { per: 'game', n: ROUNDS } },
+    totalRounds: ROUNDS,
     deadline: null,
     reply: null,
   };
@@ -119,8 +131,34 @@ export function setMode(room, playerId, mode) {
   if (room.phase !== 'LOBBY') refuse('The mode can only change in the lobby.');
   if (!MODES[mode]) refuse('Pick a game mode.');
   room.mode = mode;
+  if (mode !== 'free' && room.settings.rounds.per === 'player') room.settings.rounds = { per: 'game', n: ROUNDS };
   room.players.forEach((p) => { p.team = null; });
   room.players.forEach((p) => placeOnTeam(room, p));
+}
+
+export function setSettings(room, playerId, { topicSet, rounds } = {}) {
+  assertHost(room, playerId);
+  if (room.phase !== 'LOBBY') refuse('Settings can only change in the lobby.');
+  if (topicSet !== undefined) {
+    if (!Object.hasOwn(TOPIC_SETS, topicSet)) refuse('Pick a topic set.');
+    room.settings.topicSet = topicSet;
+  }
+  if (rounds !== undefined) {
+    const per = rounds?.per === 'player' ? 'player' : 'game';
+    const n = Number(rounds?.n);
+    if (per === 'player' && room.mode !== 'free') refuse('Turns per player only works in Free for All.');
+    const max = per === 'player' ? MAX_LAPS : MAX_ROUNDS;
+    if (!Number.isInteger(n) || n < 1 || n > max) refuse(per === 'player' ? `Pick 1 to ${MAX_LAPS} turns each.` : `Pick 1 to ${MAX_ROUNDS} rounds.`);
+    room.settings.rounds = { per, n };
+  }
+}
+
+// How many rounds the game will have, counting the players who are here now.
+export function plannedRounds(room) {
+  const { per, n } = room.settings.rounds;
+  if (per !== 'player') return n;
+  const here = room.players.filter((p) => p.connected).length;
+  return Math.min(MAX_TOTAL_ROUNDS, n * Math.max(1, here));
 }
 
 export function setTeam(room, playerId, team) {
@@ -156,9 +194,19 @@ function drawPsychic(room, bagKey, group) {
   return pool.find((p) => p.id === id);
 }
 
+const topicSet = (room) => TOPIC_SETS[room.settings.topicSet] ?? TOPIC_SETS[DEFAULT_TOPIC_SET];
+
+// Both decks deal without repeats until they run out.
 function dealCard(room) {
-  if (!room.deck.length) room.deck = CARDS.slice();
+  if (!room.deck.length) room.deck = topicSet(room).cards.slice();
   return room.deck.splice(Math.floor(room.random() * room.deck.length), 1)[0];
+}
+
+function dealTopic(room) {
+  const { topics } = topicSet(room);
+  if (!topics) return null;
+  if (!room.topicDeck.length) room.topicDeck = topics.slice();
+  return room.topicDeck.splice(Math.floor(room.random() * room.topicDeck.length), 1)[0];
 }
 
 function randomTarget(room) {
@@ -167,7 +215,7 @@ function randomTarget(room) {
 }
 
 function makeSheet(room, writers, guessers) {
-  return { card: dealCard(room), target: randomTarget(room), writers: writers.map((p) => p.id), guessers: guessers.map((p) => p.id), clues: {}, marks: {} };
+  return { card: dealCard(room), topic: dealTopic(room), target: randomTarget(room), writers: writers.map((p) => p.id), guessers: guessers.map((p) => p.id), clues: {}, marks: {}, nice: {}, rerolled: {}, deal: 0 };
 }
 
 function makeRound(room) {
@@ -200,8 +248,10 @@ export function startGame(room, playerId, now = Date.now()) {
   room.roundIndex = -1;
   room.rounds = [];
   room.deck = [];
+  room.topicDeck = [];
   room.bags = {};
   room.reply = null;
+  room.totalRounds = plannedRounds(room);
   beginRound(room, now);
 }
 
@@ -220,6 +270,22 @@ export function submitClue(room, playerId, rawText, now = Date.now()) {
   advance(room, now);
 }
 
+// The Psychic Reroll (the team's rule): once per turn, while writing, a psychic can throw away the
+// board, topic and target for fresh ones. It can't be undone. In teams both psychics share the
+// sheet, so it changes for both, and it's refused once either has sealed a clue.
+export function rerollSheet(room, playerId) {
+  if (room.phase !== 'WRITING') refuse('You can only reroll while writing your clue.');
+  const sheet = currentRound(room).sheets.find((s) => s.writers.includes(playerId));
+  if (!sheet) refuse('You are not the psychic this round.');
+  if (sheet.rerolled[playerId]) refuse('You have used your reroll this turn.');
+  if (Object.keys(sheet.clues).length) refuse(sheet.clues[playerId] !== undefined ? 'Your clue is already in.' : 'The other psychic has sealed a clue for this board.');
+  sheet.card = dealCard(room);
+  sheet.topic = dealTopic(room);
+  sheet.target = randomTarget(room);
+  sheet.rerolled[playerId] = true;
+  sheet.deal += 1;
+}
+
 export function submitMark(room, playerId, mark, now = Date.now()) {
   if (room.phase !== 'MARKING') refuse('It is not time to mark the board.');
   const sheet = currentRound(room).sheets.find((s) => s.guessers.includes(playerId));
@@ -230,6 +296,20 @@ export function submitMark(room, playerId, mark, now = Date.now()) {
   const clamp = (v) => Math.max(-100, Math.min(100, Math.round(v)));
   sheet.marks[playerId] = { x: clamp(x), y: clamp(y) };
   advance(room, now);
+}
+
+// "Nice clue!": a nod to a psychic while the clue is on the table. It scores nothing. The psychic
+// sees how many nods came in, and the reply names who gave them. Pressing again takes it back.
+export function niceClue(room, playerId, psychicId) {
+  if (room.phase !== 'MARKING') refuse('You can only praise a clue while it is on the board.');
+  if (playerId === psychicId) refuse('You cannot praise your own clue.');
+  const sheet = currentRound(room).sheets.find((s) => s.writers.includes(psychicId) && (s.guessers.includes(playerId) || s.writers.includes(playerId)));
+  if (!sheet) refuse('That clue is not on your board.');
+  if (sheet.clues[psychicId] === undefined) refuse('That psychic sent no clue.');
+  const fans = sheet.nice[psychicId] ?? [];
+  const on = !fans.includes(playerId);
+  sheet.nice[psychicId] = on ? [...fans, playerId] : fans.filter((id) => id !== playerId);
+  return { on };
 }
 
 // Moves on once everyone still connected is done. Absent players never hold up the room.
@@ -249,7 +329,7 @@ function beginMarking(room, now) {
 }
 
 function endRound(room, now) {
-  if (room.roundIndex + 1 < ROUNDS) beginRound(room, now);
+  if (room.roundIndex + 1 < room.totalRounds) beginRound(room, now);
   else finish(room);
 }
 
@@ -293,12 +373,14 @@ function buildReply(room) {
       const score = scoreFor(mark, sheet.target);
       return { ...base, ...mark, tier: score.tier, points: score.points, distance: round1(score.distance) };
     });
-    const psychicPoints = room.mode === 'free' ? Math.round(average(marks.map((m) => m.points))) : null;
+    const resonance = room.mode === 'free' && marks.filter((m) => m.tier === 'Bullseye').length >= RESONANCE_BULLSEYES;
+    const psychicPoints = room.mode === 'free' ? Math.round(average(marks.map((m) => m.points))) + (resonance ? RESONANCE_BONUS : 0) : null;
     return {
       round: r,
       card: sheet.card,
+      topic: sheet.topic,
       target: sheet.target,
-      clues: sheet.writers.map((id) => ({ playerId: id, name: person(id).name, team: person(id).team, text: sheet.clues[id] ?? null, points: psychicPoints })),
+      clues: sheet.writers.map((id) => ({ playerId: id, name: person(id).name, team: person(id).team, text: sheet.clues[id] ?? null, points: psychicPoints, resonance, nice: (sheet.nice[id] ?? []).map((f) => person(f).name) })),
       marks,
     };
   }));
@@ -361,7 +443,11 @@ export function viewFor(room, playerId, now = Date.now()) {
     you: { id: playerId, isHost: room.hostId === playerId, team: me?.team ?? null },
     hostId: room.hostId,
     roundNumber: room.roundIndex + 1,
-    totalRounds: ROUNDS,
+    totalRounds: room.phase === 'LOBBY' ? plannedRounds(room) : room.totalRounds,
+    settings: room.settings,
+    topicSet: { id: room.settings.topicSet, name: topicSet(room).name },
+    topicSets: room.phase === 'LOBBY' ? Object.entries(TOPIC_SETS).map(([id, t]) => ({ id, name: t.name, blurb: t.blurb })) : null,
+    limits: { rounds: MAX_ROUNDS, laps: MAX_LAPS },
     msLeft: room.deadline ? Math.max(0, room.deadline - now) : null,
     startProblem: room.phase === 'LOBBY' ? startProblem(room) : null,
     players: room.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected, team: p.team, isHost: p.id === room.hostId, status: statusOf(room, p.id) })),
@@ -399,17 +485,21 @@ function taskFor(room, round, id) {
   if (room.phase === 'WRITING') {
     if (writing) {
       const clue = writing.clues[id];
-      return { kind: clue === undefined ? 'write' : 'wrote', card: writing.card, target: writing.target, clue: clue ?? null };
+      return { kind: clue === undefined ? 'write' : 'wrote', card: writing.card, topic: writing.topic, target: writing.target, clue: clue ?? null, rerollsLeft: writing.rerolled[id] ? 0 : 1, deal: writing.deal };
     }
-    return { kind: 'await-clue', card: guessing.card, psychics: writerNames(guessing) };
+    return { kind: 'await-clue', card: guessing.card, topic: guessing.topic, psychics: writerNames(guessing), deal: guessing.deal };
   }
   // MARKING: every clue on the sheet is now public to the players of that sheet.
-  const clueList = (s) => s.writers.map((w) => ({ name: name(w), team: team(w), own: w === id, text: s.clues[w] ?? null }));
+  // Nods: you see your own, and a psychic sees how many their clue has, never who gave them.
+  const clueList = (s) => s.writers.map((w) => {
+    const fans = s.nice[w] ?? [];
+    return { id: w, name: name(w), team: team(w), own: w === id, text: s.clues[w] ?? null, nicedByYou: fans.includes(id), nice: w === id ? fans.length : null };
+  });
   if (guessing) {
     const mark = guessing.marks[id] ?? null;
-    return { kind: mark ? 'marked' : 'mark', card: guessing.card, clues: clueList(guessing), mark };
+    return { kind: mark ? 'marked' : 'mark', card: guessing.card, topic: guessing.topic, clues: clueList(guessing), mark };
   }
-  return { kind: 'await-marks', card: writing.card, target: writing.target, clues: clueList(writing) };
+  return { kind: 'await-marks', card: writing.card, topic: writing.topic, target: writing.target, clues: clueList(writing) };
 }
 
 /* Connections ------------------------------------------------------------ */

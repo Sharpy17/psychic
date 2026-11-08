@@ -27,7 +27,7 @@ test('scoring matches the published tiers, and a distance on a limit earns that 
   assert.equal(at(35).points, 750);
   assert.equal(at(60).points, 500);
   assert.equal(at(90).points, 250);
-  assert.equal(at(91).points, 50);
+  assert.equal(at(91).points, 0);
   assert.equal(at(91).tier, 'Miss');
 });
 
@@ -134,14 +134,14 @@ test('free for all: the psychic earns the average, and ties are shared', () => {
   const { reply } = room;
   reply.sheets.forEach((s) => {
     const avg = Math.round(s.marks.reduce((t, m) => t + m.points, 0) / s.marks.length);
-    assert.equal(s.clues[0].points, avg);
+    assert.equal(s.clues[0].points, avg + (s.clues[0].resonance ? G.RESONANCE_BONUS : 0));
   });
   reply.standings.forEach((row) => assert.equal(row.total, row.perRound.reduce((a, b) => a + b, 0)));
 
-  // Three identical results share the ticket.
+  // Three identical results share the ticket. Every mark lands 20 away (Close), so no Resonance bonus.
   const tie = setup('free', ['A', 'B', 'C']);
   G.startGame(tie.room, tie.ids[0]);
-  playGame(tie.room, (id, sheet) => sheet.target);
+  playGame(tie.room, (id, sheet) => ({ x: sheet.target.x > 0 ? sheet.target.x - 20 : sheet.target.x + 20, y: sheet.target.y }));
   assert.equal(tie.room.reply.winners.length, 3);
 });
 
@@ -220,7 +220,7 @@ test('teams: one shared target, a psychic each, both clues visible, scored by av
   const lions = reply.standings.find((s) => s.id === 'lions');
   const tigerRow = reply.standings.find((s) => s.id === 'tigers');
   assert.equal(lions.total, 4000);
-  assert.equal(tigerRow.total, 4 * Math.round((1000 + 50) / 2));
+  assert.equal(tigerRow.total, 4 * Math.round((1000 + 0) / 2));
   assert.deepEqual(reply.winners, ['lions']);
   assert.equal(lions.members.length, 4);
 });
@@ -310,4 +310,133 @@ test('room codes use the agreed characters and avoid codes in use', () => {
   const code = G.makeCode((c) => seen.has(c), () => (calls++ < 4 ? 0 : 0.5));
   assert.notEqual(code, 'AAAA');
   assert.match(G.makeCode(), /^[A-HJ-NP-Z2-9]{4}$/);
+});
+
+test('the host sets the topic set, and each sheet deals a topic from it', () => {
+  const { room, ids } = setup('free', ['Ann', 'Bo', 'Cy']);
+  assert.throws(() => G.setSettings(room, ids[1], { topicSet: 'food' }), /Only the host/);
+  assert.throws(() => G.setSettings(room, ids[0], { topicSet: 'nope' }), /topic set/);
+  assert.throws(() => G.setSettings(room, ids[0], { topicSet: '__proto__' }), /topic set/);
+  G.setSettings(room, ids[0], { topicSet: 'food' });
+  G.startGame(room, ids[0]);
+  const sheet = room.rounds[0].sheets[0];
+  assert.ok(G.TOPIC_SETS.food.topics.includes(sheet.topic));
+  assert.ok(G.TOPIC_SETS.food.cards.includes(sheet.card));
+  // Everyone on the sheet sees the topic, even before the clue is in.
+  ids.forEach((id) => assert.equal(G.viewFor(room, id).task.topic, sheet.topic));
+  assert.throws(() => G.setSettings(room, ids[0], { topicSet: 'pop' }), /lobby/);
+});
+
+test('"Anything goes" deals no topic', () => {
+  const { room, ids } = setup('duel', ['Ann', 'Bo']);
+  G.setSettings(room, ids[0], { topicSet: 'open' });
+  G.startGame(room, ids[0]);
+  room.rounds[0].sheets.forEach((s) => assert.equal(s.topic, null));
+});
+
+test('the host sets the number of rounds', () => {
+  const { room, ids } = setup('duel', ['Ann', 'Bo']);
+  assert.throws(() => G.setSettings(room, ids[0], { rounds: { per: 'game', n: 0 } }), /rounds/);
+  assert.throws(() => G.setSettings(room, ids[0], { rounds: { per: 'game', n: G.MAX_ROUNDS + 1 } }), /rounds/);
+  assert.throws(() => G.setSettings(room, ids[0], { rounds: { per: 'player', n: 1 } }), /Free for All/);
+  G.setSettings(room, ids[0], { rounds: { per: 'game', n: 2 } });
+  assert.equal(G.viewFor(room, ids[0]).totalRounds, 2);
+  G.startGame(room, ids[0]);
+  playRound(room); playRound(room);
+  assert.equal(room.phase, 'REPLY');
+  assert.equal(room.reply.rounds, 2);
+});
+
+test('Free for All by turns: everyone is psychic exactly n times', () => {
+  const { room, ids } = setup('free', ['Ann', 'Bo', 'Cy', 'Di', 'Ed']);
+  G.setSettings(room, ids[0], { rounds: { per: 'player', n: 2 } });
+  assert.equal(G.viewFor(room, ids[1]).totalRounds, 10);
+  G.startGame(room, ids[0]);
+  const turns = new Map();
+  for (let i = 0; i < 10; i++) {
+    writers(room).forEach((id) => turns.set(id, (turns.get(id) ?? 0) + 1));
+    playRound(room);
+  }
+  assert.equal(room.phase, 'REPLY');
+  ids.forEach((id) => assert.equal(turns.get(id), 2));
+  // Leaving Free for All drops the per-player setting.
+  G.playAgain(room, ids[0]);
+  G.setMode(room, ids[0], 'teams');
+  assert.deepEqual(room.settings.rounds, { per: 'game', n: G.ROUNDS });
+});
+
+test('nice clue: toggles, never your own, the psychic sees only a count, and the reply names the fans', () => {
+  const { room, ids } = setup('free', ['Ann', 'Bo', 'Cy']);
+  G.startGame(room, ids[0]);
+  const psychic = writers(room)[0];
+  const [a, b] = guessers(room);
+  assert.throws(() => G.niceClue(room, a, psychic), /while it is on the board/);
+  G.submitClue(room, psychic, 'a fine clue');
+  assert.throws(() => G.niceClue(room, psychic, psychic), /own clue/);
+  assert.deepEqual(G.niceClue(room, a, psychic), { on: true });
+  assert.deepEqual(G.niceClue(room, b, psychic), { on: true });
+  assert.deepEqual(G.niceClue(room, b, psychic), { on: false });
+  const own = G.viewFor(room, psychic).task.clues[0];
+  assert.equal(own.nice, 1);
+  const seenByA = G.viewFor(room, a).task.clues[0];
+  assert.equal(seenByA.nicedByYou, true);
+  assert.equal(seenByA.nice, null);
+  // Live, the psychic's view carries a count only: no list of who gave the nods.
+  assert.deepEqual(Object.keys(own).sort(), ['id', 'name', 'nice', 'nicedByYou', 'own', 'team', 'text']);
+  guessers(room).forEach((id) => G.submitMark(room, id, { x: 0, y: 0 }));
+  for (let i = 1; i < G.ROUNDS; i++) playRound(room);
+  const name = room.players.find((p) => p.id === a).name;
+  assert.deepEqual(room.reply.sheets[0].clues[0].nice, [name]);
+});
+
+test('team scoring: Close, Warm, Edge, and a Miss scores nothing', () => {
+  const at = (x) => G.scoreFor({ x, y: 0 }, { x: 0, y: 0 });
+  assert.deepEqual([at(15).tier, at(35).tier, at(60).tier, at(90).tier, at(91).tier], ['Bullseye', 'Close', 'Warm', 'Edge', 'Miss']);
+  assert.equal(at(91).points, 0);
+});
+
+test('Psychic Resonance: two Bullseyes earn the psychic +250, one does not', () => {
+  const play = (hits) => {
+    const { room, ids } = setup('free', ['Ann', 'Bo', 'Cy', 'Di']);
+    G.setSettings(room, ids[0], { rounds: { per: 'game', n: 1 } });
+    G.startGame(room, ids[0]);
+    let n = 0;
+    playRound(room, (id, sheet) => (n++ < hits ? sheet.target : { x: sheet.target.x > 0 ? -100 : 100, y: sheet.target.y > 0 ? -100 : 100 }));
+    return room.reply.sheets[0].clues[0];
+  };
+  const two = play(2);
+  assert.equal(two.resonance, true);
+  assert.equal(two.points, Math.round((1000 + 1000 + 0) / 3) + G.RESONANCE_BONUS);
+  const one = play(1);
+  assert.equal(one.resonance, false);
+  assert.equal(one.points, Math.round(1000 / 3));
+});
+
+test('reroll: once per psychic turn, new board and target, writers only', () => {
+  const { room, ids } = setup('free', ['Ann', 'Bo', 'Cy']);
+  G.startGame(room, ids[0]);
+  const psychic = writers(room)[0];
+  const guesser = guessers(room)[0];
+  const sheet = room.rounds[0].sheets[0];
+  assert.throws(() => G.rerollSheet(room, guesser), /not the psychic/);
+  const before = { ...sheet.target };
+  G.rerollSheet(room, psychic);
+  assert.equal(sheet.deal, 1);
+  assert.notDeepEqual(sheet.target, before);
+  assert.equal(G.viewFor(room, psychic).task.rerollsLeft, 0);
+  assert.equal(G.viewFor(room, guesser).task.deal, 1);
+  assert.ok(!('target' in G.viewFor(room, guesser).task), 'guessers never get the target');
+  assert.throws(() => G.rerollSheet(room, psychic), /used your reroll/);
+  G.submitClue(room, psychic, 'x');
+  assert.throws(() => G.rerollSheet(room, psychic), /while writing/);
+});
+
+test('reroll in teams changes the shared board, and stops once either psychic has sealed', () => {
+  const { room, ids } = setup('teams', ['Ann', 'Bo', 'Cy', 'Di']);
+  G.startGame(room, ids[0]);
+  const [a, b] = writers(room);
+  G.rerollSheet(room, a);
+  assert.equal(G.viewFor(room, b).task.rerollsLeft, 1);
+  G.submitClue(room, a, 'sealed');
+  assert.throws(() => G.rerollSheet(room, b), /other psychic has sealed/);
 });
