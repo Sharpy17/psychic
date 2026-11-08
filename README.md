@@ -38,7 +38,9 @@ the reply, in every mode.
 |---|---|---|---|
 | **Head to Head** | Exactly 2 | Both write a clue for their own target at once, swap, then both guess at once | You score only for your own guess |
 | **Free for All** | 3 to 8 | A psychic is drawn at random, and everyone else guesses | Guessers score their own marks, and the psychic earns the average |
-| **Team Against Team** | 4 or more, at least 2 per team | Each team has a psychic, both teams chase one shared target, and both clues are visible to everyone | A team's round score is the average of its marks |
+| **Team Against Team** | 4 or more, at least 2 per team | Each team has a psychic, both teams chase one shared target, and both clues are visible to everyone. Each team moves **one shared X** live (only that team sees it) and it seals once every teammate has pressed Lock in; any move unlocks everyone | A team scores its X. When time runs out the X counts where it stands |
+
+In the reply, each team-game clue opens with **two boards side by side**, one per team. Both teams' paths replay at once (the trail, plus a heatmap of where the X lingered), with who moved it, how far it travelled and when the team locked in. Only then does the target appear, with each team's score and the closest its X ever got. The server records the path during marking (`teamMarks[team].path`), and `journeyOf()` in `engine.js` turns it into the replay.
 
 **Points** (the team's scoring, from Sharpy17/psychic): within 15 units of the target earns 1,000
 (Bullseye), within 35 earns 750 (Close), within 60 earns 500 (Warm), within 90 earns 250 (Edge), and
@@ -56,6 +58,16 @@ happens within each team.
 **Winning:** the top of the leaderboard takes the ticket, and every member of a winning team gets
 one. Head to Head and team games break level scores on the lowest total distance from the targets,
 then share the win. Free for All shares a tied win.
+
+## Testing alone with bots
+
+In the lobby the host can press **+ Add a bot** (in team games, one button per team) and remove a bot
+with its ×. Bots fill seats like players, so one person can start any mode: Head to Head with one bot,
+Free for All with two or more, Team Against Team with three. A bot takes 1 to 3.5 seconds per turn:
+it writes a clue from a stock list (and rerolls first about one time in five), gives a nice clue now
+and then, and marks near the target with a random error, so every score tier turns up. Bots know the
+target, so they're for testing, not for playing against. They never become host, and a room with
+only bots left closes. The brain is in `server/bots.js`.
 
 ## How it's built
 

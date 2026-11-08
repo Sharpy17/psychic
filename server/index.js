@@ -7,6 +7,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import * as G from './engine.js';
+import * as Bots from './bots.js';
 
 const PORT = Number(process.env.PORT) || 4100;
 const ROOT = fileURLToPath(new URL('../public', import.meta.url));
@@ -40,11 +41,27 @@ const io = new Server(http, { maxHttpBufferSize: 8_000 });
 const rooms = new Map();
 const timers = new Map(); // code -> { deadline, handle }
 const emptyTimers = new Map();
+const botTurns = new Set(); // Keys of bot turns already scheduled.
+const BOT_DELAY = [1200, 3500]; // A bot thinks for a moment, like a person.
 
 // Each player gets their own view, so nobody is sent what they may not see.
 function sync(room) {
   armTimer(room);
+  scheduleBots(room);
   for (const player of room.players) io.to(`player:${player.id}`).emit('state', G.viewFor(room, player.id));
+}
+
+function scheduleBots(room) {
+  for (const turn of Bots.dueTurns(room)) {
+    if (botTurns.has(turn.key)) continue;
+    botTurns.add(turn.key);
+    const delay = BOT_DELAY[0] + Math.random() * (BOT_DELAY[1] - BOT_DELAY[0]);
+    setTimeout(() => {
+      botTurns.delete(turn.key);
+      if (rooms.get(room.code) !== room) return; // The room has closed.
+      if (Bots.playTurn(room, turn)) sync(room);
+    }, delay);
+  }
 }
 
 function armTimer(room) {
@@ -134,12 +151,23 @@ io.on('connection', (socket) => {
   });
 
   on('room:mode', ({ mode }) => { const r = seated(); G.setMode(r, socket.data.playerId, mode); sync(r); });
+  on('room:bot:add', ({ team }) => { const r = seated(); G.addBot(r, socket.data.playerId, team); sync(r); });
+  on('room:bot:remove', ({ botId }) => { const r = seated(); G.removeBot(r, socket.data.playerId, String(botId ?? '')); sync(r); });
   on('room:team', ({ team }) => { const r = seated(); G.setTeam(r, socket.data.playerId, team); sync(r); });
   on('room:settings', ({ topicSet, rounds }) => { const r = seated(); G.setSettings(r, socket.data.playerId, { topicSet, rounds }); sync(r); });
   on('clue:nice', ({ psychicId }) => { const r = seated(); const res = G.niceClue(r, socket.data.playerId, String(psychicId ?? '')); sync(r); return res; });
   on('game:start', () => { const r = seated(); G.startGame(r, socket.data.playerId); sync(r); });
   on('psychic:reroll', () => { const r = seated(); G.rerollSheet(r, socket.data.playerId); sync(r); });
   on('clue:submit', ({ text }) => { const r = seated(); G.submitClue(r, socket.data.playerId, text); sync(r); });
+  // Team games: the shared dot. A move goes straight to that team's players (never the rivals),
+  // and only a move that unlocks someone needs a full update.
+  on('team:move', ({ x, y }) => {
+    const r = seated();
+    const moved = G.moveTeamMark(r, socket.data.playerId, { x, y });
+    for (const p of r.players.filter((pl) => pl.team === moved.team)) io.to(`player:${p.id}`).emit('team:pos', { x: moved.x, y: moved.y, by: socket.data.playerId });
+    if (moved.unlocked) sync(r);
+  });
+  on('team:agree', () => { const r = seated(); const res = G.agreeTeamMark(r, socket.data.playerId); sync(r); return res; });
   on('mark:submit', ({ x, y }) => { const r = seated(); G.submitMark(r, socket.data.playerId, { x, y }); sync(r); });
   on('game:again', () => { const r = seated(); G.playAgain(r, socket.data.playerId); sync(r); });
 
@@ -151,7 +179,7 @@ io.on('connection', (socket) => {
     socket.data.code = null;
     G.removePlayer(room, id);
     checkEmpty(room);
-    if (room.players.length) sync(room);
+    if (G.hasPeople(room)) sync(room);
     else deleteRoom(room.code);
   });
 

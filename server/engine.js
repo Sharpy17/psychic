@@ -5,6 +5,7 @@
 // A round is one or more "sheets". A sheet is one board with one target:
 //   Free for All: one sheet, one writer, everyone else guesses.
 //   Team:         one sheet, one writer per team, everyone else guesses. Both clues are shown.
+//                 Each team moves ONE shared dot together and locks it in when every teammate agrees.
 //   Head to Head: two sheets, each player writes on one and guesses on the other.
 //
 // SECRECY: viewFor() is the only thing that leaves the server. Targets go only to a sheet's
@@ -72,13 +73,14 @@ export function cleanName(raw) {
   return name;
 }
 
-function addPlayer(room, name) {
+function addPlayer(room, name, isBot = false) {
   const player = {
     id: randomUUID(),
     token: randomBytes(24).toString('hex'),
     name: cleanName(name),
     connected: true,
     team: null,
+    isBot,
   };
   room.players.push(player);
   placeOnTeam(room, player);
@@ -161,6 +163,30 @@ export function plannedRounds(room) {
   return Math.min(MAX_TOTAL_ROUNDS, n * Math.max(1, here));
 }
 
+/* Bots, for testing: they sit in seats like players, and server/bots.js plays their turns. */
+const BOT_NAMES = ['Ada', 'Bubbles', 'Chester', 'Dot', 'Elmo', 'Fifi', 'Gizmo', 'Hoot', 'Ivy', 'Jumbo', 'Kiki', 'Loopy'];
+
+export function addBot(room, playerId, team) {
+  assertHost(room, playerId);
+  if (room.phase !== 'LOBBY') refuse('Bots can only join in the lobby.');
+  if (room.players.length >= MODES[room.mode].max) refuse(`The room is full. ${MODES[room.mode].name} takes ${MODES[room.mode].max} players.`);
+  const taken = new Set(room.players.map((p) => p.name.toLowerCase()));
+  const pick = BOT_NAMES.map((n) => `${n} (bot)`).find((n) => !taken.has(n.toLowerCase()))
+    ?? `Bot ${room.players.length + 1}`;
+  const bot = addPlayer(room, pick.slice(0, MAX_NAME), true);
+  if (room.mode === 'teams' && TEAMS[team]) bot.team = team;
+  return bot;
+}
+
+export function removeBot(room, playerId, botId) {
+  assertHost(room, playerId);
+  if (room.phase !== 'LOBBY') refuse('Bots can only leave in the lobby.');
+  if (!room.players.some((p) => p.id === botId && p.isBot)) refuse('That is not a bot.');
+  room.players = room.players.filter((p) => p.id !== botId);
+}
+
+const firstHuman = (room) => room.players.find((p) => p.connected && !p.isBot);
+
 export function setTeam(room, playerId, team) {
   if (room.phase !== 'LOBBY' || room.mode !== 'teams') refuse('You can only switch teams in a team lobby.');
   if (!TEAMS[team]) refuse('Pick a team.');
@@ -226,7 +252,11 @@ function makeRound(room) {
   }
   if (room.mode === 'teams') {
     const writers = Object.keys(TEAMS).map((team) => drawPsychic(room, team, players.filter((p) => p.team === team)));
-    return { sheets: [makeSheet(room, writers, players.filter((p) => !writers.includes(p)))] };
+    const sheet = makeSheet(room, writers, players.filter((p) => !writers.includes(p)));
+    // One dot per team, starting in the middle. "cycle" counts the times agreement was reset.
+    // "path" records every move (time since marking began, where, who) for the replay in the reply.
+    sheet.teamMarks = Object.fromEntries(Object.keys(TEAMS).map((t) => [t, { x: 0, y: 0, moved: 0, cycle: 0, agreed: [], sealed: false, path: [], lockedAt: null }]));
+    return { sheets: [sheet] };
   }
   const psychic = drawPsychic(room, 'all', players);
   return { sheets: [makeSheet(room, [psychic], players.filter((p) => p !== psychic))] };
@@ -286,8 +316,63 @@ export function rerollSheet(room, playerId) {
   sheet.deal += 1;
 }
 
+const teamOf = (room, id) => room.players.find((p) => p.id === id)?.team ?? null;
+const clampChart = (v) => Math.max(-100, Math.min(100, Math.round(v)));
+
+function teamMarkFor(room, playerId) {
+  if (room.phase !== 'MARKING') refuse('It is not time to mark the board.');
+  if (room.mode !== 'teams') refuse('Only team games share a dot.');
+  const sheet = currentRound(room).sheets.find((s) => s.guessers.includes(playerId));
+  if (!sheet) refuse('You are not guessing this round.');
+  const mark = sheet.teamMarks[teamOf(room, playerId)];
+  if (mark.sealed) refuse('Your team has locked in its guess.');
+  return { sheet, mark };
+}
+
+// A teammate moves the team's dot. Any move unlocks everyone, so the team agrees on where it ends up.
+const MAX_PATH = 3000; // Plenty for a minute of dragging, and a cap against floods.
+
+export function moveTeamMark(room, playerId, pos, now = Date.now()) {
+  const { mark } = teamMarkFor(room, playerId);
+  const x = Number(pos?.x), y = Number(pos?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) refuse('That mark is not on the board.');
+  mark.x = clampChart(x);
+  mark.y = clampChart(y);
+  mark.moved += 1;
+  const t = Math.max(0, now - (currentRound(room).markStart ?? now));
+  if (mark.path.length < MAX_PATH) mark.path.push({ t, x: mark.x, y: mark.y, by: playerId });
+  const unlocked = mark.agreed.length > 0;
+  if (unlocked) { mark.agreed = []; mark.cycle += 1; }
+  return { team: teamOf(room, playerId), x: mark.x, y: mark.y, unlocked };
+}
+
+// "Lock in": the dot is sealed once every teammate still here has agreed. Pressing again unlocks.
+export function agreeTeamMark(room, playerId, now = Date.now()) {
+  const { mark } = teamMarkFor(room, playerId);
+  const on = !mark.agreed.includes(playerId);
+  mark.agreed = on ? [...mark.agreed, playerId] : mark.agreed.filter((id) => id !== playerId);
+  advance(room, now);
+  return { on };
+}
+
+function settleTeamMarks(room, now) {
+  for (const sheet of currentRound(room).sheets) {
+    if (!sheet.teamMarks) continue;
+    for (const [team, mark] of Object.entries(sheet.teamMarks)) {
+      const here = sheet.guessers.filter((id) => teamOf(room, id) === team && isOnline(room, id));
+      if (!mark.sealed && here.length && here.every((id) => mark.agreed.includes(id))) {
+        mark.sealed = true;
+        mark.lockedAt = Math.max(0, now - (currentRound(room).markStart ?? now));
+      }
+    }
+  }
+}
+
+const teamHasGuessers = (room, sheet, team) => sheet.guessers.some((id) => teamOf(room, id) === team && isOnline(room, id));
+
 export function submitMark(room, playerId, mark, now = Date.now()) {
   if (room.phase !== 'MARKING') refuse('It is not time to mark the board.');
+  if (room.mode === 'teams') refuse('In team games your team moves one dot together. Lock it in when you all agree.');
   const sheet = currentRound(room).sheets.find((s) => s.guessers.includes(playerId));
   if (!sheet) refuse('You are not guessing this round.');
   if (sheet.marks[playerId]) refuse('Your mark is already sealed.');
@@ -318,7 +403,10 @@ export function advance(room, now = Date.now()) {
     const done = currentRound(room).sheets.every((s) => s.writers.every((id) => s.clues[id] !== undefined || !isOnline(room, id)));
     if (done) beginMarking(room, now);
   } else if (room.phase === 'MARKING') {
-    const done = currentRound(room).sheets.every((s) => s.guessers.every((id) => s.marks[id] || !isOnline(room, id)));
+    if (room.mode === 'teams') settleTeamMarks(room, now);
+    const done = currentRound(room).sheets.every((s) => (s.teamMarks
+      ? Object.entries(s.teamMarks).every(([team, m]) => m.sealed || !teamHasGuessers(room, s, team))
+      : s.guessers.every((id) => s.marks[id] || !isOnline(room, id))));
     if (done) endRound(room, now);
   }
 }
@@ -326,9 +414,12 @@ export function advance(room, now = Date.now()) {
 function beginMarking(room, now) {
   room.phase = 'MARKING';
   room.deadline = now + MARK_MS;
+  currentRound(room).markStart = now;
 }
 
 function endRound(room, now) {
+  const round = currentRound(room);
+  if (round.markStart !== undefined) round.markEnd = now;
   if (room.roundIndex + 1 < room.totalRounds) beginRound(room, now);
   else finish(room);
 }
@@ -357,6 +448,36 @@ export function playAgain(room, playerId) {
 
 /* The reply: everything, once it's all over ------------------------------ */
 
+// How a team got to its answer: the path resampled at even time steps (so a spot the X sat on
+// for a long time shows up hot in the heatmap), and a few numbers about the discussion.
+const TRAIL_FRAMES = 80;
+function journeyOf(mark, target, duration, person) {
+  const points = [{ t: 0, x: 0, y: 0 }, ...mark.path];
+  const end = Math.max(duration, points.at(-1).t, 1);
+  const frames = Math.min(TRAIL_FRAMES, Math.max(2, Math.ceil(end / 250)));
+  const trail = [];
+  let i = 0;
+  for (let f = 0; f < frames; f++) {
+    const t = (end * f) / (frames - 1);
+    while (i + 1 < points.length && points[i + 1].t <= t) i++;
+    trail.push([points[i].x, points[i].y]);
+  }
+  let travelled = 0;
+  for (let k = 1; k < points.length; k++) travelled += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
+  const movers = [...new Set(mark.path.map((p) => p.by))].map((id) => person(id).name);
+  const visited = mark.path.length ? mark.path : points; // Not the starting spot, unless it never moved.
+  const closest = Math.min(...visited.map((p) => Math.hypot(p.x - target.x, p.y - target.y)));
+  return {
+    trail,
+    moves: mark.path.length,
+    movers,
+    travelled: Math.round(travelled),
+    seconds: Math.round(end / 1000),
+    lockedIn: mark.lockedAt !== null,
+    closest: round1(closest),
+  };
+}
+
 function buildReply(room) {
   const person = (id) => room.players.find((p) => p.id === id) ?? { id, name: 'A departed player', team: null };
   const earned = new Map(); // id -> { perRound, distance }
@@ -366,7 +487,12 @@ function buildReply(room) {
   };
 
   const sheets = room.rounds.flatMap((round, r) => round.sheets.map((sheet) => {
-    const marks = sheet.guessers.map((id) => {
+    // Teams: one guess per team, wherever its dot stood when it was sealed or time ran out.
+    const marks = sheet.teamMarks ? Object.entries(sheet.teamMarks).map(([team, m]) => {
+      const score = scoreFor(m, sheet.target);
+      const duration = m.lockedAt ?? ((round.markEnd ?? round.markStart ?? 0) - (round.markStart ?? 0));
+      return { playerId: team, name: TEAMS[team], team, x: m.x, y: m.y, tier: score.tier, points: score.points, distance: round1(score.distance), journey: journeyOf(m, sheet.target, duration, person) };
+    }) : sheet.guessers.map((id) => {
       const who = person(id), mark = sheet.marks[id];
       const base = { playerId: id, name: who.name, team: who.team };
       if (!mark) return { ...base, x: null, y: null, tier: 'No mark', points: 0, distance: null };
@@ -450,9 +576,14 @@ export function viewFor(room, playerId, now = Date.now()) {
     limits: { rounds: MAX_ROUNDS, laps: MAX_LAPS },
     msLeft: room.deadline ? Math.max(0, room.deadline - now) : null,
     startProblem: room.phase === 'LOBBY' ? startProblem(room) : null,
-    players: room.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected, team: p.team, isHost: p.id === room.hostId, status: statusOf(room, p.id) })),
+    players: room.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected, team: p.team, isBot: !!p.isBot, isHost: p.id === room.hostId, status: statusOf(room, p.id) })),
     task: null,
-    yourMarks: room.rounds.map((r) => {
+    yourMarks: room.rounds.map((r, i) => {
+      if (r.sheets[0].teamMarks) {
+        // Your team's dot, once sealed (or once that round is over).
+        const m = r.sheets[0].teamMarks[me?.team];
+        return m && (m.sealed || i < room.roundIndex || room.phase === 'REPLY') ? { x: m.x, y: m.y } : null;
+      }
       const sheet = r.sheets.find((s) => s.marks[playerId]);
       return sheet ? sheet.marks[playerId] : null;
     }),
@@ -472,6 +603,10 @@ function statusOf(room, id) {
   }
   const sheet = round.sheets.find((s) => s.guessers.includes(id));
   if (!sheet) return null;
+  if (sheet.teamMarks) {
+    const m = sheet.teamMarks[teamOf(room, id)];
+    return m.sealed ? 'sealed' : m.agreed.includes(id) ? 'agreed' : 'marking';
+  }
   return sheet.marks[id] ? 'sealed' : 'marking';
 }
 
@@ -495,11 +630,23 @@ function taskFor(room, round, id) {
     const fans = s.nice[w] ?? [];
     return { id: w, name: name(w), team: team(w), own: w === id, text: s.clues[w] ?? null, nicedByYou: fans.includes(id), nice: w === id ? fans.length : null };
   });
+  // Teams: your own team's dot and who has locked in. Never the other team's.
+  const teamDot = (s) => {
+    const myTeam = team(id), m = s.teamMarks?.[myTeam];
+    if (!m) return null;
+    const mates = s.guessers.filter((g) => team(g) === myTeam);
+    return {
+      x: m.x, y: m.y, sealed: m.sealed, youAgreed: m.agreed.includes(id),
+      mates: mates.map((g) => ({ id: g, name: name(g), agreed: m.agreed.includes(g), online: !!isOnline(room, g), you: g === id })),
+    };
+  };
   if (guessing) {
+    const dot = teamDot(guessing);
+    if (dot) return { kind: dot.sealed ? 'marked' : 'mark', card: guessing.card, topic: guessing.topic, clues: clueList(guessing), mark: { x: dot.x, y: dot.y }, team: dot };
     const mark = guessing.marks[id] ?? null;
     return { kind: mark ? 'marked' : 'mark', card: guessing.card, topic: guessing.topic, clues: clueList(guessing), mark };
   }
-  return { kind: 'await-marks', card: writing.card, topic: writing.topic, target: writing.target, clues: clueList(writing) };
+  return { kind: 'await-marks', card: writing.card, topic: writing.topic, target: writing.target, clues: clueList(writing), team: teamDot(writing) };
 }
 
 /* Connections ------------------------------------------------------------ */
@@ -509,7 +656,7 @@ export function setConnected(room, playerId, connected, now = Date.now()) {
   if (!player) return;
   player.connected = connected;
   if (!connected && room.hostId === playerId) {
-    const next = room.players.find((p) => p.connected);
+    const next = firstHuman(room);
     if (next) room.hostId = next.id;
   }
   if (!connected) advance(room, now);
@@ -518,10 +665,12 @@ export function setConnected(room, playerId, connected, now = Date.now()) {
 export function removePlayer(room, playerId, now = Date.now()) {
   if (room.phase === 'LOBBY') {
     room.players = room.players.filter((p) => p.id !== playerId);
-    if (room.hostId === playerId && room.players.length) room.hostId = (room.players.find((p) => p.connected) ?? room.players[0]).id;
+    if (room.hostId === playerId && room.players.length) room.hostId = (firstHuman(room) ?? room.players[0]).id;
     return;
   }
   setConnected(room, playerId, false, now);
 }
 
-export const isEmpty = (room) => !room.players.some((p) => p.connected);
+// Bots don't keep a room alive: with no people left, it closes.
+export const isEmpty = (room) => !room.players.some((p) => p.connected && !p.isBot);
+export const hasPeople = (room) => room.players.some((p) => !p.isBot);

@@ -29,7 +29,9 @@
   let mailing = false;
   let rerolling = false; // True while your own reroll is on its way, so you aren't told about it.
   let lastDeal = null; // Which deal of the board is on screen, so a reroll can be announced.
-  let niceSeen = 0; // Nods on your own clue this round, so a new one can be announced.
+  let niceSeen = 0;
+  let movedAt = 0; // When you last moved your team's dot, so a teammate's echo doesn't yank it from under you.
+  let moveTimer = null, pendingMove = null, lastSent = 0; // Nods on your own clue this round, so a new one can be announced.
 
   /* Connecting ------------------------------------------------------------ */
 
@@ -38,6 +40,13 @@
     if (!window.io) return null;
     socket = window.io({ reconnectionDelayMax: 4000 });
     socket.on('state', (next) => { view = next; render(); });
+    // Team games: a teammate moved the shared dot.
+    socket.on('team:pos', (pos) => {
+      if (!view?.task?.team || pos.by === view.you.id) return;
+      view.task.mark = { x: pos.x, y: pos.y };
+      view.task.team.x = pos.x; view.task.team.y = pos.y;
+      placeTeamDot();
+    });
     socket.on('connect', () => {
       setOffline(false);
       const session = store.get(SESSION);
@@ -149,11 +158,11 @@
           <button class="btn" type="button" id="copy-link">Copy invite link</button>
         </div>
         <p class="lobby-link" id="lobby-link"></p>
+        <fieldset class="mode-pick topic-pick" id="lobby-topics"><legend>The topics</legend></fieldset>
       </div>
       <div class="lobby-main">
         <h2 class="lobby-title" id="lobby-title"></h2>
         <fieldset class="mode-pick" id="lobby-modes"><legend>The ring</legend></fieldset>
-        <fieldset class="mode-pick topic-pick" id="lobby-topics"><legend>The topics</legend></fieldset>
         <fieldset class="rounds-pick" id="lobby-rounds">
           <legend>The length of the show</legend>
           <div class="rounds-per" id="rounds-per">
@@ -213,6 +222,10 @@
   screen.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-team-join]');
     if (btn) act('room:team', { team: btn.dataset.teamJoin });
+    const addBot = e.target.closest('[data-bot-add]');
+    if (addBot) { blip(700, 0.05); act('room:bot:add', { team: addBot.dataset.botAdd || undefined }); }
+    const dropBot = e.target.closest('[data-bot-remove]');
+    if (dropBot) act('room:bot:remove', { botId: dropBot.dataset.botRemove });
     if (e.target.closest('#reroll')) {
       const btn = e.target.closest('#reroll');
       btn.disabled = true;
@@ -241,7 +254,8 @@
     leaveToFront();
   }
 
-  const nameTag = (p) => `<li class="lobby-player${p.id === view.you.id ? ' is-you' : ''}${p.connected ? '' : ' is-away'}"><span>${esc(p.name)}</span>${p.id === view.you.id ? '<small>you</small>' : ''}${p.isHost ? '<small>host</small>' : ''}${p.connected ? '' : '<small>away</small>'}</li>`;
+  const nameTag = (p) => `<li class="lobby-player${p.id === view.you.id ? ' is-you' : ''}${p.connected ? '' : ' is-away'}${p.isBot ? ' is-bot' : ''}"><span>${esc(p.name)}</span>${p.id === view.you.id ? '<small>you</small>' : ''}${p.isHost ? '<small>host</small>' : ''}${p.connected ? '' : '<small>away</small>'}${p.isBot && view.you.isHost ? `<button class="bot-remove" type="button" data-bot-remove="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">×</button>` : ''}</li>`;
+  const botButton = (team = '', label = 'Add a bot') => (view.you.isHost ? `<button class="btn bot-add" type="button" data-bot-add="${team}">+ ${label}</button>` : '');
 
   function refreshLobby() {
     const isHost = view.you.isHost;
@@ -265,11 +279,13 @@
       const team = (id, name) => {
         const members = view.players.filter((p) => p.team === id);
         const mine = view.you.team === id;
-        return `<div class="lobby-team team-${id}"><h3>${name}</h3><ul>${members.map(nameTag).join('') || '<li class="lobby-empty">Nobody yet</li>'}</ul>${mine ? '' : `<button class="btn" type="button" data-team-join="${id}">Join ${name}</button>`}</div>`;
+        // Join and bot buttons sit in the team's heading, apart from the names.
+        const join = mine ? '<span class="team-yours">Your team</span>' : `<button class="btn team-join" type="button" data-team-join="${id}">Join</button>`;
+        return `<div class="lobby-team team-${id}"><div class="lobby-team-head"><h3>${name}</h3><span class="lobby-team-actions">${join}${botButton(id, 'bot')}</span></div><ul>${members.map(nameTag).join('') || '<li class="lobby-empty">Nobody yet</li>'}</ul></div>`;
       };
       list.innerHTML = `<div class="lobby-teams">${team('lions', 'The Lions')}${team('tigers', 'The Tigers')}</div>`;
     } else {
-      list.innerHTML = `<ul class="lobby-list">${view.players.map(nameTag).join('')}</ul>`;
+      list.innerHTML = `<ul class="lobby-list">${view.players.map(nameTag).join('')}</ul>${view.mode === 'duel' && view.players.length >= 2 ? '' : botButton()}`;
     }
     const start = document.getElementById('start-game');
     start.hidden = !isHost;
@@ -330,11 +346,11 @@
       return view.task.psychics.length > 1 ? `${names} are writing. Both clues appear together, so nobody can copy.` : `${names} is writing the clue. You mark the board as soon as it comes in.`;
     },
     mark() {
-      if (view.mode === 'teams') return 'Both clues point to the same secret spot. Drag the X or tap the board, then seal your mark.';
+      if (view.mode === 'teams') return 'Your team shares one X. Anyone can drag it, and everyone sees it move. Lock in when you all agree.';
       return 'Drag the X or tap the board, then seal your mark. No answers until your reply comes by mail.';
     },
-    marked: () => 'Your mark is sealed. Waiting for everyone else.',
-    'await-marks': () => 'Your clue is out. Nobody learns a thing until the mail comes.',
+    marked: () => (view.task.team ? 'Your team has locked in its guess. Waiting for the other team.' : 'Your mark is sealed. Waiting for everyone else.'),
+    'await-marks': () => (view.task.team ? 'Your clue is out. Watch your team move its X, and keep your poker face.' : 'Your clue is out. Nobody learns a thing until the mail comes.'),
   };
 
   function clueHtml() {
@@ -374,6 +390,7 @@
         : '<button class="btn reroll" type="button" disabled>Reroll used <small>0 left</small></button>';
       return `<button class="btn primary" type="submit" form="clue-form" id="game-action">Seal my clue</button>${reroll}`;
     }
+    if (kind === 'mark' && view.task.team) return `<button class="btn primary" type="button" id="game-action" aria-pressed="false">Lock in our guess</button>${niceHtml()}<p class="team-agree" id="team-agree" aria-live="polite"></p>`;
     if (kind === 'mark') return `<button class="btn primary" type="button" id="game-action">${view.roundNumber === view.totalRounds ? 'Seal my last mark' : 'Seal my mark'}</button>${niceHtml()}`;
     return niceHtml();
   }
@@ -426,12 +443,13 @@
     const { task } = view;
     sentAtZero = false;
     niceSeen = view.task.clues?.find((c) => c.own)?.nice ?? 0;
-    let pos = task.mark ? toBoard(task.mark) : { x: 50, y: 50 };
+    let pos = task.mark ? toBoard(task.mark) : task.team ? toBoard(task.team) : { x: 50, y: 50 };
     let lastTick = pos;
     board = createBoard(document.getElementById('game-board'), {
       onInput(p) {
         pos = p;
         if (Math.hypot(p.x - lastTick.x, p.y - lastTick.y) >= 6) { lastTick = p; blip(900, 0.02, 'square', 0.02); }
+        if (view.task.team) sendTeamMove(p);
       },
     });
     const svg = document.querySelector('#game-board svg');
@@ -439,10 +457,22 @@
     board.update({ marker: pos, target: null, interactive: canMark, revealed: false });
     svg.setAttribute('aria-label', `Top is ${task.card.top}, bottom is ${task.card.bottom}, left is ${task.card.left}, right is ${task.card.right}.${canMark ? ' Arrow keys move your mark, Enter seals it.' : ''}`);
     if (task.target) showTarget(svg, toBoard(task.target));
-    if (task.kind !== 'mark' && task.kind !== 'marked') svg.querySelector('.marker').classList.add('hidden');
+    // A team's psychic watches the team's X; otherwise only guessers see one.
+    if (task.kind !== 'mark' && task.kind !== 'marked' && !task.team) svg.querySelector('.marker').classList.add('hidden');
 
     const status = document.getElementById('game-status');
-    if (canMark) {
+    if (canMark && task.team) {
+      const lock = () => {
+        flushTeamMove();
+        act('team:agree').then((r) => { if (r.ok) PPMail.paperSound(0.08, 0.14); });
+      };
+      document.getElementById('game-action').addEventListener('click', lock);
+      document.getElementById('game-board').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); lock(); }
+      });
+      status.textContent = `New clues: ${task.clues.map((c) => c.text ?? 'none').join(' and ')}. Your team moves one X together.`;
+      blip(660, 0.08);
+    } else if (canMark) {
       const seal = () => act('mark:submit', toChart(board.position())).then((r) => { if (r.ok) PPMail.paperSound(0.1, 0.16); });
       document.getElementById('game-action').addEventListener('click', seal);
       document.getElementById('game-board').addEventListener('keydown', (e) => {
@@ -465,6 +495,47 @@
     }
     document.getElementById('leave-room').addEventListener('click', leaveRoom);
     document.getElementById('game-slot').scrollIntoView({ block: 'nearest', behavior: still.matches ? 'auto' : 'smooth' });
+  }
+
+  // The team's dot: sent at most every 70ms while dragging, with the last spot always sent.
+  function sendTeamMove(p) {
+    movedAt = Date.now();
+    pendingMove = toChart(p);
+    const wait = 70 - (Date.now() - lastSent);
+    if (wait <= 0) flushTeamMove();
+    else if (!moveTimer) moveTimer = setTimeout(flushTeamMove, wait);
+  }
+  function flushTeamMove() {
+    clearTimeout(moveTimer);
+    moveTimer = null;
+    if (!pendingMove || !socket) return;
+    lastSent = Date.now();
+    socket.emit('team:move', pendingMove);
+    pendingMove = null;
+  }
+  function placeTeamDot() {
+    const { task } = view;
+    if (!board || !task?.team || Date.now() - movedAt < 400) return; // Your own drag wins.
+    board.update({ marker: toBoard(task.team), target: null, interactive: task.kind === 'mark', revealed: false });
+  }
+
+  function refreshTeam() {
+    const { team } = view.task;
+    if (!team) return;
+    placeTeamDot();
+    const btn = document.getElementById('game-action');
+    if (btn && view.task.kind === 'mark') {
+      btn.textContent = team.youAgreed ? 'Unlock' : 'Lock in our guess';
+      btn.setAttribute('aria-pressed', String(team.youAgreed));
+      btn.classList.toggle('is-locked', team.youAgreed);
+    }
+    const line = document.getElementById('team-agree');
+    if (line) {
+      const here = team.mates.filter((m) => m.online);
+      const waiting = here.filter((m) => !m.agreed).map((m) => (m.you ? 'you' : m.name));
+      const done = here.length - waiting.length;
+      line.innerHTML = `<b>${done} of ${here.length} locked in</b>${waiting.length ? ` · waiting for ${esc(waiting.join(', '))}` : ''}`;
+    }
   }
 
   function showTarget(svg, t) {
@@ -504,13 +575,14 @@
 
   function refreshPlay() {
     refreshNice();
+    refreshTeam();
     document.getElementById('game-thumbs').innerHTML = Array.from({ length: view.totalRounds }, (_, i) => {
       const m = view.yourMarks[i];
       return PPMail.thumb(m ? toBoard(m) : null, i === view.roundNumber - 1);
     }).join('');
     const box = document.getElementById('contestants');
     const chip = (p) => {
-      const label = !p.connected ? 'Away' : p.status === 'sealed' ? 'Sealed' : p.status === 'writing' ? 'Writing…' : p.status === 'marking' ? 'Marking…' : view.phase === 'MARKING' ? 'Psychic' : 'Waiting';
+      const label = !p.connected ? 'Away' : p.status === 'sealed' ? 'Sealed' : p.status === 'writing' ? 'Writing…' : p.status === 'marking' ? 'Marking…' : p.status === 'agreed' ? 'Locked in' : view.phase === 'MARKING' ? 'Psychic' : 'Waiting';
       return `<li class="contestant${p.id === view.you.id ? ' is-you' : ''}${p.status === 'sealed' ? ' is-sealed' : ''}${p.connected ? '' : ' is-away'}${p.team ? ` team-${p.team}` : ''}"><b>${esc(p.name)}</b><small>${label}</small></li>`;
     };
     if (view.mode === 'teams') {
@@ -539,7 +611,8 @@
     el.classList.toggle('is-short', secs <= 10);
     if (left === 0 && !sentAtZero && view.task) {
       sentAtZero = true;
-      if (view.task.kind === 'mark') send('mark:submit', toChart(board.position()));
+      if (view.task.kind === 'mark' && !view.task.team) send('mark:submit', toChart(board.position()));
+      if (view.task.kind === 'mark' && view.task.team) flushTeamMove(); // The server seals the team's X where it stands.
       if (view.task.kind === 'write') {
         const text = document.getElementById('clue-input')?.value.trim();
         if (text) send('clue:submit', { text });
@@ -618,12 +691,18 @@
       heading: raw.mode === 'duel'
         ? `Round ${sheet.round + 1} of ${raw.rounds}, ${sheet.clues[0].playerId === me ? 'your clue' : `${sheet.clues[0].name}’s clue`}`
         : `Clue ${sheet.round + 1} of ${raw.rounds}`,
-      clues: sheet.clues.map((c) => ({ label: raw.mode === 'duel' ? null : c.team ? `${c.name} of ${teamName[c.team]}` : c.name, text: c.text, nice: c.nice ?? [] })),
+      clues: sheet.clues.map((c) => ({ label: raw.mode === 'duel' ? null : c.team ? `${c.name} of ${teamName[c.team]}` : c.name, text: c.text, nice: c.nice ?? [], team: c.team ?? null, by: c.name })),
       card: sheet.card,
       topic: sheet.topic ?? null,
       target: toBoard(sheet.target),
       marks: sheet.marks.map((m) => {
         const at = m.x === null ? { x: null, y: null } : toBoard(m);
+        // Team games list one guess per team; yours is drawn as your X.
+        if (raw.mode === 'teams') {
+          const j = m.journey;
+          const journey = j && { ...j, trail: j.trail.map(([x, y]) => { const p = toBoard({ x, y }); return [p.x, p.y]; }) };
+          return { name: m.name.replace(/^The /, ''), ...at, tier: m.tier, points: m.points, distance: m.distance, isYou: m.team === view.you.team, youLabel: 'Your team', team: m.team, journey };
+        }
         return { name: m.name, ...at, tier: m.tier, points: m.points, distance: m.distance, isYou: m.playerId === me, team: m.team };
       }),
       psychics: sheet.clues.map((c) => ({ name: c.name, points: c.points, isYou: c.playerId === me, resonance: !!c.resonance })),

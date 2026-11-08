@@ -245,3 +245,55 @@ html:not(.in-game) #game { display: none; }
 .btn.reroll:not(:disabled):hover { background: #1b1b1b0d; }
 .btn.reroll:disabled { border-style: dotted; opacity: 0.5; }
 @media (max-width: 680px) { .demo-foot .btn.reroll { flex: 1 1 auto; } }
+
+/* ---------- Test bots in the lobby ---------- */
+.lobby-player.is-bot { border-style: dashed; font-weight: 400; font-style: italic; }
+.bot-remove { margin-left: 2px; padding: 0 4px; border: 0; background: none; color: var(--muted); font: 700 1rem/1 var(--f-head); cursor: pointer; }
+.bot-remove:hover, .bot-remove:focus-visible { color: var(--red); }
+.btn.bot-add { justify-self: start; margin-top: 10px; padding: 4px 12px 6px; border-style: dashed; font-size: 0.9rem; box-shadow: none; }
+.lobby-team-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lobby-team-actions .btn.bot-add { margin-top: 0; }
+
+/* ---------- Lobby: topics under the room code, team buttons in the team heading ---------- */
+.lobby-side .topic-pick { justify-self: stretch; margin-top: 10px; text-align: left; }
+.lobby-side .topic-pick legend { text-align: center; width: 100%; }
+.lobby-team-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; width: 100%; padding-bottom: 6px; border-bottom: 1px solid #1b1b1b33; }
+.lobby-team-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lobby-team .btn.team-join { padding: 3px 14px 5px; font: 400 0.95rem/1.1 var(--f-circus); background: var(--text); color: var(--bg); border-color: var(--text); }
+.lobby-team.team-tigers .btn.team-join { background: var(--red); border-color: var(--red); }
+.lobby-team .btn.team-join:hover { filter: brightness(1.25); }
+.lobby-team .btn.bot-add { margin: 0; padding: 3px 10px 5px; font-size: 0.82rem; }
+.team-yours { font: 400 0.76rem var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- Team games: one shared X, locked in together ---------- */
+.team-agree { flex-basis: 100%; margin: 0; font: 400 0.86rem/1.35 var(--f-type); color: var(--muted); }
+.team-agree:empty { display: none; }
+.team-agree b { color: var(--text); font-weight: 700; }
+.demo-foot .btn.primary.is-locked { background: var(--red); }
+
+/* The main button gets its own row; nods and the reroll sit on the row under it. */
+#game .demo-foot .btn.primary { flex: 1 1 100%; }
+#game .topic-tag { margin-bottom: 8px; }
+
+/* ---------- The reply, team games: two boards, each replaying its team's X ---------- */
+.reply-body.is-teams { grid-template-columns: 1fr; }
+.team-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.team-panel { display: grid; gap: 8px; align-content: start; margin: 0; min-width: 0; }
+.team-panel figcaption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding-bottom: 4px; border-bottom: 2px solid var(--text); }
+.team-panel.team-tigers figcaption { border-color: var(--red); }
+.team-panel figcaption b { font: 400 1.15rem/1.1 var(--f-circus); }
+.team-panel.team-tigers figcaption b { color: var(--red); }
+.team-panel figcaption small { font: 400 0.76rem var(--f-type); color: var(--muted); }
+.team-panel .axis-label { font-size: 0.72rem; }
+.heat-cell { opacity: 0; fill: var(--text); transition: opacity 0.18s linear; }
+.heat.team-tigers .heat-cell { fill: var(--red); }
+.trail { fill: none; stroke: var(--text); stroke-width: 0.55; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1.4 1; opacity: 0.75; }
+.trail.team-tigers { stroke: var(--red); }
+.trail-head { pointer-events: none; }
+.journey-stats { min-height: 2.6em; margin: 0; font: 400 0.8rem/1.35 var(--f-type); color: var(--muted); }
+.journey-score { min-height: 1.4em; margin: 0; font: 400 0.95rem/1.35 var(--f-type); }
+.journey-score b { font-family: var(--f-head); }
+.journey-score small { display: block; font: italic 400 0.85rem var(--f-body); color: var(--red); }
+.team-panel.is-you .journey-score b { color: var(--red); }
+@media (max-width: 560px) { .team-boards { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .heat-cell { transition: none; } }

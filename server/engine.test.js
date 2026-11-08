@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as G from './engine.js';
+import * as Bots from './bots.js';
 
 // A room with players, returning { room, ids } where ids[0] is the host.
 function setup(mode, names) {
@@ -15,7 +16,21 @@ const sheetOf = (room, id) => room.rounds[room.roundIndex].sheets.find((s) => s.
 // Plays one round; `markFor` picks each guesser's mark.
 function playRound(room, markFor = () => ({ x: 0, y: 0 })) {
   writers(room).forEach((id) => G.submitClue(room, id, `clue from ${id}`));
-  guessers(room).forEach((id) => G.submitMark(room, id, markFor(id, sheetOf(room, id))));
+  guessersMark(room, markFor);
+}
+// Teams share one dot: each team's first guesser places it, then the whole team locks in.
+function guessersMark(room, markFor) {
+  if (room.mode !== 'teams') {
+    guessers(room).forEach((id) => G.submitMark(room, id, markFor(id, sheetOf(room, id))));
+    return;
+  }
+  const teamOf = (id) => room.players.find((p) => p.id === id).team;
+  const all = guessers(room);
+  for (const team of ['lions', 'tigers']) {
+    const mine = all.filter((id) => teamOf(id) === team);
+    G.moveTeamMark(room, mine[0], markFor(mine[0], sheetOf(room, mine[0])));
+    mine.forEach((id) => G.agreeTeamMark(room, id));
+  }
 }
 const playGame = (room, markFor) => { for (let i = 0; i < G.ROUNDS; i++) playRound(room, markFor); };
 
@@ -99,15 +114,19 @@ test('nothing secret reaches a player before the reply', () => {
       const [firstGuesser, ...others] = guessers(room);
       // A unique mark each round, because a player's view rightly lists their own earlier marks.
       const secretMark = { x: 37 + r, y: -41 - r };
-      G.submitMark(room, firstGuesser, secretMark);
+      const teamOf = (id) => room.players.find((p) => p.id === id).team;
+      if (mode === 'teams') G.moveTeamMark(room, firstGuesser, secretMark);
+      else G.submitMark(room, firstGuesser, secretMark);
       if (room.phase === 'MARKING') {
-        ids.filter((id) => id !== firstGuesser).forEach((id) => {
+        // In teams the dot is shared, so only the other team must not see it.
+        ids.filter((id) => id !== firstGuesser && (mode !== 'teams' || teamOf(id) !== teamOf(firstGuesser))).forEach((id) => {
           const json = JSON.stringify(G.viewFor(room, id));
           assert.ok(!json.includes(`"x":${secretMark.x},"y":${secretMark.y}`), `${mode}: mark leaked`);
           assert.equal(G.viewFor(room, id).reply, null);
         });
       }
-      others.forEach((id) => { if (room.phase === 'MARKING' && room.roundIndex === r) G.submitMark(room, id, { x: 0, y: 0 }); });
+      if (mode === 'teams') guessers(room).forEach((id) => { if (room.phase === 'MARKING' && room.roundIndex === r) G.agreeTeamMark(room, id); });
+      else others.forEach((id) => { if (room.phase === 'MARKING' && room.roundIndex === r) G.submitMark(room, id, { x: 0, y: 0 }); });
     }
     assert.equal(room.phase, 'REPLY');
     assert.ok(G.viewFor(room, ids[0]).reply);
@@ -189,7 +208,7 @@ test('head to head: a level score goes to the lower total distance, then is shar
   assert.equal(even.room.reply.winners.length, 2);
 });
 
-test('teams: one shared target, a psychic each, both clues visible, scored by average', () => {
+test('teams: one shared target, a psychic each, both clues visible, one dot per team', () => {
   const { room, ids } = setup('teams', ['A', 'B', 'C', 'D', 'E', 'F', 'G']); // 4 lions, 3 tigers
   G.startGame(room, ids[0]);
   const round = room.rounds[0];
@@ -207,12 +226,8 @@ test('teams: one shared target, a psychic each, both clues visible, scored by av
   const clues = G.viewFor(room, guesser).task.clues.map((c) => c.text).sort();
   assert.deepEqual(clues, ['in joke one', 'in joke two']);
 
-  // Lions all hit, and tigers split one hit and one miss: the bigger team has no edge.
-  const tigers = () => room.rounds[room.roundIndex].sheets[0].guessers.filter((id) => team(id) === 'tigers');
-  const mark = (id, sheet) => {
-    if (team(id) === 'lions' || tigers()[0] === id) return sheet.target;
-    return { x: sheet.target.x > 0 ? -100 : 100, y: sheet.target.y > 0 ? -100 : 100 };
-  };
+  // The lions' dot hits every time, the tigers' dot misses: one guess per team.
+  const mark = (id, sheet) => (team(id) === 'lions' ? sheet.target : { x: sheet.target.x > 0 ? -100 : 100, y: sheet.target.y > 0 ? -100 : 100 });
   guessersMark(room, mark);
   for (let i = 1; i < G.ROUNDS; i++) playRound(room, mark);
 
@@ -220,13 +235,11 @@ test('teams: one shared target, a psychic each, both clues visible, scored by av
   const lions = reply.standings.find((s) => s.id === 'lions');
   const tigerRow = reply.standings.find((s) => s.id === 'tigers');
   assert.equal(lions.total, 4000);
-  assert.equal(tigerRow.total, 4 * Math.round((1000 + 0) / 2));
+  assert.equal(tigerRow.total, 0);
+  reply.sheets.forEach((sh) => assert.deepEqual(sh.marks.map((m) => m.playerId), ['lions', 'tigers']));
   assert.deepEqual(reply.winners, ['lions']);
   assert.equal(lions.members.length, 4);
 });
-function guessersMark(room, markFor) {
-  guessers(room).forEach((id) => G.submitMark(room, id, markFor(id, sheetOf(room, id))));
-}
 
 test('the psychic in teams rotates within each team, with no repeats', () => {
   const { room, ids } = setup('teams', ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
@@ -439,4 +452,127 @@ test('reroll in teams changes the shared board, and stops once either psychic ha
   assert.equal(G.viewFor(room, b).task.rerollsLeft, 1);
   G.submitClue(room, a, 'sealed');
   assert.throws(() => G.rerollSheet(room, b), /other psychic has sealed/);
+});
+
+test('bots: only the host adds them, in the lobby, and they never keep a room alive or host it', () => {
+  const { room, ids } = setup('free', ['Ann', 'Bo']);
+  assert.throws(() => G.addBot(room, ids[1]), /Only the host/);
+  const bot = G.addBot(room, ids[0]);
+  assert.ok(bot.isBot && bot.name.endsWith('(bot)'));
+  assert.equal(G.viewFor(room, ids[1]).players.find((p) => p.id === bot.id).isBot, true);
+  G.removeBot(room, ids[0], bot.id);
+  assert.throws(() => G.removeBot(room, ids[0], ids[1]), /not a bot/);
+  G.addBot(room, ids[0]);
+  G.setConnected(room, ids[0], false);
+  assert.equal(room.hostId, ids[1], 'the host passes to a person, not a bot');
+  G.setConnected(room, ids[1], false);
+  assert.ok(G.isEmpty(room), 'bots alone count as an empty room');
+});
+
+test('bots fill a room to its limit, and land on the team asked for', () => {
+  const { room, ids } = setup('duel', ['Ann']);
+  G.addBot(room, ids[0]);
+  assert.throws(() => G.addBot(room, ids[0]), /full/);
+  const t = setup('teams', ['Ann']);
+  const bot = G.addBot(t.room, t.ids[0], 'tigers');
+  assert.equal(bot.team, 'tigers');
+});
+
+// Plays one person's turns by hand and lets the bots do the rest, until the reply.
+function playWithBots(mode, botCount, teams = []) {
+  const { room, ids } = setup(mode, ['Ann']);
+  for (let i = 0; i < botCount; i++) G.addBot(room, ids[0], teams[i]);
+  G.startGame(room, ids[0]);
+  let random = 0.42;
+  const rnd = () => { random = (random * 9301 + 49297) % 233280 / 233280; return random; };
+  for (let guard = 0; room.phase !== 'REPLY' && guard < 500; guard++) {
+    const round = room.rounds[room.roundIndex];
+    const team = room.players[0].team;
+    const mine = room.phase === 'WRITING'
+      ? round.sheets.find((s) => s.writers.includes(ids[0]) && s.clues[ids[0]] === undefined)
+      : round.sheets.find((s) => s.guessers.includes(ids[0]) && (s.teamMarks ? !s.teamMarks[team].agreed.includes(ids[0]) && !s.teamMarks[team].sealed : !s.marks[ids[0]]));
+    if (mine) {
+      if (room.phase === 'WRITING') G.submitClue(room, ids[0], 'my clue');
+      else if (mine.teamMarks) G.agreeTeamMark(room, ids[0]); // Go along with where the bots put it.
+      else G.submitMark(room, ids[0], { x: 0, y: 0 });
+      continue;
+    }
+    const turns = Bots.dueTurns(room);
+    assert.ok(turns.length, `someone must be due in ${room.phase}`);
+    turns.forEach((t) => Bots.playTurn(room, t, rnd));
+  }
+  return room;
+}
+
+test('bots play whole games in every mode', () => {
+  for (const [mode, bots, teams] of [['duel', 1], ['free', 4], ['teams', 3, ['lions', 'tigers', 'tigers']]]) {
+    const room = playWithBots(mode, bots, teams);
+    assert.equal(room.phase, 'REPLY', mode);
+    assert.equal(room.reply.rounds, G.ROUNDS, mode);
+    room.reply.sheets.forEach((s) => s.clues.forEach((c) => assert.ok(c.text, `${mode}: every clue came in`)));
+  }
+});
+
+test('team dot: teammates see it move, rivals never do, any move unlocks, and all must agree', () => {
+  const { room, ids } = setup('teams', ['A', 'B', 'C', 'D', 'E', 'F']); // 3 lions, 3 tigers
+  G.startGame(room, ids[0]);
+  writers(room).forEach((id) => G.submitClue(room, id, 'c'));
+  const team = (id) => room.players.find((p) => p.id === id).team;
+  const lions = guessers(room).filter((id) => team(id) === 'lions');
+  const tiger = guessers(room).find((id) => team(id) === 'tigers');
+  assert.throws(() => G.submitMark(room, lions[0], { x: 1, y: 1 }), /one dot together/);
+
+  G.moveTeamMark(room, lions[0], { x: 33, y: -44 });
+  assert.deepEqual(G.viewFor(room, lions[1]).task.mark, { x: 33, y: -44 });
+  assert.ok(!JSON.stringify(G.viewFor(room, tiger)).includes('"x":33,"y":-44'), 'the rival team never sees the dot');
+
+  G.agreeTeamMark(room, lions[0]);
+  assert.equal(G.viewFor(room, lions[1]).task.team.mates.find((m) => m.id === lions[0]).agreed, true);
+  assert.equal(G.moveTeamMark(room, lions[1], { x: 30, y: -40 }).unlocked, true);
+  assert.equal(G.viewFor(room, lions[0]).task.team.youAgreed, false);
+
+  G.agreeTeamMark(room, lions[0]);
+  assert.equal(G.viewFor(room, lions[0]).task.kind, 'mark', 'one of two is not enough');
+  G.agreeTeamMark(room, lions[1]);
+  assert.equal(G.viewFor(room, lions[0]).task.kind, 'marked');
+  assert.throws(() => G.moveTeamMark(room, lions[0], { x: 0, y: 0 }), /locked in/);
+  assert.equal(room.phase, 'MARKING', 'the tigers are still deciding');
+});
+
+test('team dot: a teammate who drops out does not hold the team up, and time seals the dot where it stands', () => {
+  const { room, ids } = setup('teams', ['A', 'B', 'C', 'D', 'E', 'F']);
+  G.startGame(room, ids[0]);
+  writers(room).forEach((id) => G.submitClue(room, id, 'c'));
+  const team = (id) => room.players.find((p) => p.id === id).team;
+  const lions = guessers(room).filter((id) => team(id) === 'lions');
+  G.moveTeamMark(room, lions[0], { x: 10, y: 10 });
+  G.agreeTeamMark(room, lions[0]);
+  G.setConnected(room, lions[1], false);
+  assert.equal(room.rounds[0].sheets[0].teamMarks.lions.sealed, true);
+  G.expire(room); // The tigers never locked in.
+  assert.equal(room.roundIndex, 1);
+  assert.deepEqual({ x: room.rounds[0].sheets[0].teamMarks.lions.x, y: room.rounds[0].sheets[0].teamMarks.lions.y }, { x: 10, y: 10 });
+});
+
+test('team replay: the reply carries each team path, who moved it, and how close it got', () => {
+  const { room, ids } = setup('teams', ['A', 'B', 'C', 'D', 'E', 'F']);
+  G.setSettings(room, ids[0], { rounds: { per: 'game', n: 1 } });
+  G.startGame(room, ids[0], 0);
+  writers(room).forEach((id) => G.submitClue(room, id, 'c', 1000));
+  const team = (id) => room.players.find((p) => p.id === id).team;
+  const lions = guessers(room).filter((id) => team(id) === 'lions');
+  const target = room.rounds[0].sheets[0].target;
+  G.moveTeamMark(room, lions[0], target, 3000);                    // Right on it...
+  G.moveTeamMark(room, lions[1], { x: target.x > 0 ? -90 : 90, y: 0 }, 9000); // ...then talked away from it.
+  lions.forEach((id) => G.agreeTeamMark(room, id, 21000));
+  G.expire(room, 61000); // The tigers never touched theirs.
+  const [l, t] = room.reply.sheets[0].marks;
+  assert.equal(l.journey.lockedIn, true);
+  assert.equal(l.journey.seconds, 20);
+  assert.equal(l.journey.movers.length, 2);
+  assert.equal(l.journey.closest, 0);
+  assert.ok(l.journey.trail.length >= 2 && l.journey.trail.length <= 80);
+  assert.deepEqual(l.journey.trail.at(-1), [l.x, l.y]);
+  assert.equal(t.journey.moves, 0);
+  assert.equal(t.journey.lockedIn, false);
 });
