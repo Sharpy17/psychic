@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Psychic Plane: mark your guess, mail it in, wait for the answers</title>
+  <meta name="description" content="Psychic Plane is a party game for up to 8 players. One player gives a clue, everyone else marks a chart, and nobody sees an answer until the results arrive by mail. Play a sample round.">
+  <meta name="theme-color" content="#2f2a24">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23e7dcbc'/%3E%3Cpath d='M16 3v26M3 16h26' stroke='%231a1714' stroke-width='2'/%3E%3Cpath d='M18 5l9 9M27 5l-9 9' stroke='%231d3ab8' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Courier+Prime:wght@400;700&family=Reenie+Beanie&family=Tinos:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add("js");</script>
+  <script defer src="round.js"></script>
+</head>
+<body>
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="tone-light" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="2" cy="2" r=".6" fill="#1a1714"/></pattern>
+    <pattern id="tone-mid" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="2" cy="2" r="1.1" fill="#1a1714"/></pattern>
+    <pattern id="tone-dark" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><circle cx="2" cy="2" r="1.6" fill="#1a1714"/></pattern>
+    <filter id="worn-ink" x="-1%" y="-3%" width="102%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="1.3"/></filter>
+    <symbol id="snip" viewBox="0 0 40 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="6" r="4.5"/><circle cx="7" cy="18" r="4.5"/><path d="M11 8.5 38 20M11 15.5 38 4"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="sheet">
+  <header class="masthead">
+    <h1 class="nameplate">The Psychic Plane</h1>
+    <p class="folio">
+      <span>Saturday, March 17, 1984</span>
+      <span>Reader Contest Edition</span>
+      <span>Weather: Cloudy, with a chance of doubt</span>
+    </p>
+  </header>
+
+  <main>
+    <section class="front" aria-labelledby="lead">
+      <h2 class="lead-headline" id="lead">Friends Mail In Their Guesses, Wait Days to Learn Who Knew Whom</h2>
+      <p class="deck">One clue. Two axes. No answers until the mail arrives.</p>
+
+      <div class="rooms" role="group" aria-label="Play with your friends">
+        <div class="rooms-row">
+          <button type="button" class="button" data-room-create>Create a room</button>
+          <span class="rooms-or">or</span>
+          <form class="join-form" novalidate>
+            <label class="join-label" for="room-code-top">Room code</label>
+            <input class="room-code" id="room-code-top" name="code" type="text" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="rooms-message-top">
+            <button type="submit" class="button">Join room</button>
+          </form>
+        </div>
+        <p class="rooms-message" id="rooms-message-top" role="status"></p>
+      </div>
+
+      <div class="front-grid">
+        <article class="story">
+          <h3 class="story-title">How to enter</h3>
+          <div class="column-text">
+            <p>Each round, one player is the psychic and sees a secret spot on a chart with two axes. The psychic gives a single clue, and everyone else marks where they think it lies.</p>
+            <p>Nobody learns a thing. No target, no score, not a hint. After the fourth round, you cut out your entry, fold it, seal it and put it in the mail.</p>
+            <p>Then you wait.</p>
+          </div>
+          <a class="button button-plain story-button" href="#entry-form" data-play>Play the sample round</a>
+          <figure class="photo photo-spot" data-sketches="cutting">
+            <img src="drawings/cutting.svg" width="680" height="460" alt="Sketch of a hand and dark coat sleeve working a large pair of scissors along the dashed line of a newspaper contest entry.">
+            <figcaption>Cut along the dashed line.</figcaption>
+          </figure>
+        </article>
+
+        <div class="slot" id="slot">
+          <section class="coupon" id="entry-form" aria-labelledby="coupon-title">
+            <svg class="coupon-snip" viewBox="0 0 40 24" aria-hidden="true" focusable="false"><use href="#snip"/></svg>
+            <h3 class="coupon-title" id="coupon-title">Clip &amp; Mail Entry Form</h3>
+            <p class="clue-line"><span id="clue-count">Clue 1 of 4</span>: <em id="clue">A lighthouse in the desert</em></p>
+            <div class="chart" id="chart" role="application" tabindex="0" aria-label="Sample chart. Left to right runs Ordinary to Strange. Bottom to top runs Sad to Hopeful.">
+              <svg viewBox="-100 -100 200 200" aria-hidden="true" focusable="false">
+                <path class="grid" d="M-80-100V100M-60-100V100M-40-100V100M-20-100V100M20-100V100M40-100V100M60-100V100M80-100V100M-100-80H100M-100-60H100M-100-40H100M-100-20H100M-100 20H100M-100 40H100M-100 60H100M-100 80H100"/>
+                <path class="axes" d="M0-100V100M-100 0H100"/>
+                <rect class="border" x="-100" y="-100" width="200" height="200"/>
+                <g id="pin"><circle class="pin-pulse" r="12"/><path class="pen-mark" d="M-7-8C-2-3 3 3 8 8M7-9C2-3-3 3-8 9"/></g>
+              </svg>
+              <span class="axis axis-top" id="end-top">Hopeful</span>
+              <span class="axis axis-bottom" id="end-bottom">Sad</span>
+              <span class="axis axis-left" id="end-left">Ordinary</span>
+              <span class="axis axis-right" id="end-right">Strange</span>
+            </div>
+            <div class="entry-row">
+              <div class="thumbs" id="thumbs" aria-hidden="true"></div>
+              <p class="entry-name">Name: <span>You</span></p>
+            </div>
+            <div class="coupon-actions">
+              <button type="button" class="button" id="mark-button">Mark it and see clue 2</button>
+              <p class="hint">Drag the X, tap the chart, or use the arrow keys. This is a one-player sample.</p>
+            </div>
+            <noscript><p class="hint">Playing this sample needs JavaScript. Everything else on the page reads fine without it.</p></noscript>
+          </section>
+          <div class="hole">
+            <div class="hole-inner" id="hole" hidden>
+              <p class="hole-note">Mailed!</p>
+              <p class="hole-text">A hole in the paper, and your reply in hand.</p>
+              <button type="button" class="button" id="read-reply">Read your reply</button>
+              <button type="button" class="button button-paper" id="enter-again">Enter again</button>
+            </div>
+          </div>
+          <p class="visually-hidden" id="status" role="status" aria-live="polite"></p>
+        </div>
+
+        <figure class="photo" data-sketches="waiting">
+          <img src="drawings/waiting.svg" width="560" height="540" alt="Brush pen sketch of a person in a hat and heavy coat hunched on a step, chin on fist, waiting by a mailbox.">
+          <figcaption>Day three. A local player waits by the mailbox.</figcaption>
+          <div class="photo-story">
+            <h3 class="story-title">The answers come by mail</h3>
+            <p>Your reply holds every target, each player&rsquo;s result and the final leaderboard.</p>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <div class="crease" aria-hidden="true"></div>
+
+    <div class="inside">
+      <section class="inside-rules" aria-labelledby="rules-title">
+        <h2 class="section-title" id="rules-title">The Contest Rules</h2>
+        <ol class="rules">
+          <li><strong>The psychic sees the target.</strong> It&rsquo;s a secret spot on a chart with two labelled axes.</li>
+          <li><strong>The psychic gives one clue.</strong> Just one, and it has to fit both axes at once.</li>
+          <li><strong>Everyone else marks the chart.</strong> Time is limited, and nobody sees the target or a score.</li>
+          <li><strong>The next player becomes the psychic.</strong> After 4 rounds, everyone clips their entry and mails it.</li>
+          <li><strong>The reply arrives.</strong> Only now do you see every target, every result and who won.</li>
+        </ol>
+        <h3 class="story-title psychic-title">A word to the psychic</h3>
+        <div class="column-text">
+          <p>Your score is the average of everyone else&rsquo;s, so a clever clue that only you understand costs you too. And you won&rsquo;t know whether it worked until the mail comes.</p>
+        </div>
+        <figure class="photo photo-spot photo-after" data-sketches="results">
+          <img src="drawings/results.svg" width="600" height="500" alt="Sketch of a person with dark curly hair, glasses and raised eyebrows peering wide-eyed over a large letter headed Results.">
+          <figcaption>The reply arrives. Someone is about to be insufferable.</figcaption>
+        </figure>
+      </section>
+
+      <section class="inside-scoring" aria-labelledby="scoring-title">
+        <h2 class="section-title" id="scoring-title">How Entries Are Scored</h2>
+        <p class="scoring-intro">The closer your mark, the more it scores. These rings are drawn to scale, on a chart that runs from &minus;100 to +100 on each axis.</p>
+        <figure class="rings">
+          <svg viewBox="-104 -104 208 208" aria-hidden="true" focusable="false">
+            <rect class="border" x="-100" y="-100" width="200" height="200"/>
+            <path class="ring-tone" fill-rule="evenodd" d="M-90 0a90 90 0 1 0 180 0a90 90 0 1 0-180 0ZM-60 0a60 60 0 1 0 120 0a60 60 0 1 0-120 0Z"/>
+            <circle class="ring-line" r="90"/>
+            <circle class="ring-line" r="60"/>
+            <circle class="ring-line" r="35"/>
+            <circle class="ring-core" r="15"/>
+            <text class="ring-core-text" y="3" text-anchor="middle">1,000</text>
+            <text class="ring-text" y="-22" text-anchor="middle">750</text>
+            <text class="ring-text" y="-44" text-anchor="middle">500</text>
+            <text class="ring-text ring-on-tone" y="-71" text-anchor="middle">250</text>
+            <text class="ring-text" x="94" y="-86" text-anchor="end">50</text>
+          </svg>
+        </figure>
+        <table class="points">
+          <thead>
+            <tr><th scope="col">Result</th><th scope="col">Distance</th><th scope="col" class="number">Points</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Bullseye</th><td>within 15</td><td class="number">1,000</td></tr>
+            <tr><th scope="row">Excellent</th><td>within 35</td><td class="number">750</td></tr>
+            <tr><th scope="row">Great</th><td>within 60</td><td class="number">500</td></tr>
+            <tr><th scope="row">Close</th><td>within 90</td><td class="number">250</td></tr>
+            <tr><th scope="row">Miss</th><td>farther than 90</td><td class="number">50</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="inside-side" aria-labelledby="room-title">
+        <figure class="photo" data-sketches="posting">
+          <img src="drawings/posting.svg" width="520" height="580" alt="Brush pen sketch of a person seen from behind in a hat and long dark coat, reaching up to post an envelope into a street mailbox.">
+          <figcaption>An entry goes in. There is no getting it back now.</figcaption>
+        </figure>
+        <h2 class="section-title" id="room-title">Contest Particulars</h2>
+        <dl class="particulars">
+          <div><dt>Joining</dt><dd>4-character room code</dd></div>
+          <div><dt>Players</dt><dd>up to 8 in a room</dd></div>
+          <div><dt>Length</dt><dd>4 rounds to a game</dd></div>
+          <div><dt>Time limit</dt><dd>60 seconds</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="closing" aria-labelledby="closing-title">
+      <h2 class="closing-headline" id="closing-title">Gather Your People. No Stamps Required.</h2>
+      <div class="rooms" role="group" aria-label="Play with your friends">
+        <div class="rooms-row">
+          <button type="button" class="button" data-room-create>Create a room</button>
+          <span class="rooms-or">or</span>
+          <form class="join-form" novalidate>
+            <label class="join-label" for="room-code-bottom">Room code</label>
+            <input class="room-code" id="room-code-bottom" name="code" type="text" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="rooms-message-bottom">
+            <button type="submit" class="button">Join room</button>
+          </form>
+        </div>
+        <p class="rooms-message" id="rooms-message-bottom" role="status"></p>
+      </div>
+      <a class="button button-plain" href="#entry-form" data-play>Play the sample round</a>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <p>Psychic Plane is a multiplayer party game. This page isn&rsquo;t a real newspaper, and its mail happens on screen, so there&rsquo;s nothing to post.</p>
+  </footer>
+</div>
+
+<dialog class="letter" id="letter" aria-labelledby="letter-title">
+  <div class="letter-paper">
+    <p class="letter-head">The Psychic Plane <span>Contest Desk</span></p>
+    <p class="letter-date">Wednesday, March 21, 1984</p>
+    <h2 class="letter-title" id="letter-title" tabindex="-1" autofocus>Here are your results</h2>
+
+    <section class="reveal" id="reveal-view" aria-labelledby="reveal-count">
+      <p class="letter-intro">Dear player, your entry reached us safely. We&rsquo;ll open the clues one at a time.</p>
+      <p class="reveal-heading"><span id="reveal-count">Clue 1 of 4</span>: <em id="reveal-clue"></em></p>
+      <div class="reveal-body">
+        <div class="reveal-chart" id="reveal-chart"></div>
+        <ul class="roster" id="roster"></ul>
+      </div>
+      <p class="reveal-note" id="reveal-note"></p>
+      <div class="letter-actions">
+        <button type="button" class="button" id="reveal-next">Show this clue now</button>
+        <button type="button" class="button button-plain" id="reveal-skip">Skip to the final results</button>
+      </div>
+    </section>
+
+    <section class="final" id="final-view" hidden>
+      <table class="standings">
+        <thead id="standings-head"></thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+      <div id="final-rest">
+        <p class="letter-intro" id="letter-intro"></p>
+        <p class="answers-key">On each chart, the X is you, the black dot is the target, and the letters are the other players.</p>
+        <div class="answers" id="answers"></div>
+        <p class="letter-note">In the sample, the clues are ready-made and the other players are made up. In a real game, these are your friends.</p>
+        <div class="letter-actions">
+          <button type="button" class="button" id="letter-again">Enter again</button>
+          <button type="button" class="button button-plain" id="letter-close">Close the letter</button>
+        </div>
+      </div>
+    </section>
+    <p class="visually-hidden" id="letter-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+</body>
+</html>

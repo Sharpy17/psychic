@@ -1,0 +1,16 @@
+{
+  "name": "psychic-plane",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Psychic Plane: a mail-in party game with three modes, played for a ticket to the circus.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test server/"
+  },
+  "dependencies": {
+    "socket.io": "4.8.1"
+  }
+}

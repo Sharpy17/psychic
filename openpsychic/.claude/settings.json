@@ -1,0 +1,7 @@
+{
+  "claudeMdExcludes": [
+    "D:/4 WORK/CLAUDE.md",
+    "D:\\4 WORK\\CLAUDE.md",
+    "**/4 WORK/CLAUDE.md"
+  ]
+}

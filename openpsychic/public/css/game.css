@@ -1,0 +1,299 @@
+/* The real game's screens: the lobby and the play form. They reuse the contest form's styles. */
+
+/* In a game, the paper shows only the game. */
+html.in-game main, html.in-game .stop-press, html.in-game .topline .links, html.in-game .topline [data-action="create"],
+html.in-game .masthead .ear, html.in-game .masthead .motto, html.in-game .masthead .stamp, html.in-game .dateline { display: none; }
+html.in-game .masthead { grid-template-columns: 1fr; padding-block: 2px 4px; border-bottom: 3px double var(--line); }
+html.in-game .masthead h1 { font-size: clamp(1.7rem, calc(var(--pw) * 0.042), 2.7rem); }
+html.in-game .topline { padding-block: 2px; }
+html.in-game .sheet { margin-top: 10px; }
+#game[hidden] { display: none; }
+#game { padding-block: 10px 28px; }
+html:not(.in-game) #game { display: none; }
+
+.game-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 18px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font: 400 0.92rem var(--f-type);
+}
+.game-bar b { font: 400 1.05rem var(--f-circus); color: var(--red); }
+.game-timer { font-size: 1.15rem; font-variant-numeric: tabular-nums; min-width: 3.4em; text-align: right; }
+.game-timer.is-short { color: var(--red); font-weight: 700; }
+.game-offline { margin: 10px 0 0; padding: 6px 12px; background: var(--text); color: var(--bg); text-align: center; font: 400 0.92rem var(--f-type); }
+
+/* ---------- The lobby ---------- */
+.lobby { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 36px; align-items: start; padding-top: 26px; }
+.lobby > * { min-width: 0; }
+.lobby-side { display: grid; gap: 14px; justify-items: center; text-align: center; }
+.lobby-kicker { color: var(--red); font: 400 1rem/1.2 var(--f-circus); }
+.lobby-code { width: min(100%, 340px); min-width: 0; min-height: 150px; cursor: default; rotate: -1.5deg; padding-inline: 36px; }
+.lobby-code b { font: 400 clamp(2.8rem, 8vw, 3.6rem)/1.05 var(--f-circus); letter-spacing: 0.1em; padding-left: 0.1em; user-select: all; }
+.lobby-share { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 6px; }
+.lobby-link { font: 400 0.82rem/1.35 var(--f-type); color: var(--muted); overflow-wrap: anywhere; user-select: all; }
+.lobby-main { display: grid; gap: 16px; }
+.lobby-title { font: 400 clamp(1.5rem, 3.4vw, 2.3rem)/1.1 var(--f-circus); text-wrap: balance; }
+.mode-pick.is-locked label { cursor: default; }
+.mode-pick.is-locked input { cursor: default; }
+.mode-pick.is-locked input:hover + span { background: transparent; }
+.mode-pick.is-locked input:checked + span { background: var(--text); }
+.lobby-list, .lobby-team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.lobby-player { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 12px 6px; border: 1.5px solid var(--text); font-weight: 700; }
+.lobby-player small { font: 400 0.72rem var(--f-type); color: var(--muted); }
+.lobby-player.is-you { color: var(--red); border-color: var(--red); }
+.lobby-player.is-away { opacity: 0.55; border-style: dashed; }
+.lobby-empty { font-style: italic; color: var(--muted); }
+.lobby-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.lobby-team { display: grid; gap: 10px; align-content: start; justify-items: start; padding: 12px; border: 1px dashed var(--text); }
+.lobby-team > * { min-width: 0; }
+.lobby-team h3 { font: 400 1.25rem var(--f-circus); }
+.lobby-team.team-tigers h3 { color: var(--red); }
+.lobby-team .btn { font-size: 0.92rem; padding: 5px 12px 7px; }
+.lobby-problem { font-style: italic; color: var(--muted); min-height: 1.5em; }
+.lobby-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* ---------- The play form ---------- */
+.game-front { padding-top: 18px; border-bottom: 0; padding-bottom: 14px; scroll-margin-top: 8px; }
+#game-slot { scroll-margin-top: 10px; }
+@media (max-height: 800px) and (min-width: 961px) {
+  #game .coupon-fine { display: none; }
+  #game .front .coupon { padding-block: 14px; }
+}
+.clue-write { display: grid; gap: 6px; margin: 4px 0 12px; }
+.clue-write label { font: 400 0.8rem var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.clue-write input { width: 100%; font: 700 1.2rem/1.2 var(--f-head); background: #f6f1e3; }
+.clue-pending { margin: 4px 0 12px; font: italic 400 1.3rem/1.2 var(--f-head); color: var(--muted); text-align: center; }
+.clue-pair { display: grid; gap: 10px; margin: 4px 0 12px; }
+.clue-pair p { display: grid; gap: 2px; padding-left: 10px; border-left: 3px solid #1b1b1b44; }
+.clue-pair p.is-ours { border-left-color: var(--red); }
+.clue-pair small { font: 400 0.76rem var(--f-type); color: var(--muted); }
+.clue-pair b { font: 900 1.3rem/1.15 var(--f-head); overflow-wrap: anywhere; }
+.demo-clue { overflow-wrap: anywhere; }
+@media (min-width: 961px) {
+  .front .coupon .clue-write, .front .coupon .clue-pair, .front .coupon .clue-pending { grid-row: 5; }
+  .front .coupon .clue-pending { text-align: left; }
+}
+.demo-foot:empty { display: none; }
+.psychic-target { pointer-events: none; }
+.target-glow { fill: var(--red); opacity: 0.16; }
+.target-star { fill: var(--red); stroke: var(--bg); stroke-width: 0.5; }
+.results-slot { min-height: 340px; }
+.game-leave { display: flex; justify-content: center; }
+.game-leave .btn { font-size: 0.92rem; color: var(--muted); }
+
+.contestants { max-width: 860px; margin: 0 auto 8px; }
+.contestants ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.contestant { display: grid; gap: 0; padding: 4px 12px 5px; border: 1px solid #1b1b1b66; text-align: center; min-width: 84px; }
+.contestant b { font-size: 0.95rem; overflow-wrap: anywhere; }
+.contestant small { font: 400 0.72rem var(--f-type); color: var(--muted); }
+.contestant.is-you b { color: var(--red); }
+.contestant.is-sealed { background: var(--text); color: var(--bg); border-color: var(--text); }
+.contestant.is-sealed small { color: var(--bg); }
+.contestant.is-sealed.is-you b { color: var(--bg); }
+.contestant.is-away { opacity: 0.55; border-style: dashed; }
+.contestant-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.contestant-teams h3 { font: 400 1.05rem var(--f-circus); text-align: center; margin-bottom: 6px; }
+.contestant-teams h3.team-tigers { color: var(--red); }
+
+/* ---------- The reply: details real games need ---------- */
+.reveal-clue-line { display: block; }
+.clue-by { font: 400 0.85rem var(--f-type); color: var(--muted); }
+.answer .clue-by { display: block; font-weight: 400; }
+.reply-rival.team-tigers { stroke: var(--red); stroke-width: 1; }
+.is-psychic .roster-key { border-color: var(--red); color: var(--red); }
+.standing-members { display: block; font: 400 0.76rem/1.3 var(--f-type); white-space: normal; color: var(--muted); }
+.tie-note { font-style: italic; text-align: center; }
+.roster { max-height: 46dvh; overflow-y: auto; }
+@media (max-width: 680px) { .roster { max-height: none; } }
+
+/* Join and create pop-ups */
+.modal .field-code { text-transform: uppercase; letter-spacing: 0.3em; font: 400 1.5rem var(--f-circus); text-align: center; }
+.modal-error { min-height: 1.3em; color: var(--red); font: 400 0.9rem var(--f-type) !important; }
+
+@media (max-width: 760px) {
+  .lobby { grid-template-columns: 1fr; gap: 22px; padding-top: 18px; }
+}
+@media (max-width: 480px) {
+  .lobby-teams, .contestant-teams { grid-template-columns: 1fr; }
+  .game-bar { font-size: 0.82rem; }
+}
+
+/* Same newsprint as everything else, rather than a white card. */
+.hole-note {
+  background:
+    radial-gradient(#0000000b 1px, transparent 1.2px) 0 0 / 4px 4px,
+    radial-gradient(ellipse at 50% 40%, #0000 50%, #9c7a4a26 100%),
+    #ece5d2;
+}
+
+/* A guest only needs to see the ring the host chose. */
+.mode-pick.is-locked label:not(:has(input:checked)) { display: none; }
+
+/* Very short windows: the letter gives up its letterhead to keep its buttons on screen. */
+@media (max-height: 640px) { .reply-head { display: none; } }
+
+/* Phones: the host's start button stays in reach, and the letter gets straight to it. */
+@media (max-width: 760px) {
+  .lobby-code { min-height: 112px; }
+  .lobby-code b { font-size: 2.4rem; }
+  .lobby-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-inline: -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #e3dcc8;
+    border-top: 1px solid var(--line);
+  }
+  .lobby-actions .btn { flex: 1 1 auto; }
+  .reply-intro { display: none; }
+}
+
+/* ---------- Lobby settings: topics and the length of the show ---------- */
+.topic-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.topic-pick legend { grid-column: 1 / -1; }
+.topic-pick span { height: 100%; padding-block: 6px 7px; }
+.topic-pick b { font-size: 1rem; }
+@media (max-width: 420px) { .topic-pick { grid-template-columns: 1fr; } }
+
+.rounds-pick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.rounds-pick legend { padding: 0; margin-bottom: 8px; font-weight: 700; }
+.rounds-per { display: inline-flex; flex-wrap: wrap; justify-self: start; border: 1.5px solid var(--text); }
+.rounds-per[hidden] { display: none; }
+.rounds-per label { position: relative; cursor: pointer; }
+.rounds-per label + label { border-left: 1.5px solid var(--text); }
+.rounds-per input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.rounds-per span { display: block; padding: 5px 12px 6px; font: 400 0.86rem var(--f-type); }
+.rounds-per input:hover + span { background: #1b1b1b0d; }
+.rounds-per input:checked + span { background: var(--text); color: var(--bg); }
+.rounds-per input:focus-visible + span { outline: 2px solid var(--red); outline-offset: 2px; }
+.rounds-pick.is-locked .rounds-per label:not(:has(input:checked)) { display: none; }
+.rounds-pick.is-locked .rounds-per label + label { border-left: 0; }
+.rounds-pick.is-locked .rounds-per input { cursor: default; }
+.rounds-row { display: flex; align-items: center; gap: 10px; }
+.rounds-row output { min-width: 1.6em; text-align: center; font: 400 2.2rem/1 var(--f-circus); color: var(--red); font-variant-numeric: tabular-nums; }
+.rounds-row span { font: 400 1rem var(--f-type); }
+.btn.step { width: 38px; height: 38px; padding: 0; font: 700 1.3rem/1 var(--f-head); }
+.btn.step[hidden] { display: none; }
+.rounds-total { font: italic 400 0.86rem/1.35 var(--f-body); color: var(--muted); min-height: 1.35em; }
+.rounds-total:empty { display: none; }
+
+/* ---------- The topic on the entry form ---------- */
+.topic-tag {
+  display: table;
+  margin: 6px auto 0;
+  padding: 2px 10px 3px;
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font: 700 1rem/1.25 var(--f-head);
+  rotate: -1deg;
+}
+.topic-tag small { margin-right: 4px; font: 400 0.7rem var(--f-type); letter-spacing: 0.1em; text-transform: uppercase; }
+@media (min-width: 961px) { .front .coupon .topic-tag { margin-left: 0; } }
+
+/* ---------- "Nice clue!" ---------- */
+.demo-foot { flex-wrap: wrap; align-items: center; }
+.demo-foot .btn.nice {
+  flex: 0 1 auto;
+  gap: 6px;
+  padding: 7px 14px 8px;
+  border: 1.5px dashed var(--text);
+  background: transparent;
+  color: var(--text);
+  font: 400 1rem/1.1 var(--f-circus);
+  box-shadow: none;
+}
+.btn.nice small { font: 400 0.72rem var(--f-type); opacity: 0.8; }
+.btn.nice .nice-star { color: var(--red); transition: transform 0.2s; }
+.btn.nice:hover { background: #1b1b1b0d; }
+.btn.nice.is-on { border-style: solid; border-color: var(--red); background: var(--red); color: var(--bg); }
+.btn.nice.is-on .nice-star { color: var(--bg); transform: rotate(-14deg) scale(1.2); }
+.btn.nice.pop, .nice-count.pop { animation: nice-pop 0.38s steps(4) both; }
+@keyframes nice-pop { 0% { scale: 1.35; rotate: -4deg; } 60% { scale: 0.95; } 100% { scale: 1; rotate: 0deg; } }
+.nice-count { flex-basis: 100%; margin: 0; font: 400 1rem/1.3 var(--f-circus); color: var(--red); }
+.nice-count:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .btn.nice.pop, .nice-count.pop { animation: none; } }
+@media (max-width: 680px) { .demo-foot .btn.nice { flex: 1 1 auto; } }
+
+/* Long shows: the row of little marks wraps instead of running off the form. */
+.front .thumbs { flex-wrap: wrap; }
+
+/* The reply: the topic and the nods. */
+.reply-topic { display: block; font: 400 0.8rem var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); }
+.nice-tag { display: inline-block; margin-left: 6px; padding: 0 6px 1px; border: 1px solid var(--red); color: var(--red); font: 400 0.76rem/1.4 var(--f-type); font-style: normal; white-space: nowrap; vertical-align: middle; }
+.nicest { text-align: center; font: 400 1rem/1.35 var(--f-body); }
+.nicest b { font-family: var(--f-circus); font-weight: 400; color: var(--red); }
+
+/* ---------- The Psychic Reroll: the same dashed look as "Nice clue" ---------- */
+.demo-foot .btn.reroll {
+  flex: 0 1 auto;
+  gap: 6px;
+  padding: 7px 14px 8px;
+  border: 1.5px dashed var(--text);
+  background: transparent;
+  color: var(--text);
+  font: 400 1rem/1.1 var(--f-circus);
+  box-shadow: none;
+}
+.btn.reroll small { font: 400 0.72rem var(--f-type); opacity: 0.8; }
+.btn.reroll .nice-star { color: var(--red); font-family: var(--f-head); }
+.btn.reroll:not(:disabled):hover { background: #1b1b1b0d; }
+.btn.reroll:disabled { border-style: dotted; opacity: 0.5; }
+@media (max-width: 680px) { .demo-foot .btn.reroll { flex: 1 1 auto; } }
+
+/* ---------- Test bots in the lobby ---------- */
+.lobby-player.is-bot { border-style: dashed; font-weight: 400; font-style: italic; }
+.bot-remove { margin-left: 2px; padding: 0 4px; border: 0; background: none; color: var(--muted); font: 700 1rem/1 var(--f-head); cursor: pointer; }
+.bot-remove:hover, .bot-remove:focus-visible { color: var(--red); }
+.btn.bot-add { justify-self: start; margin-top: 10px; padding: 4px 12px 6px; border-style: dashed; font-size: 0.9rem; box-shadow: none; }
+.lobby-team-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lobby-team-actions .btn.bot-add { margin-top: 0; }
+
+/* ---------- Lobby: topics under the room code, team buttons in the team heading ---------- */
+.lobby-side .topic-pick { justify-self: stretch; margin-top: 10px; text-align: left; }
+.lobby-side .topic-pick legend { text-align: center; width: 100%; }
+.lobby-team-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; width: 100%; padding-bottom: 6px; border-bottom: 1px solid #1b1b1b33; }
+.lobby-team-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lobby-team .btn.team-join { padding: 3px 14px 5px; font: 400 0.95rem/1.1 var(--f-circus); background: var(--text); color: var(--bg); border-color: var(--text); }
+.lobby-team.team-tigers .btn.team-join { background: var(--red); border-color: var(--red); }
+.lobby-team .btn.team-join:hover { filter: brightness(1.25); }
+.lobby-team .btn.bot-add { margin: 0; padding: 3px 10px 5px; font-size: 0.82rem; }
+.team-yours { font: 400 0.76rem var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- Team games: one shared X, locked in together ---------- */
+.team-agree { flex-basis: 100%; margin: 0; font: 400 0.86rem/1.35 var(--f-type); color: var(--muted); }
+.team-agree:empty { display: none; }
+.team-agree b { color: var(--text); font-weight: 700; }
+.demo-foot .btn.primary.is-locked { background: var(--red); }
+
+/* The main button gets its own row; nods and the reroll sit on the row under it. */
+#game .demo-foot .btn.primary { flex: 1 1 100%; }
+#game .topic-tag { margin-bottom: 8px; }
+
+/* ---------- The reply, team games: two boards, each replaying its team's X ---------- */
+.reply-body.is-teams { grid-template-columns: 1fr; }
+.team-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.team-panel { display: grid; gap: 8px; align-content: start; margin: 0; min-width: 0; }
+.team-panel figcaption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding-bottom: 4px; border-bottom: 2px solid var(--text); }
+.team-panel.team-tigers figcaption { border-color: var(--red); }
+.team-panel figcaption b { font: 400 1.15rem/1.1 var(--f-circus); }
+.team-panel.team-tigers figcaption b { color: var(--red); }
+.team-panel figcaption small { font: 400 0.76rem var(--f-type); color: var(--muted); }
+.team-panel .axis-label { font-size: 0.72rem; }
+.heat-cell { opacity: 0; fill: var(--text); transition: opacity 0.18s linear; }
+.heat.team-tigers .heat-cell { fill: var(--red); }
+.trail { fill: none; stroke: var(--text); stroke-width: 0.55; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1.4 1; opacity: 0.75; }
+.trail.team-tigers { stroke: var(--red); }
+.trail-head { pointer-events: none; }
+.journey-stats { min-height: 2.6em; margin: 0; font: 400 0.8rem/1.35 var(--f-type); color: var(--muted); }
+.journey-score { min-height: 1.4em; margin: 0; font: 400 0.95rem/1.35 var(--f-type); }
+.journey-score b { font-family: var(--f-head); }
+.journey-score small { display: block; font: italic 400 0.85rem var(--f-body); color: var(--red); }
+.team-panel.is-you .journey-score b { color: var(--red); }
+@media (max-width: 560px) { .team-boards { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .heat-cell { transition: none; } }
