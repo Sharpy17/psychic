@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="css/intro.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/daily.css">
 </head>
 <body>
   <script src="js/stage.js"></script>
@@ -40,7 +41,7 @@
     <div class="topline">
       <span class="sc">Late Edition</span>
       <nav>
-        <span class="links"><a href="#how">How to play</a><a href="#classifieds">Classifieds</a></span>
+        <span class="links"><a href="#daily" data-daily="open" class="daily-link">Daily Poll<sup>new</sup></a><a href="#how">How to play</a><a href="#classifieds">Classifieds</a></span>
         <button class="btn ghost" data-action="sound" aria-pressed="true" title="Toggle sound">🔊</button>
         <button class="btn primary" data-action="create">Play</button>
       </nav>
@@ -73,6 +74,27 @@
           <div class="bulbs" id="bulbs"></div>
         </div>
         <span class="corner tl" aria-hidden="true">✦</span><span class="corner tr" aria-hidden="true">✦</span>
+
+        <!-- The Daily Poll, slapped on the corner of the bill like a sticker. Opens #daily-paper. -->
+        <button class="daily-seal" type="button" data-daily="open" aria-haspopup="dialog" aria-label="New: the Daily Poll. Play today’s poll">
+          <!-- The starburst turns on its own layer; the face on top stays still. -->
+          <svg class="seal-spin" viewBox="0 0 200 200" aria-hidden="true">
+            <path class="seal-burst" d="M100.0 1.0L109.6 14.5L122.0 3.5L128.4 18.8L143.0 10.8L145.8 27.2L161.7 22.6L160.8 39.2L177.4 38.3L172.8 54.2L189.2 57.0L181.2 71.6L196.5 78.0L185.5 90.4L199.0 100.0L185.5 109.6L196.5 122.0L181.2 128.4L189.2 143.0L172.8 145.8L177.4 161.7L160.8 160.8L161.7 177.4L145.8 172.8L143.0 189.2L128.4 181.2L122.0 196.5L109.6 185.5L100.0 199.0L90.4 185.5L78.0 196.5L71.6 181.2L57.0 189.2L54.2 172.8L38.3 177.4L39.2 160.8L22.6 161.7L27.2 145.8L10.8 143.0L18.8 128.4L3.5 122.0L14.5 109.6L1.0 100.0L14.5 90.4L3.5 78.0L18.8 71.6L10.8 57.0L27.2 54.2L22.6 38.3L39.2 39.2L38.3 22.6L54.2 27.2L57.0 10.8L71.6 18.8L78.0 3.5L90.4 14.5Z"/>
+          </svg>
+          <svg class="seal-top" viewBox="0 0 200 200" aria-hidden="true">
+            <defs>
+              <path id="seal-arc-top" d="M38 100a62 62 0 0 1 124 0"/>
+              <path id="seal-arc-bot" d="M30 100a70 70 0 0 0 140 0"/>
+            </defs>
+            <circle class="seal-face" cx="100" cy="100" r="80"/>
+            <circle class="seal-ring" cx="100" cy="100" r="74"/>
+            <circle class="seal-ring thin" cx="100" cy="100" r="52"/>
+            <text class="seal-arc"><textPath href="#seal-arc-top" startOffset="50%" text-anchor="middle">★ New · Every Day ★</textPath></text>
+            <text class="seal-the" x="100" y="88" text-anchor="middle">The Daily</text>
+            <text class="seal-big" x="100" y="126" text-anchor="middle">POLL</text>
+            <text class="seal-arc seal-bot"><textPath href="#seal-arc-bot" startOffset="50%" text-anchor="middle" id="daily-seal-cta">Play today’s poll ›</textPath></text>
+          </svg>
+        </button>
 
         <p class="arc" data-arc="620">★ The Greatest Mind-Reading Show on Earth ★</p>
         <div class="names">
@@ -169,6 +191,18 @@
           </div>
           <p class="visually-hidden" id="contest-status" role="status" aria-live="polite"></p>
         </div>
+      </div>
+
+      <!-- The Daily Poll is advertised here; the game itself is a separate paper (#daily-paper). -->
+      <div class="daily-ad-wrap" id="daily">
+        <button class="daily-ad" type="button" data-daily="open" aria-haspopup="dialog">
+          <span class="ad-flag">Advertisement</span>
+          <span class="ad-burst" aria-hidden="true"><span>New!<br>Daily!</span></span>
+          <span class="ad-kicker">Free · One guess a day · For one reader</span>
+          <span class="ad-big">Can You Read the Public’s Mind?</span>
+          <span class="ad-sub">Every day, one famous name. A real survey knows what people think of it. Do you?</span>
+          <span class="ad-cta"><span class="ad-today" id="daily-ad-today">Today’s poll is out</span><span class="ad-go">Read today’s poll <span aria-hidden="true">→</span></span></span>
+        </button>
       </div>
 
       <section id="how">
@@ -312,6 +346,100 @@
     </div>
   </dialog>
 
+  <!-- The Daily Poll: a second edition of the same newspaper, which unrolls from a paper roll.
+       It reuses the front page's own parts (sheet, masthead, dateline, coupon, tickets); only
+       the chart is different. Drawn and animated by js/daily.js. -->
+  <dialog class="daily-paper" id="daily-paper" aria-labelledby="dp-title">
+    <div class="dp-scroll" id="dp-scroll">
+      <div class="dp-stage">
+        <div class="sheet dp-sheet" id="dp-sheet">
+          <div class="topline">
+            <span class="sc">Daily Supplement</span>
+            <nav>
+              <span class="links"><a href="#dp-how">How it works</a></span>
+              <button class="btn primary dp-close" type="button" data-daily="close">Fold it away <span aria-hidden="true">✕</span></button>
+            </nav>
+          </div>
+
+          <header class="masthead">
+            <div class="ear left"><b class="sc">Forecast</b><span>Opinions scattered, with a strong chance of hot takes by noon.</span></div>
+            <div class="title">
+              <h2 class="dp-name" id="dp-title">The Daily Poll</h2>
+              <p class="motto">“What the public thinks, sealed until you guess”</p>
+            </div>
+            <div class="ear right"><b class="sc">Today only</b><span>One name. One guess. A fresh poll every midnight.</span></div>
+            <div class="stamp dp-stamp" aria-hidden="true"><span>Daily!</span></div>
+          </header>
+
+          <div class="dateline sc"><span id="daily-no">Vol. I · Poll No. —</span><span id="dp-date">Daily Edition</span><span>Free · For one reader</span></div>
+
+          <div class="stop-press">
+            <b>Stop press</b>
+            <span class="ticker"><span id="dp-ticker">Survey results locked in the editor’s safe until you mail your guess.</span><i class="caret"></i></span>
+          </div>
+
+          <div class="front dp-front">
+            <div class="slot">
+              <aside class="coupon daily-card" id="daily-card" aria-label="Today’s poll entry form" aria-busy="true">
+                <span class="scissors" aria-hidden="true">✂</span>
+                <div class="board-wrap" id="daily-board-wrap" hidden>
+                  <span class="axis-label top" id="daily-top"></span>
+                  <span class="axis-label left" id="daily-left"></span>
+                  <div class="board-slot" id="daily-board"></div>
+                  <span class="axis-label right" id="daily-right"></span>
+                  <span class="axis-label bottom" id="daily-bottom"></span>
+                </div>
+                <h2>Daily Poll Entry Form</h2>
+                <p class="sub" id="daily-asked">Fetching today’s poll…</p>
+                <div class="demo-clue" id="daily-clue" hidden></div>
+                <p class="hint" id="daily-hint" hidden>Where did the public put it? Drag the X or tap the chart. One guess a day, so make it count.</p>
+                <div class="demo-foot" id="daily-foot" hidden>
+                  <button class="btn primary" type="button" id="daily-mail">Mail my guess</button>
+                </div>
+                <div class="daily-result" id="daily-result" hidden></div>
+                <p class="coupon-fine" id="daily-fine">One entry per reader per day. Void where prohibited by geese.</p>
+              </aside>
+            </div>
+          </div>
+
+          <div class="dp-how" id="dp-how">
+            <h2 class="sec-title">How the Daily Poll Works</h2>
+            <div class="cols3">
+              <article>
+                <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="22" y="8" width="76" height="54"/><path d="M30 20h40M30 30h52M30 40h30M30 50h46"/><path d="M84 14l10 10-10 10" class="red"/></svg>
+                <h3><span class="num">I.</span> Somebody Asked the Public</h3>
+                <p>A real survey asked thousands of people about one famous name or everyday thing: do they like it, and do they dislike it? We print the name. The answers stay in the safe.</p>
+              </article>
+              <article>
+                <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><path d="M68 18l8 8M76 18l-8 8"/></svg>
+                <h3><span class="num">II.</span> You Mark One Guess</h3>
+                <p>Across is how many people like it; up is how many can’t stand it. Put your X where you think the public landed. One guess a day, and no peeking at the neighbours.</p>
+              </article>
+              <article>
+                <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><circle cx="46" cy="36" r="8" class="red"/><circle cx="74" cy="30" r="10" class="dash"/><path d="M50 33l20-2"/></svg>
+                <h3><span class="num">III.</span> The Reply Tells All</h3>
+                <p>See the survey’s real answer, your score, and where today’s other readers guessed on average. Copy your result for your friends, then come back at midnight.</p>
+              </article>
+            </div>
+            <ul class="daily-key" aria-label="What the marks on the chart mean">
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><path class="key-x" d="M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6"/></svg> Your guess</li>
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-target" r="3.4"/></svg> What the survey found</li>
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-crowd" r="3"/></svg> Today’s readers, on average</li>
+            </ul>
+          </div>
+
+          <footer>
+            <span id="dp-source">© 2026 The Psychic Plane · Daily Supplement · Survey figures are reprinted with credit to their source</span>
+            <nav><a href="#" data-daily="close">Back to the front page</a></nav>
+          </footer>
+        </div>
+        <div class="dp-curl" aria-hidden="true"></div>
+        <div class="dp-roll" aria-hidden="true"><i class="dp-core left"></i><i class="dp-core right"></i></div>
+      </div>
+    </div>
+    <p class="visually-hidden" id="daily-status" role="status" aria-live="polite"></p>
+  </dialog>
+
   <script src="js/scenes.js"></script>
   <script src="js/showbill.js"></script>
   <script src="js/page.js"></script>
@@ -319,6 +447,7 @@
   <script src="js/mail.js"></script>
   <script src="js/reply.js"></script>
   <script src="js/sample.js"></script>
+  <script src="js/daily.js"></script>
   <script src="socket.io/socket.io.js"></script>
   <script src="js/game.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>

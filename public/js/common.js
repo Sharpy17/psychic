@@ -65,7 +65,8 @@ function boardArt(clipId, band = true) {
 }
 
 let boardCount = 0;
-function createBoard(container, { onInput = () => {} } = {}) {
+// `art` draws the printed background (see boardArt); the Daily Poll passes its own chart.
+function createBoard(container, { onInput = () => {}, art: makeArt = boardArt } = {}) {
   const clamp = v => Math.max(0, Math.min(100, v));
 
   const rings = BOARD_RINGS.map(([r, pts]) => `<circle class="ring r${pts}" r="${r}"/>`).join('');
@@ -75,7 +76,7 @@ function createBoard(container, { onInput = () => {} } = {}) {
   }).join('');
 
   const clipId = `board-clip-${++boardCount}`;
-  const art = boardArt(clipId);
+  const art = makeArt(clipId);
   container.innerHTML = `
     <svg class="board" viewBox="${art.viewBox}" role="application" aria-label="Board: drag the dot">
       <defs><clipPath id="${clipId}"><rect width="100" height="100"/></clipPath></defs>

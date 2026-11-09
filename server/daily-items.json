@@ -1,0 +1,29 @@
+{
+  "about": "The Daily Poll. One item a day, in this order, starting on launchDate; the list wraps. Every number is copied from the item's YouGov Ratings page (US adults) on the 'retrieved' date. Never estimate a number: an item without a page is left out. 'liked' is YouGov's Popularity (% with a positive opinion), 'disliked' is 'Disliked by', 'fame' is % who have heard of it.",
+  "launchDate": "2026-11-09",
+  "source": { "name": "YouGov Ratings", "country": "US", "retrieved": "2026-11-09" },
+  "board": { "top": "Many dislike it", "bottom": "Hardly anyone dislikes it", "left": "Few like it", "right": "Most like it" },
+  "scale": { "liked": [20, 100], "disliked": [0, 50] },
+  "items": [
+    { "text": "Spider-Man", "liked": 71, "disliked": 5, "neutral": 19, "fame": 96, "url": "https://yougov.com/en-us/topics/fictional_character/Spider_Man" },
+    { "text": "Elon Musk", "liked": 37, "disliked": 44, "neutral": 15, "fame": 96, "url": "https://yougov.com/en-us/topics/public_figure/Elon_Musk" },
+    { "text": "Karaoke", "liked": 52, "disliked": 17, "neutral": 24, "fame": 93, "url": "https://yougov.com/en-us/topics/activity/Karaoke" },
+    { "text": "Shrek", "liked": 76, "disliked": 4, "neutral": 17, "fame": 97, "url": "https://yougov.com/en-us/topics/fictional_character/Shrek" },
+    { "text": "Taylor Swift", "liked": 53, "disliked": 24, "neutral": 21, "fame": 98, "url": "https://yougov.com/en-us/topics/public_figure/Taylor_Swift" },
+    { "text": "IKEA", "liked": 65, "disliked": 5, "neutral": 26, "fame": 96, "url": "https://yougov.com/en-us/topics/brand/IKEA" },
+    { "text": "Gordon Ramsay", "liked": 60, "disliked": 14, "neutral": 22, "fame": 96, "url": "https://yougov.com/en-us/topics/public_figure/Gordon_Ramsay" },
+    { "text": "Crocs", "liked": 54, "disliked": 14, "neutral": 26, "fame": 94, "url": "https://yougov.com/en-us/topics/brand/Crocs" },
+    { "text": "Keanu Reeves", "liked": 82, "disliked": 2, "neutral": 11, "fame": 95, "url": "https://yougov.com/en-us/topics/public_figure/Keanu_Reeves" },
+    { "text": "SpongeBob SquarePants", "liked": 60, "disliked": 13, "neutral": 21, "fame": 93, "url": "https://yougov.com/en-us/topics/fictional_character/SpongeBob_SquarePants" },
+    { "text": "Friends (the TV show)", "liked": 59, "disliked": 12, "neutral": 25, "fame": 95, "url": "https://yougov.com/en-us/topics/tv_show/Friends" },
+    { "text": "Camping", "liked": 64, "disliked": 15, "neutral": 17, "fame": 96, "url": "https://yougov.com/en-us/topics/activity/Camping" },
+    { "text": "Barbie", "liked": 52, "disliked": 12, "neutral": 33, "fame": 97, "url": "https://yougov.com/en-us/topics/fictional_character/Barbie" },
+    { "text": "Minecraft", "liked": 49, "disliked": 11, "neutral": 30, "fame": 90, "url": "https://yougov.com/en-us/topics/video_game/Minecraft" },
+    { "text": "Dolly Parton", "liked": 80, "disliked": 3, "neutral": 13, "fame": 96, "url": "https://yougov.com/en-us/topics/public_figure/Dolly_Parton" },
+    { "text": "The Office (US)", "liked": 58, "disliked": 10, "neutral": 24, "fame": 92, "url": "https://yougov.com/en-us/topics/tv_show/The_Office" },
+    { "text": "Batman", "liked": 66, "disliked": 5, "neutral": 23, "fame": 95, "url": "https://yougov.com/en-us/topics/fictional_character/Batman" },
+    { "text": "Titanic (the 1997 film)", "liked": 72, "disliked": 6, "neutral": 18, "fame": 96, "url": "https://yougov.com/en-us/topics/film/Titanic" },
+    { "text": "The Beatles", "liked": 73, "disliked": 7, "neutral": 16, "fame": 95, "url": "https://yougov.com/en-us/topics/music/The_Beatles" },
+    { "text": "Lego", "liked": 79, "disliked": 3, "neutral": 15, "fame": 97, "url": "https://yougov.com/en-us/topics/brand/Lego" }
+  ]
+}

@@ -32,7 +32,6 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const easeOut = t => 1 - Math.pow(1 - t, 3);
   const easeInOut = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-  const easeBack = t => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 
   // ---------- Mesh ----------
   function buildMesh(cols, rows) {
@@ -460,7 +459,7 @@
   function resize() {
     vw = stage.clientWidth; // not innerWidth: the page keeps a gutter for its scrollbar
     vh = stage.clientHeight;
-    dpr = Math.min(2, devicePixelRatio || 1);
+    dpr = Math.min(1.5, devicePixelRatio || 1); // ~860 textured triangles a frame: fewer pixels keep it smooth
     canvas.width = Math.round(vw * dpr);
     canvas.height = Math.round(vh * dpr);
     filmCanvas.width = vw;
@@ -473,17 +472,21 @@
   const mesh = vw < 700 ? buildMesh(12, 16) : buildMesh(18, 24);
   let tex = null, back = null;
 
-  // Timeline (seconds). The intro waits on the landed ball for a tap (or a moment).
+  // Timeline (seconds of story time; SPEED plays it faster than real time). The ball rests on the
+  // desk for a moment, or until a tap, then opens in one continuous unfold.
+  const SPEED = 1.5;
+  const UNFOLD = 1.2; // story seconds from ball to flat sheet
   const tl = {};
   function scheduleUnfold(at) {
     tl.unfold = at;
-    tl.jerks = [0, 0.42, 0.84, 1.22].map(d => at + d);
-    tl.stamp = at + 1.72;
-    tl.handoff = at + 2.15;
-    tl.end = at + 3.15;
+    tl.jerks = [0, 0.3, 0.62, 0.95].map(d => at + d); // crinkle sounds while it opens
+    tl.stamp = at + UNFOLD + 0.2;
+    tl.handoff = at + UNFOLD + 0.55;
+    tl.end = at + UNFOLD + 1.35;
   }
   const LAND = [1.0, 1.26, 1.43, 1.53]; // ball contacts with the desk
-  scheduleUnfold(2.35);
+  scheduleUnfold(1.95);
+  const storyTime = (now) => ((now - start) / 1000) * SPEED;
 
   const fired = new Set();
   const once = (key, fn) => { if (!fired.has(key)) { fired.add(key); fn(); } };
@@ -513,13 +516,9 @@
     s.rx = spin * 5.2;
     s.ry = spin * -3.4;
     s.rz = -0.03 + spin * 7.5;
-    // Unfold in uneven jerks, each overshooting a touch.
-    const targets = [0.2, 0.48, 0.79, 1];
+    // Unfold in one continuous motion: it gathers pace, opens, and eases flat.
     let P = 0;
-    tl.jerks.forEach((at, i) => {
-      const from = i ? targets[i - 1] : 0;
-      if (t >= at) P = lerp(from, targets[i], easeBack(clamp01((t - at) / 0.26)));
-    });
+    if (t >= tl.unfold) P = 0.015 + 0.985 * easeInOut(clamp01((t - tl.unfold) / UNFOLD));
     if (t < tl.unfold && t > LAND[3]) { // resting ball, rocking a little
       s.rz += Math.sin(t * 9) * 0.03;
       P = 0.015 + 0.012 * Math.sin(t * 13);
@@ -666,7 +665,8 @@
   function events(t) {
     if (t >= 0.12) once('lamp', () => crinkle(0.02, 0.15));
     LAND.slice(0, 3).forEach((at, i) => { if (t >= at) once('land' + i, () => thud(0.5 / (i + 1))); });
-    if (t >= LAND[3] + 0.12 && t < tl.unfold) once('hint', () => hint.classList.add('show'));
+    // The "tap to open" hint only when the ball rests long enough to read it.
+    if (t >= LAND[3] + 0.12 && t < tl.unfold - 0.5) once('hint', () => hint.classList.add('show'));
     if (t >= tl.unfold) once('hint-off', () => hint.classList.remove('show'));
     tl.jerks.forEach((at, i) => { if (t >= at) once('jerk' + i, () => crinkle(0.28, 0.38 - i * 0.05)); });
     if (t >= tl.stamp + 0.17) once('bake', () => { bakeStamp(tex); thud(0.7); });
@@ -683,7 +683,7 @@
       for (let s = 0; s <= FREEZE; s += 1 / 12) events(s);
       return render(FREEZE >= tl.handoff ? FREEZE : Math.floor(FREEZE * 12) / 12, 1);
     }
-    const t = (now - start) / 1000;
+    const t = storyTime(now);
     if (t >= tl.handoff || SMOOTH) {
       // The camera move runs at the display's full frame rate, so it glides (smooth pages: all of it).
       events(t);
@@ -712,15 +712,20 @@
     document.dispatchEvent(new Event('intro:done'));
   }
 
-  // A tap on the waiting ball opens it now (and unlocks sound); later taps and keys skip.
+  // A tap or a key opens the paper now (and unlocks sound) instead of cutting the intro short;
+  // once it is opening, it plays out. Only the Skip button skips.
+  function openNow() {
+    const t = start === null ? 0 : storyTime(performance.now());
+    if (t < tl.unfold) scheduleUnfold(Math.max(t + 0.05, LAND[3] + 0.08));
+  }
   stage.addEventListener('click', e => {
     if (e.target.closest('.intro-skip')) return finish(true);
-    const t = start === null ? 0 : (performance.now() - start) / 1000;
-    if (t < tl.unfold) scheduleUnfold(Math.max(t + 0.05, LAND[3] + 0.08));
-    else finish(true);
+    openNow();
   });
   addEventListener('keydown', e => {
-    if (!done && !e.metaKey && !e.ctrlKey && !e.altKey) finish(true);
+    if (done || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest?.('.intro-skip') && (e.key === 'Enter' || e.key === ' ')) return; // the button's own click skips
+    openNow();
   });
 
   // The front of the sheet is a snapshot of the real page, so the hand-off lines up exactly.
@@ -734,7 +739,9 @@
       scale: Math.max(1.5, dpr),
       logging: false,
       backgroundColor: getComputedStyle(sheet).backgroundColor || '#f3eee2',
-      ignoreElements: el => el.id === 'intro' || el.classList?.contains('creases'),
+      // The Daily Poll seal stays hidden until the intro ends, so it has no place in the snapshot.
+      // (Keep scale at 1.5 or more: at 1, html2canvas drops the sheet's background in places.)
+      ignoreElements: el => el.id === 'intro' || el.classList?.contains('creases') || el.classList?.contains('daily-seal'),
       onclone: doc => patchClone(doc, labels),
     }).then(c => {
       const g = c.getContext('2d');
@@ -782,9 +789,9 @@
   const fonts = ['58px UnifrakturMaguntia', '900 27px "Playfair Display"', '700 8px "Playfair Display"',
     '7px "Old Standard TT"', 'italic 7px "Old Standard TT"', '700 7px "Old Standard TT"', '7px "Special Elite"'];
   const loaded = document.fonts ? Promise.all([...fonts.map(f => document.fonts.load(f)), document.fonts.ready]) : Promise.resolve();
-  Promise.race([loaded, wait(1800)]).catch(() => {})
+  Promise.race([loaded, wait(1200)]).catch(() => {})
     .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))) // let page.js draw the photo
-    .then(() => Promise.race([snapshot(), wait(3500, null)]).catch(() => null))
+    .then(() => Promise.race([snapshot(), wait(2500, null)]).catch(() => null))
     .then(snap => {
       placeStamp();
       tex = snap || paintTexture();

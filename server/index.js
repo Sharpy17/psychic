@@ -8,8 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import * as G from './engine.js';
 import * as Bots from './bots.js';
+import * as Daily from './daily.js';
 
 const PORT = Number(process.env.PORT) || 4100;
+const DAILY_TZ = process.env.DAILY_TZ || Daily.DEFAULT_TZ; // When the Daily Poll changes over.
+const daily = Daily.createStore(fileURLToPath(new URL('../data/daily', import.meta.url)));
 const ROOT = fileURLToPath(new URL('../public', import.meta.url));
 const MAX_ROOMS = 2000;
 const EMPTY_ROOM_MS = 10 * 60_000; // How long an empty room waits for people to reconnect.
@@ -23,6 +26,7 @@ const http = createServer(async (req, res) => {
     res.end(JSON.stringify({ status: 'ok', rooms: rooms.size }));
     return;
   }
+  if (pathname.startsWith('/api/daily')) { await dailyRoute(req, res, pathname); return; }
   let decoded;
   try { decoded = decodeURIComponent(pathname); } catch { res.writeHead(400); res.end(); return; }
   const path = normalize(join(ROOT, decoded === '/' ? 'index.html' : decoded));
@@ -36,6 +40,44 @@ const http = createServer(async (req, res) => {
     res.end('Not found');
   }
 });
+
+/* The Daily Poll: plain JSON over HTTP, since it needs no room. ---------- */
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+
+function readJson(req, limit = 1_000) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > limit) { reject(new G.GameError('That guess is too big to mail.')); req.destroy(); }
+    });
+    req.on('end', () => { try { resolve(JSON.parse(body || '{}')); } catch { reject(new G.GameError('That guess could not be read.')); } });
+    req.on('error', reject);
+  });
+}
+
+async function dailyRoute(req, res, pathname) {
+  const now = new Date();
+  const day = Daily.dayNumber(now, DAILY_TZ);
+  const clock = { nextInMs: Daily.msUntilNextDay(now, DAILY_TZ), timeZone: DAILY_TZ };
+  try {
+    if (pathname === '/api/daily' && req.method === 'GET') {
+      const player = new URL(req.url, 'http://local').searchParams.get('player');
+      sendJson(res, 200, { ok: true, ...clock, puzzle: Daily.puzzleFor(day), result: Daily.resultFor(daily, day, player) });
+    } else if (pathname === '/api/daily/guess' && req.method === 'POST') {
+      const { player, x, y } = await readJson(req);
+      sendJson(res, 200, { ok: true, ...clock, result: Daily.submitGuess(daily, day, player, { x, y }, { now: now.valueOf() }) });
+    } else sendJson(res, 404, { ok: false, error: 'Not found' });
+  } catch (error) {
+    if (error instanceof G.GameError) sendJson(res, 400, { ok: false, error: error.message });
+    else { console.error('[daily]', error); sendJson(res, 500, { ok: false, error: 'Something went wrong. Try again.' }); }
+  }
+}
 
 const io = new Server(http, { maxHttpBufferSize: 8_000 });
 const rooms = new Map();
