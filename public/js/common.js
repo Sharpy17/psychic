@@ -64,6 +64,11 @@ function boardArt(clipId, band = true) {
   };
 }
 
+// Your guess, everywhere a guess is drawn (the board, the reply charts, the roster, the Daily
+// Poll): an ink dot in a paper ring with a soft glow. Not an X, because an X reads as "the spot"
+// and the spot is the target. Centred on (0, 0); styled in board.css.
+const YOU_MARK = '<g class="you-mark"><circle class="you-glow" r="5.4"/><circle class="you-ring" r="3.2"/><circle class="you-core" r="1.75"/><circle class="you-shine" cx="-0.55" cy="-0.6" r="0.5"/></g>';
+
 let boardCount = 0;
 // `art` draws the printed background (see boardArt); the Daily Poll passes its own chart.
 function createBoard(container, { onInput = () => {}, art: makeArt = boardArt } = {}) {
@@ -92,7 +97,7 @@ function createBoard(container, { onInput = () => {}, art: makeArt = boardArt } 
       <line class="miss-line"/>
       <g class="marker">
         <circle class="marker-halo" r="5.5"/>
-        <path class="marker-x" d="M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6"/>
+        ${YOU_MARK}
       </g>
     </svg>`;
 
@@ -186,6 +191,33 @@ function toast(msg) {
   toast.timer = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
+// ---------- Page fade: screens never just snap from one to the next ----------
+// The old page fades off the paper, the new one inks in (soft blur to sharp, a few px rise).
+const PPFade = window.PPFade = (() => {
+  const quiet = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden;
+  const fadeOut = (el, ms) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'ease-in', fill: 'forwards' });
+  async function swap(el, fn) {
+    if (!el || quiet()) { fn(); return; }
+    const out = fadeOut(el, 140);
+    await out.finished.catch(() => {});
+    try { fn(); } finally {
+      // Start the fade-in before dropping the fade-out, so the new page never flashes in at full ink.
+      const fadeIn = el.animate(
+        [{ opacity: 0, translate: '0 8px', filter: 'blur(1.5px)' }, { opacity: 1, translate: '0 0', filter: 'blur(0)' }],
+        { duration: 280, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+      out.cancel();
+      await fadeIn.finished.catch(() => {});
+    }
+  }
+  async function leave(url) {
+    try { sessionStorage.setItem('pp-fade', '1'); } catch (e) { /* storage blocked */ }
+    const sheet = document.querySelector('.sheet');
+    if (sheet && !quiet()) await fadeOut(sheet, 160).finished.catch(() => {});
+    location.href = url;
+  }
+  return { swap, leave };
+})();
+
 // ---------- Sound (tiny Web Audio blips, no files needed) ----------
 let soundOn = true;
 let audio = null;
@@ -229,15 +261,20 @@ function openModal(html, onMount) {
   onMount?.(modalRoot.querySelector('.modal'));
   modalRoot.querySelector('input, .btn')?.focus();
 }
+// The pop-up drops away before it is cleared, unless a new one has taken its place.
 function closeModal() {
-  modalRoot.innerHTML = '';
+  const backdrop = modalRoot.querySelector('.modal-backdrop');
+  if (!backdrop || backdrop.classList.contains('is-leaving')) return;
   lastFocus?.focus();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { modalRoot.innerHTML = ''; return; }
+  backdrop.classList.add('is-leaving');
+  setTimeout(() => backdrop.remove(), 220);
 }
 modalRoot.addEventListener('click', e => {
   if (e.target.matches('[data-close]')) closeModal();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && modalRoot.innerHTML) closeModal();
+  if (e.key === 'Escape' && modalRoot.querySelector('.modal-backdrop')) closeModal();
 });
 
 const GAME_MODES = {

@@ -38,9 +38,9 @@ the reply, in every mode.
 |---|---|---|---|
 | **Head to Head** | Exactly 2 | Both write a clue for their own target at once, swap, then both guess at once | You score only for your own guess |
 | **Free for All** | 3 to 8 | A psychic is drawn at random, and everyone else guesses | Guessers score their own marks, and the psychic earns the average |
-| **Team Against Team** | 4 or more, at least 2 per team | Each team has a psychic, both teams chase one shared target, and both clues are visible to everyone. Each team moves **one shared X** live (only that team sees it) and it seals once every teammate has pressed Lock in; any move unlocks everyone | A team scores its X. When time runs out the X counts where it stands |
+| **Team Against Team** | 4 or more, at least 2 per team | Each team has a psychic, both teams chase one shared target, and both clues are visible to everyone. Each team moves **one shared mark** live (only that team sees it) and it seals once every teammate has pressed Lock in; any move unlocks everyone | A team scores its mark. When time runs out the mark counts where it stands |
 
-In the reply, each team-game clue opens with **two boards side by side**, one per team. Both teams' paths replay at once (the trail, plus a heatmap of where the X lingered), with who moved it, how far it travelled and when the team locked in. Only then does the target appear, with each team's score and the closest its X ever got. The server records the path during marking (`teamMarks[team].path`), and `journeyOf()` in `engine.js` turns it into the replay.
+In the reply, each team-game clue opens with **two boards side by side**, one per team. Both teams' paths replay at once (the trail, plus a heatmap of where the mark lingered), with who moved it, how far it travelled and when the team locked in. Only then does the target appear, with each team's score and the closest its mark ever got. The server records the path during marking (`teamMarks[team].path`), and `journeyOf()` in `engine.js` turns it into the replay.
 
 **Points** (the team's scoring, from Sharpy17/psychic): within 15 units of the target earns 1,000
 (Bullseye), within 35 earns 750 (Close), within 60 earns 500 (Warm), within 90 earns 250 (Edge), and

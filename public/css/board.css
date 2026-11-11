@@ -87,6 +87,22 @@
 .board.interactive .marker-halo { animation: halo 1.4s ease-in-out infinite; }
 @keyframes halo { 50% { transform: scale(1.6); opacity: 0.05; } }
 
+/* Your guess (YOU_MARK in common.js): an ink dot in a paper ring, with a soft glow that breathes
+   while the mark can still move, and a small lift while you carry it. */
+.you-mark { transform-box: fill-box; transform-origin: center; transition: transform 0.18s cubic-bezier(.2, .8, .3, 1.2); }
+.you-glow { fill: var(--text); opacity: 0.1; transform-box: fill-box; transform-origin: center; }
+.you-ring { fill: var(--face, #fffcf2); stroke: var(--text); stroke-width: 0.85; }
+.you-core { fill: var(--text); }
+.you-shine { fill: #fff; opacity: 0.6; }
+.board.interactive .you-glow { animation: you-breathe 2.2s ease-in-out infinite; }
+.board.dragging .you-mark { transform: scale(1.18); }
+.board.dragging .you-glow { animation: none; opacity: 0.16; }
+@keyframes you-breathe { 50% { transform: scale(1.4); opacity: 0.03; } }
+@media (prefers-reduced-motion: reduce) {
+  .board.interactive .you-glow { animation: none; }
+  .you-mark { transition: none; }
+}
+
 @media (max-width: 420px) {
   .axis-label { font-size: 0.85rem; }
 }

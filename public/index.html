@@ -11,7 +11,12 @@
   var d = document.documentElement;
   var inGame = false;
   try { inGame = !!sessionStorage.getItem('pp-session'); } catch (e) {}
-  var mode = inGame || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'full';
+  // Coming back from a room: no desk intro, the paper just fades in.
+  var back = false;
+  try { back = !!sessionStorage.getItem('pp-fade'); sessionStorage.removeItem('pp-fade'); } catch (e) {}
+  var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (back && !still) d.classList.add('page-fade-in');
+  var mode = inGame || back || still ? 'none' : 'full';
   d.classList.add('js');
   d.dataset.intro = mode;
   if (mode !== 'none') {
@@ -199,8 +204,8 @@
           <span class="ad-flag">Advertisement</span>
           <span class="ad-burst" aria-hidden="true"><span>New!<br>Daily!</span></span>
           <span class="ad-kicker">Free · One guess a day · For one reader</span>
-          <span class="ad-big">Can You Read the Public’s Mind?</span>
-          <span class="ad-sub">Every day, one famous name. A real survey knows what people think of it. Do you?</span>
+          <span class="ad-big">Can You Read the People’s Mind?</span>
+          <span class="ad-sub">Every day, one famous name and one board. Everyone who plays moves the crowd’s dot. Guess where it lands.</span>
           <span class="ad-cta"><span class="ad-today" id="daily-ad-today">Today’s poll is out</span><span class="ad-go">Read today’s poll <span aria-hidden="true">→</span></span></span>
         </button>
       </div>
@@ -365,7 +370,7 @@
             <div class="ear left"><b class="sc">Forecast</b><span>Opinions scattered, with a strong chance of hot takes by noon.</span></div>
             <div class="title">
               <h2 class="dp-name" id="dp-title">The Daily Poll</h2>
-              <p class="motto">“What the public thinks, sealed until you guess”</p>
+              <p class="motto">“Guess the people’s mind”</p>
             </div>
             <div class="ear right"><b class="sc">Today only</b><span>One name. One guess. A fresh poll every midnight.</span></div>
             <div class="stamp dp-stamp" aria-hidden="true"><span>Daily!</span></div>
@@ -375,7 +380,7 @@
 
           <div class="stop-press">
             <b>Stop press</b>
-            <span class="ticker"><span id="dp-ticker">Survey results locked in the editor’s safe until you mail your guess.</span><i class="caret"></i></span>
+            <span class="ticker"><span id="dp-ticker">Today’s crowd is sealed in the editor’s safe until you mail your guess.</span><i class="caret"></i></span>
           </div>
 
           <div class="front dp-front">
@@ -392,7 +397,7 @@
                 <h2>Daily Poll Entry Form</h2>
                 <p class="sub" id="daily-asked">Fetching today’s poll…</p>
                 <div class="demo-clue" id="daily-clue" hidden></div>
-                <p class="hint" id="daily-hint" hidden>Where did the public put it? Drag the X or tap the chart. One guess a day, so make it count.</p>
+                <p class="hint" id="daily-hint" hidden>Not what <i>you</i> think: where would <b>most people</b> put it? Everyone who plays today marks this board, and the crowd’s dot sits in the middle of all their guesses. Drag your mark or tap the board. One guess a day.</p>
                 <div class="demo-foot" id="daily-foot" hidden>
                   <button class="btn primary" type="button" id="daily-mail">Mail my guess</button>
                 </div>
@@ -400,6 +405,7 @@
                 <p class="coupon-fine" id="daily-fine">One entry per reader per day. Void where prohibited by geese.</p>
               </aside>
             </div>
+            <section class="dp-recap" id="daily-recap" aria-label="Yesterday’s poll" hidden></section>
           </div>
 
           <div class="dp-how" id="dp-how">
@@ -407,29 +413,30 @@
             <div class="cols3">
               <article>
                 <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="22" y="8" width="76" height="54"/><path d="M30 20h40M30 30h52M30 40h30M30 50h46"/><path d="M84 14l10 10-10 10" class="red"/></svg>
-                <h3><span class="num">I.</span> Somebody Asked the Public</h3>
-                <p>A real survey asked thousands of people about one famous name or everyday thing: do they like it, and do they dislike it? We print the name. The answers stay in the safe.</p>
+                <h3><span class="num">I.</span> One Name, One Board</h3>
+                <p>Every midnight we print one famous name or everyday thing on a board from the game, like <i>Hero or Villain</i> and <i>Overrated or Underrated</i>. Everybody who plays gets the same one.</p>
               </article>
               <article>
-                <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><path d="M68 18l8 8M76 18l-8 8"/></svg>
-                <h3><span class="num">II.</span> You Mark One Guess</h3>
-                <p>Across is how many people like it; up is how many can’t stand it. Put your X where you think the public landed. One guess a day, and no peeking at the neighbours.</p>
+                <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><rect x="30" y="4" width="62" height="62"/><path d="M61 8v54M34 35h54" class="dash"/><circle cx="72" cy="22" r="6"/><circle cx="72" cy="22" r="2.6" class="fill"/></svg>
+                <h3><span class="num">II.</span> Guess the Crowd, Not Yourself</h3>
+                <p>Put your mark where you think <b>most people</b> would put it. The crowd’s dot is the middle of every guess mailed today, and it stays hidden until you’ve mailed yours.</p>
               </article>
               <article>
                 <svg class="sketch" viewBox="0 0 120 70" aria-hidden="true"><circle cx="46" cy="36" r="8" class="red"/><circle cx="74" cy="30" r="10" class="dash"/><path d="M50 33l20-2"/></svg>
-                <h3><span class="num">III.</span> The Reply Tells All</h3>
-                <p>See the survey’s real answer, your score, and where today’s other readers guessed on average. Copy your result for your friends, then come back at midnight.</p>
+                <h3><span class="num">III.</span> Watch the Dot Move</h3>
+                <p>You’re scored at once against the dot as it stood when you mailed. Then it keeps moving all day as guesses pile in. Come back tomorrow to see where it finished and how far it travelled.</p>
               </article>
             </div>
             <ul class="daily-key" aria-label="What the marks on the chart mean">
-              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><path class="key-x" d="M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6"/></svg> Your guess</li>
-              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-target" r="3.4"/></svg> What the survey found</li>
-              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-crowd" r="3"/></svg> Today’s readers, on average</li>
+              <li><svg viewBox="-6 -6 12 12" aria-hidden="true"><g class="you-mark"><circle class="you-glow" r="5.4"/><circle class="you-ring" r="3.2"/><circle class="you-core" r="1.75"/><circle class="you-shine" cx="-0.55" cy="-0.6" r="0.5"/></g></svg> Your mark: your guess</li>
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-target" r="3.4"/></svg> The crowd’s dot: the middle of everyone’s guesses</li>
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><circle class="key-crowd" r="3"/></svg> Where the dot stood when you mailed</li>
+              <li><svg viewBox="-5 -5 10 10" aria-hidden="true"><path class="key-road" d="M-4 3 0-1 4 2"/></svg> The road the dot travelled yesterday</li>
             </ul>
           </div>
 
           <footer>
-            <span id="dp-source">© 2026 The Psychic Plane · Daily Supplement · Survey figures are reprinted with credit to their source</span>
+            <span id="dp-source">© 2026 The Psychic Plane · Daily Supplement · Every dot made by our readers</span>
             <nav><a href="#" data-daily="close">Back to the front page</a></nav>
           </footer>
         </div>
@@ -444,6 +451,9 @@
   <script src="js/showbill.js"></script>
   <script src="js/page.js"></script>
   <script src="js/common.js"></script>
+  <!-- GSAP (vendored, standard no-charge license) drives the mailing animation's physical moves. -->
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script src="vendor/gsap/MotionPathPlugin.min.js"></script>
   <script src="js/mail.js"></script>
   <script src="js/reply.js"></script>
   <script src="js/sample.js"></script>

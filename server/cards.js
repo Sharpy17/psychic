@@ -4,7 +4,7 @@
 // and the psychic's clue has to be one of that topic ("A food", "A film"...). Each set carries
 // boards that suit its topics. "Anything goes" has no topics, so any clue will do.
 
-const C = {
+export const CARD_BY_ID = {
   funny: { top: 'Funny', bottom: 'Unfunny', left: 'Ugly', right: 'Cute' },
   pricey: { top: 'Expensive', bottom: 'Cheap', left: 'Gross', right: 'Delicious' },
   scary: { top: 'Scary', bottom: 'Not scary', left: 'Tiny', right: 'Huge' },
@@ -31,6 +31,7 @@ const C = {
   gift: { top: 'Good gift', bottom: 'Bad gift', left: 'Practical', right: 'Silly' },
 };
 
+const C = CARD_BY_ID;
 export const CARDS = Object.values(C);
 
 const SETS = [

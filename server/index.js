@@ -12,7 +12,7 @@ import * as Daily from './daily.js';
 
 const PORT = Number(process.env.PORT) || 4100;
 const DAILY_TZ = process.env.DAILY_TZ || Daily.DEFAULT_TZ; // When the Daily Poll changes over.
-const daily = Daily.createStore(fileURLToPath(new URL('../data/daily', import.meta.url)));
+const daily = Daily.createStore(process.env.DAILY_DATA || fileURLToPath(new URL('../data/daily', import.meta.url))); // Where guesses are saved.
 const ROOT = fileURLToPath(new URL('../public', import.meta.url));
 const MAX_ROOMS = 2000;
 const EMPTY_ROOM_MS = 10 * 60_000; // How long an empty room waits for people to reconnect.
@@ -68,7 +68,12 @@ async function dailyRoute(req, res, pathname) {
   try {
     if (pathname === '/api/daily' && req.method === 'GET') {
       const player = new URL(req.url, 'http://local').searchParams.get('player');
-      sendJson(res, 200, { ok: true, ...clock, puzzle: Daily.puzzleFor(day), result: Daily.resultFor(daily, day, player) });
+      sendJson(res, 200, {
+        ok: true, ...clock,
+        puzzle: Daily.puzzleFor(day),
+        result: Daily.resultFor(daily, day, player),
+        yesterday: Daily.recapFor(daily, day - 1, player),
+      });
     } else if (pathname === '/api/daily/guess' && req.method === 'POST') {
       const { player, x, y } = await readJson(req);
       sendJson(res, 200, { ok: true, ...clock, result: Daily.submitGuess(daily, day, player, { x, y }, { now: now.valueOf() }) });

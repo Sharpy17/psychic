@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as D from './daily.js';
 import { scoreFor, GameError } from './engine.js';
+import { CARD_BY_ID } from './cards.js';
 
 const P1 = 'player-one-0001';
 const P2 = 'player-two-0002';
@@ -34,35 +35,41 @@ test('items run in order and wrap around after the last', () => {
   assert.equal(D.itemFor(0), D.DATA.items[n - 1]); // The day before launch still has an item.
 });
 
-test('the puzzle never carries the survey numbers', () => {
+const start = (day) => D.itemFor(day).start;
+
+test('the puzzle is the item and a board from the main game, and no dots', () => {
   for (let day = 1; day <= D.DATA.items.length; day++) {
-    const { axes, ...rest } = D.puzzleFor(day);
-    assert.deepEqual(axes, { x: D.DATA.scale.liked, y: D.DATA.scale.disliked }); // The same every day.
-    const text = JSON.stringify(rest);
-    assert.ok(!/liked|disliked|neutral|fame|target|url|"x"|"y"/.test(text), text);
+    const p = D.puzzleFor(day);
+    assert.deepEqual(Object.keys(p).sort(), ['board', 'day', 'text']);
+    assert.deepEqual(p.board, CARD_BY_ID[D.itemFor(day).card]);
   }
 });
 
-test('survey percentages map onto the whole board', () => {
-  const data = { ...D.DATA, scale: { liked: [20, 100], disliked: [0, 50] } };
-  assert.deepEqual(D.targetOf({ liked: 20, disliked: 0 }, data), { x: -100, y: -100 });
-  assert.deepEqual(D.targetOf({ liked: 100, disliked: 50 }, data), { x: 100, y: 100 });
-  assert.deepEqual(D.targetOf({ liked: 60, disliked: 25 }, data), { x: 0, y: 0 });
-  assert.deepEqual(D.targetOf({ liked: 5, disliked: 80 }, data), { x: -100, y: 100 }); // Clamped to the edge.
+test('the crowd’s dot is the middle of the start dot and every guess, axis by axis', () => {
+  assert.equal(D.median([3, 1, 2]), 2);
+  assert.equal(D.median([4, 1, 2, 3]), 2.5);
+  assert.deepEqual(D.crowdOf({ x: 0, y: 0 }, []), { x: 0, y: 0 });
+  assert.deepEqual(D.crowdOf({ x: 0, y: 0 }, [{ x: 40, y: -20 }]), { x: 20, y: -10 });
+  // One joke guess in the corner barely moves it.
+  assert.deepEqual(D.crowdOf({ x: 0, y: 0 }, [{ x: 10, y: 10 }, { x: 12, y: 8 }, { x: 100, y: -100 }]), { x: 11, y: 4 });
 });
 
-test('a guess is scored like the main game and against the survey', () => {
+test('a guess is scored like the main game, against the dot as it stood before it', () => {
   const store = D.createStore();
-  const target = D.targetOf(D.itemFor(1));
-  const mark = { x: target.x + 20, y: target.y - 10 };
+  const s = start(1);
+  const mark = { x: s.x + 20, y: s.y - 10 };
   const r = D.submitGuess(store, 1, P1, mark);
-  const expected = scoreFor(mark, target);
+  const expected = scoreFor(mark, s);
   assert.equal(r.you.tier, expected.tier);
   assert.equal(r.you.points, expected.points);
-  assert.deepEqual(r.target, target);
-  assert.equal(r.survey.liked, D.itemFor(1).liked);
-  assert.equal(r.survey.url, D.itemFor(1).url);
+  assert.deepEqual(r.then, s);
+  assert.deepEqual([r.crowd.x, r.crowd.y], [s.x + 10, s.y - 5]); // Now halfway between the two.
+  assert.equal(r.crowd.count, 1);
   assert.equal(r.text, D.itemFor(1).text);
+  // The next player is scored against that new dot, not the start.
+  const r2 = D.submitGuess(store, 1, P2, { x: s.x + 10, y: s.y - 5 });
+  assert.deepEqual(r2.then, { x: s.x + 10, y: s.y - 5 });
+  assert.equal(r2.you.tier, 'Bullseye');
 });
 
 test('one guess per player per day', () => {
@@ -73,20 +80,20 @@ test('one guess per player per day', () => {
   assert.doesNotThrow(() => D.submitGuess(store, 2, P1, { x: 10, y: 10 })); // A new day, a new guess.
 });
 
-test('the players’ average, count and "better than" share update with each guess', () => {
+test('the dot, the live distance and the "better than" share move as guesses come in', () => {
   const store = D.createStore();
-  const t = D.targetOf(D.itemFor(1));
-  const first = D.submitGuess(store, 1, P1, { x: t.x, y: t.y });
-  assert.equal(first.crowd.count, 1);
+  const s = start(1);
+  const first = D.submitGuess(store, 1, P1, { x: s.x, y: s.y });
   assert.equal(first.beat, null); // Nobody else to beat yet.
-  D.submitGuess(store, 1, P2, { x: t.x - 60, y: t.y });
-  D.submitGuess(store, 1, P3, { x: t.x - 30, y: t.y });
+  D.submitGuess(store, 1, P2, { x: s.x - 60, y: s.y });
+  D.submitGuess(store, 1, P3, { x: s.x - 30, y: s.y });
   const r = D.resultFor(store, 1, P1);
   assert.equal(r.crowd.count, 3);
-  assert.equal(r.crowd.x, Math.round(((t.x + t.x - 60 + t.x - 30) / 3) * 10) / 10);
-  assert.equal(r.beat, 100);
+  assert.deepEqual([r.crowd.x, r.crowd.y], [s.x - 15, s.y]); // Middle of s, s, s-30, s-60.
+  assert.equal(r.live.distance, 15);
+  assert.equal(r.you.distance, 0); // The score from the moment it was mailed stands.
+  assert.equal(r.beat, 50); // P3 (15 away) ties, P2 (45 away) is further.
   assert.equal(D.resultFor(store, 1, P2).beat, 0);
-  assert.equal(D.resultFor(store, 1, P3).beat, 50);
 });
 
 test('someone who has not guessed gets no result', () => {
@@ -107,6 +114,36 @@ test('bad guesses and missing player ids are refused, and wild marks are clamped
   assert.deepEqual([r.you.x, r.you.y], [100, -100]);
 });
 
+test('yesterday’s recap: where the dot started and finished, its road, and a final score', () => {
+  const store = D.createStore();
+  const s = start(4);
+  D.submitGuess(store, 4, P1, { x: s.x + 40, y: s.y });
+  D.submitGuess(store, 4, P2, { x: s.x + 40, y: s.y });
+  D.submitGuess(store, 4, P3, { x: s.x + 40, y: s.y });
+  const r = D.recapFor(store, 4, P1);
+  assert.equal(r.text, D.itemFor(4).text);
+  assert.deepEqual(r.start, s);
+  assert.deepEqual(r.end, { x: s.x + 40, y: s.y });
+  assert.equal(r.moved, 40);
+  assert.equal(r.count, 3);
+  assert.deepEqual(r.trail[0], s);
+  assert.deepEqual(r.trail.at(-1), r.end);
+  assert.deepEqual(r.you.then, s);
+  assert.equal(r.you.movedSince, 20); // Your own pull (halfway, to s+20) doesn't count.
+  assert.equal(r.you.final.tier, 'Bullseye');
+  assert.equal(D.recapFor(store, 4, 'someone-else-9').you, null);
+  assert.equal(D.recapFor(store, 0, P1), null); // No poll before the first.
+  // A quiet day: the dot never left the start.
+  assert.deepEqual(D.recapFor(store, 5, P1).trail, [start(5), start(5)]);
+});
+
+test('a long day’s road is cut down to a few dozen stops', () => {
+  const store = D.createStore();
+  for (let i = 0; i < 500; i++) D.submitGuess(store, 1, `player-${String(i).padStart(6, '0')}`, { x: i % 100, y: -(i % 50) });
+  const r = D.recapFor(store, 1, null);
+  assert.ok(r.trail.length <= 34, `${r.trail.length} stops`);
+});
+
 test('guesses are saved and come back after a restart', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pp-daily-'));
   try {
@@ -120,21 +157,28 @@ test('guesses are saved and come back after a restart', () => {
   }
 });
 
-test('every item in daily-items.json is complete and sourced', () => {
-  const { items, board, scale, source, launchDate } = D.DATA;
+test('every item in daily-items.json has a name, a real board and a start dot', () => {
+  const { items, launchDate } = D.DATA;
   assert.ok(items.length >= 7, 'at least a week of polls');
   assert.match(launchDate, /^\d{4}-\d{2}-\d{2}$/);
-  for (const side of ['top', 'bottom', 'left', 'right']) assert.ok(board[side]);
-  assert.ok(source.name && source.country && source.retrieved);
-  assert.ok(scale.liked[0] < scale.liked[1] && scale.disliked[0] < scale.disliked[1]);
   const names = new Set();
   for (const item of items) {
     assert.ok(item.text && !names.has(item.text), `"${item.text}" is named once`);
     names.add(item.text);
-    for (const key of ['liked', 'disliked', 'neutral', 'fame']) {
-      assert.ok(Number.isInteger(item[key]) && item[key] >= 0 && item[key] <= 100, `${item.text}: ${key}`);
-    }
-    assert.ok(item.liked + item.disliked + item.neutral <= 100, `${item.text}: shares add up to at most 100`);
-    assert.match(item.url, /^https:\/\/yougov\.com\//, `${item.text}: source page`);
+    assert.ok(CARD_BY_ID[item.card], `${item.text}: card`);
+    for (const k of ['x', 'y']) assert.ok(Math.abs(item.start[k]) <= 100, `${item.text}: start.${k}`);
   }
+});
+
+test('your own pull on the dot is kept apart from the guesses after yours', () => {
+  const store = D.createStore();
+  const s = start(1);
+  const r = D.submitGuess(store, 1, P1, { x: s.x + 40, y: s.y });
+  assert.equal(r.since, 0);
+  assert.deepEqual(r.after, { x: r.crowd.x, y: r.crowd.y }); // Nobody since: the dot is where you left it.
+  D.submitGuess(store, 1, P2, { x: s.x - 40, y: s.y });
+  const later = D.resultFor(store, 1, P1);
+  assert.equal(later.since, 1);
+  assert.deepEqual(later.after, r.after);
+  assert.notDeepEqual([later.crowd.x, later.crowd.y], [r.after.x, r.after.y]);
 });

@@ -9,9 +9,22 @@
 //   prizeLine, prizeName, youLine, note, tieNote, nicest?: [{ text, name, count }]
 (() => {
   const RING_RADII = [45, 30, 17.5, 7.5]; // The scoring limits, in board units.
-  const X_PATH = 'M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6';
+  // Your own mark is YOU_MARK (common.js), the same as on the board.
   const byId = (id) => document.getElementById(id);
   const number = (n) => n.toLocaleString('en-US');
+  // Points tick up like a scoreboard instead of appearing all at once. The final figure is always exact.
+  function countUp(el, to, ms = 520) {
+    if (still.matches || !to) { el.textContent = number(to ?? 0); return; }
+    const t0 = performance.now();
+    const step = () => {
+      // Its own clock, clamped: a frame's timestamp can be earlier than t0, which would count below zero.
+      const k = Math.max(0, Math.min(1, (performance.now() - t0) / ms));
+      el.textContent = number(Math.round(to * (1 - Math.pow(1 - k, 3))));
+      if (k < 1 && el.isConnected) requestAnimationFrame(step);
+      else el.textContent = number(to);
+    };
+    requestAnimationFrame(step);
+  }
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const away = (distance) => {
     const d = Math.round(distance * 10) / 10;
@@ -67,7 +80,7 @@
     const miss = you ? `<line class="reply-miss" x1="${you.x}" y1="${you.y}" x2="${t.x}" y2="${t.y}"/>` : '';
     const dots = sheet.marks.map((m, i) => {
       if (!hasMark(m)) return '';
-      if (m.isYou) return `<g transform="translate(${m.x} ${m.y})"><path class="reply-x drop${shown}" data-mark="${i}" d="${X_PATH}"/></g>`;
+      if (m.isYou) return `<g transform="translate(${m.x} ${m.y})"><g class="drop${shown}" data-mark="${i}">${YOU_MARK}</g></g>`;
       const team = m.team ? ` team-${esc(m.team)}` : '';
       return `<g transform="translate(${m.x} ${m.y})"><g class="drop${shown}" data-mark="${i}"><circle class="reply-rival${team}" r="4"/><text class="reply-letter" y="1.6">${initial(m.name)}</text></g></g>`;
     }).join('');
@@ -90,7 +103,7 @@
   const topicLine = (sheet) => (sheet.topic ? `<span class="reply-topic">Topic: ${esc(sheet.topic)}</span>` : '');
   const clueLines = (sheet) => topicLine(sheet) + sheet.clues.map((c) => `<span class="reveal-clue-line">${c.label ? `<span class="clue-by">${esc(c.label)}:</span> ` : ''}<em>${esc(clueText(c))}</em>${niceTag(c)}</span>`).join('');
 
-  /* Team games: two boards, one per team. Each replays how its team moved the X, building a
+  /* Team games: two boards, one per team. Each replays how its team moved its mark, building a
      heatmap where it lingered, and only then shows the target. ------------------------------ */
   const HEAT = 5; // Heatmap cell size, in board units (a 20 by 20 grid).
   const REPLAY_MS = 3200;
@@ -108,10 +121,10 @@
     }).join('');
     const rings = RING_RADII.map((r) => `<circle class="reply-ring" cx="${t.x}" cy="${t.y}" r="${r}"/>`).join('');
     const head = m.isYou
-      ? `<path class="reply-x" d="${X_PATH}"/>`
+      ? YOU_MARK
       : `<circle class="reply-rival team-${esc(m.team)}" r="4"/><text class="reply-letter" y="1.6">${initial(m.name)}</text>`;
     const start = j.trail[0];
-    return `<svg class="reply-board team-board" viewBox="${art.viewBox}" role="img" aria-label="${esc(m.isYou ? 'Your team' : m.name)}: how the X moved, and the target">
+    return `<svg class="reply-board team-board" viewBox="${art.viewBox}" role="img" aria-label="${esc(m.isYou ? 'Your team' : m.name)}: how the mark moved, and the target">
       <defs><clipPath id="${clipId}"><rect width="100" height="100"/></clipPath></defs>
       ${art.back}
       <g clip-path="url(#${clipId})">
@@ -125,7 +138,7 @@
 
   function journeyLine(m) {
     const j = m.journey;
-    if (!j.moves) return 'Nobody moved it: the X stayed in the middle.';
+    if (!j.moves) return 'Nobody moved it: the mark stayed in the middle.';
     return `Moved by ${esc(names(j.movers))} · travelled ${j.travelled} units · ${j.lockedIn ? `locked in after ${j.seconds}s` : 'time ran out'}`;
   }
 
@@ -199,7 +212,7 @@
     const panel = (m) => chart.querySelector(`.team-panel[data-team="${CSS.escape(m.team)}"]`);
 
     const steps = [
-      { wait: 350, run() { status.textContent = 'Replaying how each team moved its X.'; PPMail.paperSound(0.05, 0.1); } },
+      { wait: 350, run() { status.textContent = 'Replaying how each team moved its mark.'; PPMail.paperSound(0.05, 0.1); } },
       { wait: REPLAY_MS + 250, run() { replayer = replayTrails(marks.map((m) => ({ svg: panel(m).querySelector('svg'), trail: m.journey.trail }))); } },
       { wait: 900, run() {
         marks.forEach((m) => { panel(m).querySelector('.journey-stats').innerHTML = journeyLine(m); });
@@ -216,12 +229,13 @@
         const near = j.moves && j.closest < m.distance - 2 ? `<small>At one point it was only ${away(j.closest)} away.</small>` : '';
         panel(m).querySelector('.journey-score').innerHTML = `<b>${esc(m.tier)}</b>, ${away(m.distance)} away · <b>${number(m.points)}</b> points${near}`;
         panel(m).classList.add('is-scored');
+        countUp(panel(m).querySelectorAll('.journey-score > b')[1], m.points);
         blip(m.points >= 750 ? 660 : 420, 0.06);
         status.textContent = `${m.isYou ? 'Your team' : m.name}: ${m.tier}, ${number(m.points)} points.`;
       } })),
       { wait: 0, run() {
         const you = sheet.marks.find((m) => m.isYou);
-        byId('reveal-note').textContent = you ? `Your team’s X landed ${away(you.distance)} from the target.` : '';
+        byId('reveal-note').textContent = you ? `Your team’s mark landed ${away(you.distance)} from the target.` : '';
       } },
     ];
     letter.scrollTop = 0;
@@ -248,7 +262,7 @@
     const chart = byId('reveal-chart');
     chart.innerHTML = labelled(sheet);
     const roster = byId('roster');
-    const youKey = `<svg viewBox="-6 -6 12 12" aria-hidden="true"><path class="reply-x" d="${X_PATH}"/></svg>`;
+    const youKey = `<svg viewBox="-6 -6 12 12" aria-hidden="true">${YOU_MARK}</svg>`;
     roster.innerHTML = sheet.marks.map((m, i2) =>
       `<li class="${m.isYou ? 'is-you' : ''}" data-row="${i2}"><span class="roster-key" aria-hidden="true">${m.isYou ? youKey : initial(m.name)}</span><span><span class="roster-name">${esc(m.isYou ? (m.youLabel ?? 'You') : m.name)}</span><span class="roster-result">Sealed</span></span><span class="roster-total">&nbsp;</span></li>`).join('') +
       sheet.psychics.map((p, i2) =>
@@ -279,7 +293,7 @@
         const line = row(i2);
         line.classList.add('is-scored');
         line.querySelector('.roster-result').textContent = hasMark(m) ? `${m.tier}, ${away(m.distance)} away` : 'No mark';
-        line.querySelector('.roster-total').textContent = number(m.points);
+        countUp(line.querySelector('.roster-total'), m.points);
         blip(m.points >= 750 ? 660 : 420, 0.06);
         status.textContent = `${m.isYou ? (m.youLabel ?? 'You') : m.name}: ${m.tier}, ${number(m.points)} points.`;
       },
@@ -290,14 +304,14 @@
         if (p.points === null || p.points === undefined) return;
         const line = roster.querySelector(`[data-psychic="${i2}"]`);
         line.querySelector('.roster-result').textContent = p.resonance ? 'Psychic: the average, plus 250 for two Bullseyes' : 'Psychic, earns the average';
-        line.querySelector('.roster-total').textContent = number(p.points);
+        countUp(line.querySelector('.roster-total'), p.points);
       },
     }));
     steps.push({
       wait: 0,
       run() {
         const you = sheet.marks.find((m) => m.isYou && hasMark(m));
-        byId('reveal-note').textContent = you ? `${you.youLabel ? 'Your team’s X' : 'Your mark'} landed ${away(you.distance)} from the target.` : '';
+        byId('reveal-note').textContent = you ? `${you.youLabel ? 'Your team’s mark' : 'Your mark'} landed ${away(you.distance)} from the target.` : '';
       },
     });
     letter.scrollTop = 0;
@@ -372,6 +386,8 @@
       run() {
         r.classList.remove('is-waiting');
         r.classList.add('is-arriving');
+        const totalCell = r.cells[r.cells.length - 1];
+        countUp(totalCell, data.standings[rows.length - 1 - n].total, 700);
         PPMail.paperSound(0.07, 0.14);
         const s = data.standings[rows.length - 1 - n];
         status.textContent = `In place ${rows.length - n}, ${s.name}, with ${number(s.total)} points.`;
@@ -387,8 +403,17 @@
     else showFinal(true);
   });
   byId('reveal-skip').addEventListener('click', () => showFinal(false));
-  byId('reply-close').addEventListener('click', () => letter.close());
-  byId('reply-again').addEventListener('click', () => { const again = options.onAgain; letter.close(); again?.(); });
+  // The letter folds down off the desk instead of vanishing.
+  function fold(then) {
+    if (!letter.open || letter.classList.contains('is-leaving')) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { letter.close(); then?.(); return; }
+    letter.classList.add('is-leaving');
+    PPMail.paperSound?.(0.18, 0.14);
+    setTimeout(() => { letter.classList.remove('is-leaving'); if (letter.open) letter.close(); then?.(); }, 320);
+  }
+  byId('reply-close').addEventListener('click', () => fold());
+  byId('reply-again').addEventListener('click', () => { const again = options.onAgain; fold(again); });
+  letter.addEventListener('cancel', (e) => { e.preventDefault(); fold(); });
   letter.addEventListener('close', () => { stopSteps(); options.onClose?.(); });
 
   function configure(opts) {
