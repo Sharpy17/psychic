@@ -3,7 +3,6 @@
 (() => {
   const SESSION = 'pp-session';
   const NAME = 'pp-name';
-  const X_PATH = 'M-3.4-3.6 3.6 3.6M3.4-3.6-3.6 3.6';
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const root = document.documentElement;
   const screen = document.getElementById('game');
@@ -32,6 +31,11 @@
   let niceSeen = 0;
   let movedAt = 0; // When you last moved your team's dot, so a teammate's echo doesn't yank it from under you.
   let moveTimer = null, pendingMove = null, lastSent = 0; // Nods on your own clue this round, so a new one can be announced.
+  let entering = false; // True from a create or join until the first scene is drawn, so the whole paper fades over.
+  let shownScene = null; // The scene on screen, so a new one fades in instead of snapping.
+  let fading = false; // True while the old scene fades out; the newest state is drawn once it has.
+  const seenPlayers = new Set(); // Who has already taken a bow in the lobby, so only newcomers pop in.
+  const lastStatus = new Map(); // Each contestant's last status, so a fresh seal can be stamped.
 
   /* Connecting ------------------------------------------------------------ */
 
@@ -79,7 +83,9 @@
       await new Promise((resolve) => { socket.once('connect', resolve); setTimeout(resolve, 20000); });
       if (!socket.connected) return { ok: false, error: 'Could not reach the game server. Try again in a moment.' };
     }
+    entering = true;
     const res = await send(event, payload);
+    if (!res.ok) entering = false;
     if (res.ok) {
       store.set(SESSION, { code: res.code, token: res.token });
       store.set(NAME, payload.name, localStorage);
@@ -88,9 +94,10 @@
     return res;
   }
 
-  function leaveToFront() {
+  function leaveToFront(fade = false) {
     store.clear(SESSION);
-    location.href = location.pathname;
+    if (fade) PPFade.leave(location.pathname);
+    else location.href = location.pathname;
   }
 
   window.PPGame = {
@@ -101,7 +108,29 @@
 
   /* Drawing --------------------------------------------------------------- */
 
+  // Which screen this state draws: the lobby, or one form per round, phase, task and deal.
+  // The reply has its own mailroom animation, so it never fades.
+  function sceneOf(v) {
+    if (v.phase === 'LOBBY') return 'lobby';
+    if (v.phase === 'REPLY') return null;
+    return `play:${v.roundNumber}:${v.phase}:${v.task.kind}:${v.task.deal ?? 0}`;
+  }
+
   function render() {
+    if (fading) return; // The old scene is fading out; the newest state is drawn once it has.
+    const scene = sceneOf(view);
+    const target = entering ? document.querySelector('.sheet') : shownScene !== null && scene && scene !== shownScene ? screen : null;
+    entering = false;
+    if (target) {
+      fading = true;
+      PPFade.swap(target, () => { fading = false; draw(); });
+      return;
+    }
+    draw();
+  }
+
+  function draw() {
+    shownScene = sceneOf(view) ?? 'reply';
     root.classList.add('in-game');
     if (view.phase === 'LOBBY') {
       replyHandled = false;
@@ -186,10 +215,18 @@
       </div>
     </div>`;
 
-  async function copy(text, done) {
+  async function copy(text, done, button) {
     try {
       await navigator.clipboard.writeText(text);
       toast(done);
+      // The button itself gets a red "Copied!" stamp for a moment.
+      if (button) {
+        button.classList.remove('is-copied');
+        void button.offsetWidth;
+        button.classList.add('is-copied');
+        clearTimeout(button.copiedTimer);
+        button.copiedTimer = setTimeout(() => button.classList.remove('is-copied'), 1600);
+      }
     } catch {
       toast('Copy that by hand. Your browser blocked it.');
     }
@@ -198,8 +235,8 @@
 
   function bindLobby() {
     document.getElementById('lobby-link').textContent = inviteLink();
-    document.getElementById('copy-code').addEventListener('click', () => copy(view.code, 'Code copied'));
-    document.getElementById('copy-link').addEventListener('click', () => copy(inviteLink(), 'Invite link copied'));
+    document.getElementById('copy-code').addEventListener('click', (e) => copy(view.code, 'Code copied', e.currentTarget));
+    document.getElementById('copy-link').addEventListener('click', (e) => copy(inviteLink(), 'Invite link copied', e.currentTarget));
     document.getElementById('start-game').addEventListener('click', () => act('game:start'));
     document.getElementById('leave-room').addEventListener('click', leaveRoom);
     document.getElementById('lobby-modes').addEventListener('change', (e) => act('room:mode', { mode: e.target.value }));
@@ -251,10 +288,10 @@
 
   async function leaveRoom() {
     await send('room:leave');
-    leaveToFront();
+    leaveToFront(true);
   }
 
-  const nameTag = (p) => `<li class="lobby-player${p.id === view.you.id ? ' is-you' : ''}${p.connected ? '' : ' is-away'}${p.isBot ? ' is-bot' : ''}"><span>${esc(p.name)}</span>${p.id === view.you.id ? '<small>you</small>' : ''}${p.isHost ? '<small>host</small>' : ''}${p.connected ? '' : '<small>away</small>'}${p.isBot && view.you.isHost ? `<button class="bot-remove" type="button" data-bot-remove="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">×</button>` : ''}</li>`;
+  const nameTag = (p) => `<li data-pid="${esc(p.id)}" class="lobby-player${p.id === view.you.id ? ' is-you' : ''}${p.connected ? '' : ' is-away'}${p.isBot ? ' is-bot' : ''}"><span>${esc(p.name)}</span>${p.id === view.you.id ? '<small>you</small>' : ''}${p.isHost ? '<small>host</small>' : ''}${p.connected ? '' : '<small>away</small>'}${p.isBot && view.you.isHost ? `<button class="bot-remove" type="button" data-bot-remove="${esc(p.id)}" aria-label="Remove ${esc(p.name)}">×</button>` : ''}</li>`;
   const botButton = (team = '', label = 'Add a bot') => (view.you.isHost ? `<button class="btn bot-add" type="button" data-bot-add="${team}">+ ${label}</button>` : '');
 
   function refreshLobby() {
@@ -275,6 +312,7 @@
     refreshSettings(isHost);
 
     const list = document.getElementById('lobby-players');
+    const head = playersHead();
     if (view.mode === 'teams') {
       const team = (id, name) => {
         const members = view.players.filter((p) => p.team === id);
@@ -283,10 +321,18 @@
         const join = mine ? '<span class="team-yours">Your team</span>' : `<button class="btn team-join" type="button" data-team-join="${id}">Join</button>`;
         return `<div class="lobby-team team-${id}"><div class="lobby-team-head"><h3>${name}</h3><span class="lobby-team-actions">${join}${botButton(id, 'bot')}</span></div><ul>${members.map(nameTag).join('') || '<li class="lobby-empty">Nobody yet</li>'}</ul></div>`;
       };
-      list.innerHTML = `<div class="lobby-teams">${team('lions', 'The Lions')}${team('tigers', 'The Tigers')}</div>`;
+      list.innerHTML = `${head}<div class="lobby-teams">${team('lions', 'The Lions')}${team('tigers', 'The Tigers')}</div>`;
     } else {
-      list.innerHTML = `<ul class="lobby-list">${view.players.map(nameTag).join('')}</ul>${view.mode === 'duel' && view.players.length >= 2 ? '' : botButton()}`;
+      list.innerHTML = `${head}<ul class="lobby-list">${view.players.map(nameTag).join('')}</ul>${view.mode === 'duel' && view.players.length >= 2 ? '' : botButton()}`;
     }
+    // Newcomers take a bow: their name stamps onto the list.
+    const first = seenPlayers.size === 0;
+    list.querySelectorAll('.lobby-player[data-pid]').forEach((li) => {
+      if (!seenPlayers.has(li.dataset.pid)) {
+        seenPlayers.add(li.dataset.pid);
+        if (!first) { li.classList.add('is-new'); blip(740, 0.06, 'triangle', 0.05); }
+      }
+    });
     const start = document.getElementById('start-game');
     start.hidden = !isHost;
     start.disabled = !!view.startProblem;
@@ -294,6 +340,13 @@
   }
 
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  // "Players · 3 of 8". The seat limits mirror the server's (server/engine.js); team games have none.
+  const SEATS = { duel: 2, free: 8 };
+  function playersHead() {
+    const n = view.players.length, max = SEATS[view.mode];
+    return `<h3 class="lobby-players-head">Players <small>${max ? `${n} of ${max}` : plural(n, 'player', 'players')}</small></h3>`;
+  }
 
   function refreshSettings(isHost) {
     const topics = document.getElementById('lobby-topics');
@@ -346,11 +399,11 @@
       return view.task.psychics.length > 1 ? `${names} are writing. Both clues appear together, so nobody can copy.` : `${names} is writing the clue. You mark the board as soon as it comes in.`;
     },
     mark() {
-      if (view.mode === 'teams') return 'Your team shares one X. Anyone can drag it, and everyone sees it move. Lock in when you all agree.';
-      return 'Drag the X or tap the board, then seal your mark. No answers until your reply comes by mail.';
+      if (view.mode === 'teams') return 'Your team shares one mark. Anyone can drag it, and everyone sees it move. Lock in when you all agree.';
+      return 'Drag your mark or tap the board, then seal it. No answers until your reply comes by mail.';
     },
     marked: () => (view.task.team ? 'Your team has locked in its guess. Waiting for the other team.' : 'Your mark is sealed. Waiting for everyone else.'),
-    'await-marks': () => (view.task.team ? 'Your clue is out. Watch your team move its X, and keep your poker face.' : 'Your clue is out. Nobody learns a thing until the mail comes.'),
+    'await-marks': () => (view.task.team ? 'Your clue is out. Watch your team move its mark, and keep your poker face.' : 'Your clue is out. Nobody learns a thing until the mail comes.'),
   };
 
   function clueHtml() {
@@ -457,7 +510,7 @@
     board.update({ marker: pos, target: null, interactive: canMark, revealed: false });
     svg.setAttribute('aria-label', `Top is ${task.card.top}, bottom is ${task.card.bottom}, left is ${task.card.left}, right is ${task.card.right}.${canMark ? ' Arrow keys move your mark, Enter seals it.' : ''}`);
     if (task.target) showTarget(svg, toBoard(task.target));
-    // A team's psychic watches the team's X; otherwise only guessers see one.
+    // A team's psychic watches the team's mark; otherwise only guessers see one.
     if (task.kind !== 'mark' && task.kind !== 'marked' && !task.team) svg.querySelector('.marker').classList.add('hidden');
 
     const status = document.getElementById('game-status');
@@ -470,7 +523,7 @@
       document.getElementById('game-board').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); lock(); }
       });
-      status.textContent = `New clues: ${task.clues.map((c) => c.text ?? 'none').join(' and ')}. Your team moves one X together.`;
+      status.textContent = `New clues: ${task.clues.map((c) => c.text ?? 'none').join(' and ')}. Your team moves one mark together.`;
       blip(660, 0.08);
     } else if (canMark) {
       const seal = () => act('mark:submit', toChart(board.position())).then((r) => { if (r.ok) PPMail.paperSound(0.1, 0.16); });
@@ -583,7 +636,9 @@
     const box = document.getElementById('contestants');
     const chip = (p) => {
       const label = !p.connected ? 'Away' : p.status === 'sealed' ? 'Sealed' : p.status === 'writing' ? 'Writing…' : p.status === 'marking' ? 'Marking…' : p.status === 'agreed' ? 'Locked in' : view.phase === 'MARKING' ? 'Psychic' : 'Waiting';
-      return `<li class="contestant${p.id === view.you.id ? ' is-you' : ''}${p.status === 'sealed' ? ' is-sealed' : ''}${p.connected ? '' : ' is-away'}${p.team ? ` team-${p.team}` : ''}"><b>${esc(p.name)}</b><small>${label}</small></li>`;
+      const fresh = p.status === 'sealed' && lastStatus.has(p.id) && lastStatus.get(p.id) !== 'sealed';
+      lastStatus.set(p.id, p.status);
+      return `<li class="contestant${fresh ? ' just-sealed' : ''}${p.id === view.you.id ? ' is-you' : ''}${p.status === 'sealed' ? ' is-sealed' : ''}${p.connected ? '' : ' is-away'}${p.team ? ` team-${p.team}` : ''}"><b>${esc(p.name)}</b><small>${label}</small></li>`;
     };
     if (view.mode === 'teams') {
       const group = (id, name) => `<div><h3 class="team-${id}">${name}</h3><ul>${view.players.filter((p) => p.team === id).map(chip).join('')}</ul></div>`;
@@ -612,7 +667,7 @@
     if (left === 0 && !sentAtZero && view.task) {
       sentAtZero = true;
       if (view.task.kind === 'mark' && !view.task.team) send('mark:submit', toChart(board.position()));
-      if (view.task.kind === 'mark' && view.task.team) flushTeamMove(); // The server seals the team's X where it stands.
+      if (view.task.kind === 'mark' && view.task.team) flushTeamMove(); // The server seals the team's mark where it stands.
       if (view.task.kind === 'write') {
         const text = document.getElementById('clue-input')?.value.trim();
         if (text) send('clue:submit', { text });
@@ -697,7 +752,7 @@
       target: toBoard(sheet.target),
       marks: sheet.marks.map((m) => {
         const at = m.x === null ? { x: null, y: null } : toBoard(m);
-        // Team games list one guess per team; yours is drawn as your X.
+        // Team games list one guess per team; yours is drawn as your mark.
         if (raw.mode === 'teams') {
           const j = m.journey;
           const journey = j && { ...j, trail: j.trail.map(([x, y]) => { const p = toBoard({ x, y }); return [p.x, p.y]; }) };

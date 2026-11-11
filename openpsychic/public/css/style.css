@@ -516,34 +516,38 @@ a { text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
 @media (min-width: 1440px) { .ad-size::after { content: "160 × 600"; } .ad-slot b { font-size: 1.5rem; } }
 @media (min-width: 1840px) { .ad-size::after { content: "300 × 600"; } .ad-slot b { font-size: 2rem; } }
 
-/* ---------- Shorter laptop screens: keep the tickets on the first screen ---------- */
-@media (min-width: 681px) and (max-height: 860px) {
-  .sheet { margin-top: 14px; }
-  .topline { padding-block: 4px; }
-  .topline .btn { padding: 6px 18px 8px; font-size: 1rem; }
-  .topline a { padding: 6px 12px; }
-  .masthead { padding-block: 4px 2px; }
-  .masthead h1 { font-size: clamp(2.2rem, calc(var(--pw) * 0.05), 3.2rem); }
-  .masthead .motto { margin-top: 0; font-size: 0.82rem; }
-  .ear { padding: 3px 8px; font-size: 0.7rem; line-height: 1.25; }
-  .ear b { font-size: 0.78rem; margin-bottom: 2px; padding-bottom: 1px; }
-  .stamp { font-size: 1.4rem; padding: 1px 10px 2px; top: 0; }
-  .dateline { padding-block: 2px; font-size: 0.8rem; }
-  .stop-press { padding-block: 3px; font-size: 0.85rem; }
-  .playbill { margin-top: 10px; padding-top: 14px; }
-  .arc { font-size: 1.05rem; }
-  .bill-small { font-size: 0.72rem; line-height: 1.3; }
-  .names { margin-top: 0; }
-  .bill-huge { font-size: clamp(2.8rem, calc(var(--pw) * 0.074), 5rem); margin-block: 0.1em 0.2em; text-shadow: 2px 2px 0 var(--bg), 4px 4px 0 var(--red); }
-  .bill-huge.red { text-shadow: 2px 2px 0 var(--bg), 4px 4px 0 var(--text); }
-  .bill-amp { font-size: clamp(1.4rem, calc(var(--pw) * 0.034), 2.3rem); }
-  .ribbon { margin-top: 4px; }
-  .ribbon span { padding-block: 6px 7px; font-size: 0.9rem; }
-  .tickets-slot { margin: 12px 0 -46px; }
-  .ticket { min-height: 98px; padding-block: 10px; }
-  .ticket b { font-size: 1.7rem; }
-  .slots input { font-size: 1.5rem; }
-  .bill-fine { margin-top: 62px; }
+/* ---------- Shorter laptop screens: keep the tickets on the first screen ----------
+   The top of the page grows with the window's height instead of jumping at one breakpoint, so
+   going full screen (F11) or dragging the window taller eases the masthead and playbill up in
+   size rather than snapping to a bigger layout. --g runs from 0 at 740px tall (fully compact)
+   to 160px at 900px tall (full size); each size below is its compact value plus a share of --g. */
+@media (min-width: 681px) {
+  :root { --g: clamp(0px, 100vh - 740px, 160px); }
+  .sheet { margin-top: calc(14px + var(--g) * 0.1375); }
+  .topline { padding-block: calc(4px + var(--g) * 0.0375); }
+  .topline .btn { padding: calc(6px + var(--g) * 0.025) calc(18px + var(--g) * 0.0375) calc(8px + var(--g) * 0.025); font-size: calc(1rem + var(--g) * 0.012); }
+  .topline a { padding: calc(6px + var(--g) * 0.025) calc(12px + var(--g) * 0.0125); }
+  .masthead { padding-block: calc(4px + var(--g) * 0.0375) calc(2px + var(--g) * 0.025); }
+  .masthead h1 { font-size: min(clamp(2.2rem, calc(var(--pw) * 0.06), 4.2rem), calc(clamp(2.2rem, calc(var(--pw) * 0.05), 3.2rem) + var(--g) * 0.1)); }
+  .masthead .motto { margin-top: calc(var(--g) * 0.0125); font-size: calc(0.82rem + var(--g) * 0.01); }
+  .ear { padding: calc(3px + var(--g) * 0.03125) calc(8px + var(--g) * 0.0125); font-size: calc(0.7rem + var(--g) * 0.008); line-height: calc(14px + var(--g) * 0.033); }
+  .ear b { font-size: calc(0.78rem + var(--g) * 0.012); margin-bottom: calc(2px + var(--g) * 0.0125); padding-bottom: calc(1px + var(--g) * 0.00625); }
+  .stamp { font-size: calc(1.4rem + var(--g) * 0.05); padding: calc(1px + var(--g) * 0.00625) calc(10px + var(--g) * 0.025) calc(2px + var(--g) * 0.0125); top: calc(var(--g) * 0.025); }
+  .dateline { padding-block: calc(2px + var(--g) * 0.025); font-size: calc(0.8rem + var(--g) * 0.005); }
+  .stop-press { padding-block: calc(3px + var(--g) * 0.01875); font-size: calc(0.85rem + var(--g) * 0.007); }
+  .playbill { margin-top: calc(10px + var(--g) * 0.0375); padding-top: min(clamp(24px, 3vw, 36px), calc(14px + var(--g) * 0.1375)); }
+  .arc { font-size: min(clamp(1rem, 2vw, 1.45rem), calc(1.05rem + var(--g) * 0.04)); }
+  .bill-small { font-size: min(clamp(0.8rem, 1.5vw, 1rem), calc(0.72rem + var(--g) * 0.028)); line-height: calc(15px + var(--g) * 0.066); }
+  .names { margin-top: calc(var(--g) * 0.0375); }
+  .bill-huge { font-size: min(clamp(2.8rem, calc(var(--pw) * 0.086), 6rem), calc(clamp(2.8rem, calc(var(--pw) * 0.074), 5rem) + var(--g) * 0.1)); }
+  .bill-amp { font-size: min(clamp(1.6rem, calc(var(--pw) * 0.04), 2.7rem), calc(clamp(1.4rem, calc(var(--pw) * 0.034), 2.3rem) + var(--g) * 0.04)); }
+  .ribbon { margin-top: calc(4px + var(--g) * 0.0375); }
+  .ribbon span { padding-block: calc(6px + var(--g) * 0.01875) calc(7px + var(--g) * 0.01875); font-size: min(clamp(0.85rem, 1.6vw, 1.05rem), calc(0.9rem + var(--g) * 0.015)); }
+  .tickets-slot { margin: calc(12px + var(--g) * 0.0625) 0 calc(-46px - var(--g) * 0.1375); }
+  .ticket { min-height: calc(98px + var(--g) * 0.2125); padding-block: calc(10px + var(--g) * 0.05) calc(10px + var(--g) * 0.0375); }
+  .ticket b { font-size: calc(1.7rem + var(--g) * 0.04); }
+  .slots input { font-size: calc(1.5rem + var(--g) * 0.04); }
+  .bill-fine { margin-top: calc(62px + var(--g) * 0.1875); }
 }
 @media (min-width: 681px) and (max-height: 700px) {
   .ear, .masthead .motto, .stop-press, .bill-small { display: none; }
@@ -642,7 +646,6 @@ html.is-mailing .hole-note { visibility: hidden; }
 .thumb { width: 44px; height: 44px; flex: none; background: var(--face); border: 1.5px solid #1b1b1b44; display: block; }
 .thumb.is-current { border: 2px solid var(--text); }
 .thumb line { stroke: #1b1b1b55; stroke-width: 2; }
-.thumb path { fill: none; stroke: var(--red); stroke-width: 9; stroke-linecap: round; }
 @media (min-width: 961px) {
   .front .thumbs { grid-column: 2; grid-row: 7; justify-content: flex-start; }
 }
@@ -888,9 +891,8 @@ html.is-mailing .hole-note { visibility: hidden; }
 .reply-board { display: block; width: 100%; background: var(--face); outline: 2px solid var(--text); }
 .reply-board .axis-line { stroke: #1b1b1b66; stroke-width: 0.5; stroke-dasharray: 2 1.5; }
 .reply-ring { fill: none; stroke: var(--text); stroke-width: 0.3; }
-.reply-target { fill: var(--text); }
+.reply-target { fill: var(--red); } /* Red is the answer; ink (.you-mark) is you. */
 .reply-miss { stroke: var(--red); stroke-width: 0.7; stroke-dasharray: 1.6 1.2; stroke-linecap: round; }
-.reply-x { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-linecap: round; }
 .reply-rival { fill: var(--face); stroke: var(--text); stroke-width: 0.6; }
 .reply-letter { fill: var(--text); font: 700 4.4px var(--f-head); text-anchor: middle; }
 .reply-answer { opacity: 0; transition: opacity 0.45s ease; }
@@ -1045,7 +1047,6 @@ html.is-mailing .hole-note { visibility: hidden; }
 .art-bulb { fill: var(--text); }
 .art-bulb.lit { fill: var(--red); }
 .marker-dot, .marker .pencil { display: none; }
-.marker-x { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-linecap: round; }
 .reply-rival { fill: var(--bg); }
 .answer .art-minor { display: none; }
 .answer .art-frame { stroke-width: 1; }
@@ -1083,3 +1084,93 @@ html.is-mailing .hole-note { visibility: hidden; }
   .standings tbody th { font-size: 0.86rem; }
   .reply-actions .btn { flex: 1 1 100%; }
 }
+
+/* ---------- Mailing polish ---------- */
+/* The paper's shadow is soft and see-through, so a panel lifting mid-fold shows a shadow, not a black slab. */
+.mail-shadow { background: #0d070380; filter: blur(7px); box-shadow: 0 18px 30px 2px #0d070359; }
+/* The mailbox slot's flap swings in from its top hinge. */
+.mb-flap { transform-box: fill-box; transform-origin: 50% 0; }
+.mailroom-caption { will-change: clip-path, opacity; }
+
+/* ---------- Ink shine: light catches the wet ink as you hover a main button ---------- */
+.btn.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, #fff4dc3d 48%, #fff4dc14 54%, transparent 65%);
+  translate: -110% 0;
+  pointer-events: none;
+}
+.btn.primary:hover::after, .btn.primary:focus-visible::after { translate: 110% 0; transition: translate 0.8s cubic-bezier(.16, 1, .3, 1); }
+
+/* ---------- Print-in: sections blur into focus as you reach them, instead of wiping across ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-print] { clip-path: none; opacity: 0; }
+  .js [data-print].printed { animation: print-soft 0.85s cubic-bezier(.16, 1, .3, 1) var(--d, 0s) forwards; }
+}
+@keyframes print-soft {
+  from { opacity: 0; filter: blur(6px); translate: 0 10px; }
+  to { opacity: 1; filter: none; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .btn.primary::after { display: none; } }
+
+/* ========== UI polish ========== */
+
+/* "Extra! Extra!": each word stays on one line. */
+.shout .w { display: inline-block; white-space: nowrap; }
+
+/* The story columns: finer justification, fewer gaps between words. */
+.story, .cols3 p { text-wrap: pretty; hyphenate-limit-chars: 6 3 2; }
+
+/* The EXTRA! stamp sits at the head of the right-hand ear, with the ear's words printed below it. */
+.masthead > .ear.right { padding-top: 3.2em; }
+/* Phones have no ears, so the stamp shrinks into the corner beside the title instead of over it. */
+@media (max-width: 680px) { .masthead > .stamp { font-size: 0.85rem; top: -2px; right: -4px; padding: 0 6px 1px; border-width: 2px; } }
+
+/* ---------- Pinned tickets: a slim strip of newsprint behind them, like a folded page edge ---------- */
+.tickets-slot::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  left: 50%;
+  width: min(var(--pw), 100vw);
+  height: calc(var(--strip-h, 86px) + env(safe-area-inset-top, 0px));
+  translate: -50% -110%;
+  background:
+    radial-gradient(#0000000b 1px, transparent 1.2px) 0 0 / 4px 4px,
+    linear-gradient(#efe8d6, #e9e1cc);
+  border-bottom: 3px double var(--line);
+  box-shadow: 0 10px 18px -8px #1a0d0699;
+  pointer-events: none;
+  transition: translate 0.45s cubic-bezier(.16, 1, .3, 1);
+}
+html.tickets-docked .tickets-slot::before { translate: -50% 0; }
+html.tickets-docked .tickets-slot:has(.tickets.away)::before { translate: -50% -110%; }
+html.intro-on .tickets-slot::before { display: none; }
+@media (max-width: 680px) { .tickets-slot::before { --strip-h: 62px; width: 100vw; } }
+
+/* ---------- Hover and press: cards you can pick lift a little and press in ---------- */
+.ring-cards article, .mode-pick span, .frame, .ad {
+  transition: transform 0.28s cubic-bezier(.16, 1, .3, 1), box-shadow 0.28s cubic-bezier(.16, 1, .3, 1), background 0.2s ease;
+}
+.ring-cards article { cursor: pointer; }
+@media (hover: hover) {
+  .ring-cards article:hover { transform: translateY(-4px); box-shadow: 0 10px 16px -12px #1a0d0680; }
+  .mode-pick label:not(:has(input:disabled)):hover span { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--text); }
+  .frame:hover { transform: translateY(-3px) rotate(-1deg); }
+  /* Classifieds aren't buttons, so they only shift slightly, like a clipping nudged on the desk. */
+  .ad:hover { transform: rotate(-0.6deg); box-shadow: 2px 3px 0 #1b1b1b1f; }
+}
+.ring-cards article:active { transform: translateY(-1px); transition-duration: 0.1s; }
+.mode-pick label:not(:has(input:disabled)):active span { transform: translate(0, 0); box-shadow: 0 0 0 var(--text); transition-duration: 0.1s; }
+.frame:active { transform: translateY(0) scale(0.97); transition-duration: 0.1s; }
+@media (prefers-reduced-motion: reduce) {
+  .ring-cards article, .mode-pick span, .frame, .ad { transition: none; }
+  .ring-cards article:hover, .frame:hover, .ad:hover, .mode-pick label:hover span { transform: none; }
+}
+
+/* ---------- Signing the folded entry ---------- */
+.sign-overlay { position: absolute; z-index: 2; overflow: visible; pointer-events: none; }
+.sign-overlay .pen { filter: drop-shadow(3px 6px 4px #0a050299); }
+.sign-ink-on-paper { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }

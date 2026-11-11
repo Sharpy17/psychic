@@ -1,0 +1,276 @@
+/* ---------- The Daily Poll (js/daily.js) ----------
+   The way in: a seal slapped on the circus bill, a "new" nav link and an ad lower down.
+   The paper: a second edition of the front page (same .sheet, masthead, coupon and tickets)
+   that unrolls from a paper roll. Only the chart is its own design. */
+
+/* ===== The seal on the bill ===== */
+/* Two stacked layers: the starburst (.seal-spin) turns slowly on its own compositor layer, and the
+   face (.seal-top) sits still on top. The shadow is a plain round box-shadow, not a filter, so
+   nothing has to be repainted while it turns. */
+.daily-seal {
+  position: absolute; z-index: 6; top: -46px; right: -38px;
+  width: clamp(118px, 15vw, 178px); aspect-ratio: 1; padding: 0; border: 0; background: none; cursor: pointer;
+  rotate: 9deg;
+  transition: scale 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.daily-seal::before { /* The shadow on the paper. */
+  content: ""; position: absolute; inset: 9%; border-radius: 50%; z-index: -1;
+  box-shadow: 3px 5px 0 #1b1b1b33, 0 14px 22px #0000004d;
+}
+.daily-seal svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.seal-spin { will-change: transform; }
+.seal-burst { fill: var(--red); }
+.seal-face { fill: #f7f0dd; }
+.seal-ring { fill: none; stroke: var(--red); stroke-width: 2.6; }
+.seal-ring.thin { stroke: var(--text); stroke-width: 1; stroke-dasharray: 3 2.4; }
+.seal-arc { font: 400 15.5px var(--f-circus); fill: var(--red); letter-spacing: 0.6px; }
+.seal-bot { font: 400 13px var(--f-type); fill: var(--text); letter-spacing: 1.2px; }
+.seal-the { font: 400 20px var(--f-circus); fill: var(--text); }
+.seal-big { font: 400 50px var(--f-wood); fill: var(--text); letter-spacing: 1px; }
+.daily-seal:hover, .daily-seal:focus-visible { scale: 1.07; }
+.daily-seal:focus-visible { outline: 3px solid var(--red); outline-offset: 4px; border-radius: 50%; }
+html.intro-on .daily-seal { visibility: hidden; }
+/* It is slapped on once the intro ends: one smooth pop with a small overshoot. */
+html:not(.intro-on) .daily-seal { animation: seal-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.3s both; }
+.seal-spin { animation: seal-spin 36s linear infinite; }
+@keyframes seal-in {
+  from { transform: scale(1.8) rotate(-24deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes seal-spin { to { transform: rotate(360deg); } }
+@media (max-width: 680px) { .daily-seal { top: -58px; right: -12px; width: 108px; } }
+
+/* The "new" tag on the nav link. */
+.daily-link { color: var(--red); }
+.daily-link sup { font: 400 0.62rem/1 var(--f-type); letter-spacing: 0.08em; text-transform: uppercase; margin-left: 3px; padding: 1px 4px; background: var(--red); color: var(--bg); vertical-align: 0.6em; }
+
+/* ===== The ad lower down the page ===== */
+.daily-ad-wrap { padding-block: 34px 30px; border-bottom: 1px solid var(--line); }
+.daily-ad {
+  position: relative; display: grid; justify-items: center; gap: 8px; width: 100%;
+  padding: 26px clamp(16px, 5vw, 64px) 22px; cursor: pointer; text-align: center;
+  color: var(--text); font: inherit;
+  background: radial-gradient(circle, #1b1b1b1f 0.6px, transparent 0.9px) 0 0 / 5px 5px, var(--panel);
+  border: 4px double var(--text); outline: 1px solid var(--text); outline-offset: 5px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.daily-ad:hover { transform: translateY(-2px) rotate(-0.3deg); box-shadow: 6px 8px 0 #1b1b1b26; }
+.daily-ad:focus-visible { outline: 3px solid var(--red); outline-offset: 5px; }
+.daily-ad .ad-flag { position: absolute; top: -10px; left: 50%; translate: -50% 0; background: var(--bg); padding: 0 10px; font: 400 0.7rem/1.4 var(--f-type); letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+.daily-ad .ad-kicker { font: 400 0.82rem/1.3 var(--f-type); letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); }
+.daily-ad .ad-big { font: 400 clamp(1.9rem, 5.6vw, 3.4rem)/1 var(--f-wood); letter-spacing: -0.01em; text-transform: uppercase; max-width: 15ch; text-wrap: balance; }
+.daily-ad .ad-sub { font: italic 400 clamp(1rem, 2vw, 1.15rem)/1.4 var(--f-body); max-width: 46ch; color: #2b2925; }
+.daily-ad .ad-cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px; margin-top: 6px; }
+.daily-ad .ad-today { font: 700 1rem/1.3 var(--f-head); border-bottom: 2px solid var(--red); }
+.daily-ad .ad-go { background: var(--text); color: var(--bg); padding: 10px 20px; font: 400 1.05rem/1 var(--f-circus); letter-spacing: 0.02em; transition: background 0.2s; }
+.daily-ad:hover .ad-go { background: var(--red); }
+.daily-ad .ad-burst {
+  position: absolute; top: -18px; right: clamp(-8px, 2vw, 22px); width: 92px; height: 92px; display: grid; place-items: center;
+  background: var(--red); color: var(--bg); rotate: 12deg;
+  clip-path: polygon(50% 0, 61% 14%, 79% 9%, 79% 27%, 96% 34%, 86% 50%, 96% 66%, 79% 73%, 79% 91%, 61% 86%, 50% 100%, 39% 86%, 21% 91%, 21% 73%, 4% 66%, 14% 50%, 4% 34%, 21% 27%, 21% 9%, 39% 14%);
+  font: 400 0.95rem/1.05 var(--f-circus); text-align: center;
+}
+@media (max-width: 560px) { .daily-ad .ad-burst { width: 70px; height: 70px; font-size: 0.75rem; top: -22px; right: -6px; } }
+
+/* ===== The paper: a full-screen layer over the front page ===== */
+.daily-paper {
+  position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; overflow: hidden; background: transparent; color: var(--text);
+}
+.daily-paper::backdrop { background: #160e09d6; }
+.daily-paper[open]::backdrop { animation: fade 0.35s ease-out; }
+.daily-paper.is-closing::backdrop { opacity: 0; transition: opacity 0.3s 0.25s; }
+.dp-scroll { position: absolute; inset: 0; overflow: hidden auto; overscroll-behavior: contain; scrollbar-color: #6b4c36 #160e09; }
+.daily-paper.is-animating .dp-scroll { overflow: hidden; }
+.dp-stage { position: relative; padding: 22px clamp(8px, 2vw, 24px) 44px; }
+/* The supplement is an insert laid on the front page, narrower than it, so the front page's
+   edges show on both sides. Its parts lay out by the insert's own width (container "dp"),
+   not the screen's, because the front page's media queries assume a full-width sheet. */
+.dp-sheet {
+  width: min(820px, calc(var(--pw, 100vw) - 2 * clamp(28px, 6vw, 72px)));
+  max-width: none;
+  margin: 0 auto;
+  padding-inline: clamp(14px, 3vw, 32px);
+  container: dp / inline-size;
+}
+.daily-paper.is-animating .dp-sheet { box-shadow: inset 0 0 90px #b08d5a3a; } /* No drop shadow under a sheet that's still on the roll. */
+
+/* The roll the paper comes off. Its height and surface position are set every frame by daily.js. */
+.dp-roll, .dp-curl { position: absolute; left: 0; top: 0; display: none; pointer-events: none; }
+.daily-paper.is-animating .dp-roll, .daily-paper.is-animating .dp-curl { display: block; will-change: transform, opacity; }
+.daily-paper.is-animating .dp-sheet { will-change: clip-path; }
+.dp-roll {
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #0000007a 0%, #00000026 13%, #ffffff66 33%, #ffffff10 47%, #00000014 66%, #00000059 88%, #00000094 100%),
+    repeating-linear-gradient(180deg, #0000 0 6px, #1b1b1b24 6px 7px, #0000 7px 10px, #1b1b1b16 10px 11px, #0000 11px 19px),
+    radial-gradient(#0000001c 1px, transparent 1.25px) 0 0 / 4px 4px,
+    #f1e9d4;
+  background-position: 0 0, 0 var(--spin, 0px), 0 var(--spin, 0px), 0 0;
+  box-shadow: 0 22px 26px -12px #000c, 0 5px 8px #0007;
+}
+/* The roll's ends: rings of wound paper around a cardboard core. */
+.dp-core {
+  position: absolute; top: 0; height: 100%; aspect-ratio: 0.3; border-radius: 50%;
+  background:
+    radial-gradient(closest-side, #3b2a1a 0 20%, #9b7a4f 21% 30%, #0000 31%),
+    repeating-radial-gradient(closest-side, #ece2c8 0 1.6px, #b9a780 1.6px 2.4px, #e3d7b8 2.4px 3.4px);
+  box-shadow: inset 0 0 0 1px #8f7f5e, inset -3px 0 6px #0005;
+}
+.dp-core.left { left: -4px; }
+.dp-core.right { right: -4px; transform: scaleX(-1); }
+/* The paper bending into the roll: a shadow that deepens toward it. */
+.dp-curl { height: 90px; background: linear-gradient(180deg, #0000 0%, #4a321a0d 35%, #4a321a33 75%, #0000006b 100%); }
+
+/* ===== The supplement's own touches on the front-page parts ===== */
+.dp-sheet .topline .dp-close { white-space: nowrap; }
+.dp-sheet .masthead { gap: 14px; }
+.dp-sheet .ear { max-width: 150px; }
+.dp-sheet .masthead .dp-name {
+  font: 400 clamp(2rem, 7.2cqi, 3.6rem)/1 var(--f-black);
+  text-shadow: 0 0 1px #1b1b1b99, 0.5px 0.4px 0 #1b1b1b55;
+  white-space: nowrap;
+}
+.dp-sheet .dp-stamp { right: -4px; top: -8px; font-size: 1.2rem; padding: 1px 10px 3px; border-width: 3px; }
+.dp-sheet .front { padding-block: 30px 36px; border-bottom: 1px solid var(--line); }
+.dp-sheet .ticker #dp-ticker { white-space: nowrap; }
+.dp-how { padding-block: 36px 28px; }
+.dp-how .cols3 article { padding-inline: 16px; }
+.dp-how .cols3 p { text-align: left; font-size: 0.95rem; }
+@container dp (max-width: 700px) {
+  .dp-sheet .masthead { grid-template-columns: 1fr; }
+  .dp-sheet .ear, .dp-sheet .dp-stamp { display: none; }
+  .dp-how .cols3 { grid-template-columns: 1fr; gap: 24px; }
+  .dp-how .cols3 article, .dp-how .cols3 article + article { padding: 0; border: 0; }
+}
+@container dp (max-width: 520px) { .dp-sheet .topline .links { display: none; } }
+.dp-how .daily-key { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 28px; margin: 28px auto 0; padding-top: 16px; border-top: 1px solid #1b1b1b55; max-width: 760px; }
+.dp-sheet footer { border-top: 3px double var(--line); }
+
+/* The entry form: the board on the left and the words on the right, like the contest entry. */
+.daily-card[aria-busy="true"] .sub { animation: hint 1.4s ease-in-out infinite; }
+.daily-card .board-wrap { grid-template-columns: auto minmax(0, 430px) auto; }
+.daily-card .board-slot { max-width: 430px; }
+.daily-card .board:not(:focus-visible) { outline: 0; }
+.daily-card .q, .daily-card .rings { display: none; }
+#daily-retry { display: block; margin: 10px auto 0; }
+/* Narrow insert: the chart, then the words under it, centred. */
+.dp-front .coupon { display: block; max-width: 520px; margin-inline: auto; padding: 22px 18px 18px; }
+.dp-front .coupon h2 { font-size: clamp(1.25rem, 3.4cqi, 1.6rem); }
+.dp-front .coupon h2, .dp-front .coupon .sub, .dp-front .coupon .hint, .dp-front .coupon .coupon-fine,
+.dp-front .coupon .demo-clue, .dp-front .coupon .daily-result { text-align: center; }
+.dp-front .coupon .demo-clue { font-size: clamp(1.5rem, 4.4cqi, 2rem); margin-top: 6px; }
+.dp-front .coupon .daily-result .demo-foot, .dp-front .coupon .daily-result .entry-row, .dp-front .coupon .dp-verdict { justify-content: center; }
+.dp-front .coupon .board-wrap { margin-bottom: 14px; }
+/* Wide insert: the chart on the left, the words beside it, like the contest entry form. */
+@container dp (min-width: 680px) {
+  .dp-front .coupon {
+    display: grid; max-width: none; padding: 24px 22px 20px;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    grid-template-rows: 1fr repeat(6, auto) 1fr;
+    column-gap: 26px;
+  }
+  .dp-front .coupon > .board-wrap { grid-column: 1; grid-row: 1 / -1; align-self: center; margin-bottom: 0; }
+  .dp-front .coupon h2 { grid-row: 2; }
+  .dp-front .coupon .sub { grid-row: 3; }
+  .dp-front .coupon .demo-clue { grid-row: 4; }
+  .dp-front .coupon .hint, .dp-front .coupon .daily-result { grid-row: 5; }
+  .dp-front .coupon .demo-foot { grid-row: 6; }
+  .dp-front .coupon .coupon-fine { grid-row: 7; }
+  .dp-front .coupon h2, .dp-front .coupon .sub, .dp-front .coupon .hint, .dp-front .coupon .coupon-fine,
+  .dp-front .coupon .demo-clue, .dp-front .coupon .daily-result { text-align: left; }
+  .dp-front .coupon .daily-result .demo-foot, .dp-front .coupon .daily-result .entry-row, .dp-front .coupon .dp-verdict { justify-content: flex-start; }
+}
+
+/* ===== The chart: graph paper and newsprint dots, with the real percentages ===== */
+.poll-paper { fill: #fffcf2; }
+.poll-dot { fill: var(--text); opacity: 0.15; }
+.poll-grid { fill: none; stroke: var(--text); stroke-width: 0.15; opacity: 0.35; }
+.poll-mid { fill: none; stroke: var(--text); stroke-width: 0.35; stroke-dasharray: 1.4 1.2; opacity: 0.7; }
+.poll-axis { fill: none; stroke: var(--text); stroke-width: 0.9; }
+.poll-frame { fill: none; stroke: var(--text); stroke-width: 0.3; }
+
+/* Your guess is the game's mark (.you-mark, board.css), labelled "You" here because the crowd's
+   red dot shares the board. Red is the answer; ink is you. */
+#daily-board svg { overflow: visible; }
+.daily-card .you-ring, .dp-recap .you-ring, .daily-key .you-ring { fill: #fffcf2; }
+.you-label { font: italic 700 4.2px var(--f-head); fill: var(--text); paint-order: stroke; stroke: #fffcf2; stroke-width: 0.9px; }
+
+/* The crowd's dot (red, labelled) and where it stood when you mailed (a dashed ring). The dot
+   glides when new guesses move it while the paper is open. */
+.crowd-dot, .then-dot { transform-box: view-box; opacity: 0; pointer-events: none; }
+.crowd-dot { transition: opacity 0.4s 0.15s, transform 1.4s cubic-bezier(0.45, 0, 0.2, 1); }
+.then-dot { transition: opacity 0.5s 0.6s; }
+.crowd-dot.show, .then-dot.show { opacity: 1; }
+.crowd-glow { fill: var(--red); opacity: 0.16; }
+.crowd-pip { fill: var(--red); stroke: #fffcf2; stroke-width: 0.7; }
+.crowd-label { font: italic 700 3.2px var(--f-head); fill: var(--red); paint-order: stroke; stroke: #fffcf2; stroke-width: 0.9px; }
+.then-ring { fill: none; stroke: var(--needle); stroke-width: 0.8; stroke-dasharray: 1.6 1.2; }
+.crowd-dot.nudge .crowd-glow { animation: crowd-nudge 0.9s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes crowd-nudge { 0% { transform: scale(1); opacity: 0.16; } 40% { transform: scale(2.2); opacity: 0.3; } 100% { transform: scale(1); opacity: 0.16; } }
+
+.daily-key { list-style: none; padding: 0; font-size: 0.92rem; }
+.daily-key li { display: flex; align-items: center; gap: 10px; }
+.daily-key svg { width: 20px; height: 20px; flex: none; overflow: visible; }
+.daily-key .key-target { fill: var(--red); opacity: 0.85; }
+.daily-key .key-crowd { fill: none; stroke: var(--needle); stroke-width: 1.2; stroke-dasharray: 1.6 1.2; }
+.daily-key .key-road { fill: none; stroke: var(--text); stroke-width: 1.1; stroke-dasharray: 0.4 1.6; stroke-linecap: round; }
+
+/* ===== Yesterday's poll, printed above today's: the dot's road and where it finished ===== */
+.dp-recap {
+  display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr); gap: 6px 22px; align-items: center;
+  max-width: 760px; margin: 26px auto 0; padding: 14px 16px 16px;
+  border-top: 3px double var(--text); border-bottom: 1px solid var(--text);
+}
+.dp-recap .recap-kicker { grid-column: 1 / -1; font: 700 0.78rem/1.2 var(--f-type); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.dp-recap .recap-board { width: 100%; height: auto; display: block; }
+.dp-recap h3 { font: 900 clamp(1.15rem, 3cqi, 1.45rem)/1.15 var(--f-head); margin: 0 0 6px; }
+.dp-recap p { margin: 0 0 6px; font-size: 0.98rem; }
+.dp-recap .recap-labels { font: 400 0.78rem/1.3 var(--f-type); color: var(--muted); }
+.recap-road { fill: none; stroke: var(--text); stroke-width: 0.9; stroke-dasharray: 0.3 2; stroke-linecap: round; }
+.recap-start { fill: #fffcf2; stroke: var(--text); stroke-width: 0.8; }
+.recap-axis { font: italic 700 4.4px var(--f-head); fill: var(--muted); }
+@media (max-width: 520px) {
+  .dp-recap { grid-template-columns: 1fr; text-align: center; }
+  .dp-recap .recap-board { max-width: 240px; margin: 0 auto; }
+}
+
+/* ===== The reply, printed in the entry form ===== */
+.daily-result { margin-top: 8px; text-align: center; }
+.daily-result p { margin-bottom: 8px; }
+.dp-verdict { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: inherit; margin: 6px 0 12px; }
+.dp-verdict-stamp {
+  display: inline-block; transform: rotate(-6deg);
+  color: var(--red); border: 4px double var(--red); padding: 2px 14px 4px;
+  font: 900 clamp(1.8rem, 3.4vw, 2.4rem)/1.1 var(--f-head); letter-spacing: 0.04em; text-transform: uppercase;
+  mix-blend-mode: multiply;
+  -webkit-mask: var(--noise) 0 0 / 160px, linear-gradient(#000, #000); -webkit-mask-composite: xor;
+  mask: var(--noise) 0 0 / 160px exclude, linear-gradient(#000, #000);
+}
+.dp-verdict-stamp.tier-miss, .dp-verdict-stamp.tier-edge { color: var(--text); border-color: var(--text); }
+.dp-verdict-stamp.thump { animation: verdict-thump 0.4s steps(4) both; }
+@keyframes verdict-thump {
+  0% { transform: rotate(-6deg) scale(2.4); opacity: 0; }
+  60% { transform: rotate(-6deg) scale(0.94); opacity: 1; }
+  100% { transform: rotate(-6deg) scale(1); opacity: 1; }
+}
+.dp-points { font: 400 1.35rem/1.1 var(--f-circus); }
+.dp-facts { font-size: 1.02rem; }
+.dp-crowd { font-style: italic; color: #2b2925; }
+.daily-result .demo-foot { margin-top: 12px; }
+.daily-result .entry-row { gap: 18px; flex-wrap: wrap; }
+.daily-copy { display: block; width: 100%; margin: 6px 0 10px; font: 0.85rem/1.4 var(--f-type); padding: 8px; border: 1px dashed var(--text); background: var(--bg); resize: none; }
+
+@media (max-width: 680px) {
+  .dp-stage { padding: 10px 0 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.intro-on) .daily-seal, .seal-spin { animation: none; }
+  .daily-seal { transition: none; }
+  .daily-paper[open]::backdrop { animation: none; }
+  .daily-ad, .daily-ad:hover { transition: none; transform: none; }
+  .dp-verdict-stamp.thump { animation: none; }
+  .crowd-dot, .then-dot { transition: none; }
+  .crowd-dot.nudge .crowd-glow { animation: none; }
+}

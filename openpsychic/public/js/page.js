@@ -265,8 +265,15 @@
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
     sections.forEach(sec => io.observe(sec));
 
+    // A ring card plays its ring wherever you click it, not only on its button.
+    document.querySelectorAll('.ring-cards article').forEach(card => card.addEventListener('click', e => {
+      if (!e.target.closest('button, a') && !getSelection().toString()) card.querySelector('button')?.click();
+    }));
     document.querySelectorAll('[data-shout]').forEach(shout => {
-    shout.innerHTML = [...shout.textContent].map((ch, i) => `<span style="--i:${i}">${ch}</span>`).join('');
+    let i = 0;
+    shout.innerHTML = shout.textContent.trim().split(/\s+/)
+      .map(word => `<span class="w">${[...word].map(ch => `<span style="--i:${i++}">${ch}</span>`).join('')}</span>`)
+      .join(' ');
     new IntersectionObserver(([e]) => shout.classList.toggle('live', e.isIntersecting)).observe(shout);
     });
   }

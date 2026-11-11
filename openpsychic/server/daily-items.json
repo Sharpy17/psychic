@@ -1,0 +1,26 @@
+{
+  "about": "The Daily Poll. One item a day, in this order, starting on launchDate; the list wraps. 'card' is a board from cards.js. 'start' is where the crowd's dot begins the day (the paper's own guess, -100..100 with y up); it counts as one guess, so real guesses soon outweigh it.",
+  "launchDate": "2026-11-09",
+  "items": [
+    { "text": "Spider-Man", "card": "rated", "start": { "x": 20, "y": 10 } },
+    { "text": "Elon Musk", "card": "smart", "start": { "x": -40, "y": 40 } },
+    { "text": "Karaoke", "card": "exciting", "start": { "x": -30, "y": 40 } },
+    { "text": "Shrek", "card": "funny", "start": { "x": -30, "y": 70 } },
+    { "text": "Taylor Swift", "card": "rated", "start": { "x": 20, "y": 50 } },
+    { "text": "IKEA", "card": "stress", "start": { "x": 60, "y": 10 } },
+    { "text": "Gordon Ramsay", "card": "smart", "start": { "x": -60, "y": 50 } },
+    { "text": "Crocs", "card": "cool", "start": { "x": 50, "y": -40 } },
+    { "text": "Keanu Reeves", "card": "famous", "start": { "x": 75, "y": 60 } },
+    { "text": "SpongeBob SquarePants", "card": "hopeful", "start": { "x": 60, "y": 70 } },
+    { "text": "Friends (the TV show)", "card": "rated", "start": { "x": -30, "y": 40 } },
+    { "text": "Camping", "card": "clean", "start": { "x": 85, "y": -60 } },
+    { "text": "Barbie", "card": "trendy", "start": { "x": -40, "y": 20 } },
+    { "text": "Minecraft", "card": "exciting", "start": { "x": 0, "y": 30 } },
+    { "text": "Dolly Parton", "card": "warm", "start": { "x": 70, "y": 75 } },
+    { "text": "The Office (US)", "card": "cool", "start": { "x": 20, "y": 30 } },
+    { "text": "Batman", "card": "rich", "start": { "x": -60, "y": 85 } },
+    { "text": "Titanic (the 1997 film)", "card": "romantic", "start": { "x": 50, "y": 70 } },
+    { "text": "The Beatles", "card": "rated", "start": { "x": -60, "y": 20 } },
+    { "text": "Lego", "card": "gift", "start": { "x": 20, "y": 75 } }
+  ]
+}

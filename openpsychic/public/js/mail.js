@@ -50,7 +50,7 @@
 
   // A small drawing of one clue's board, with your mark if you've made it.
   function thumb(m, current) {
-    const mark = m ? `<path d="M${m.x - 11} ${m.y - 11}L${m.x + 11} ${m.y + 11}M${m.x + 11} ${m.y - 11}L${m.x - 11} ${m.y + 11}"/>` : '';
+    const mark = m ? `<g transform="translate(${m.x} ${m.y}) scale(3.2)">${YOU_MARK}</g>` : ''; // The board's own mark, scaled up.
     return `<svg class="thumb${current ? ' is-current' : ''}" viewBox="0 0 100 100" aria-hidden="true"><line x1="50" y1="0" x2="50" y2="100"/><line x1="0" y1="50" x2="100" y2="50"/>${mark}</svg>`;
   }
 
@@ -78,10 +78,33 @@
       el.animate(frames, { duration: skipped ? 0 : duration, easing: EASE, fill: 'forwards', ...options }).finished.catch(() => {});
     const pause = ms => skipped ? Promise.resolve() : new Promise(r => timers.push(setTimeout(r, ms)));
 
+    // GSAP gives the physical moves their weight: springy settles, wobbles, and curved flight paths.
+    // Skipping jumps straight past them; finish() kills whatever is still running.
+    const G = window.gsap;
+    if (G && window.MotionPathPlugin) G.registerPlugin(window.MotionPathPlugin);
+    const tween = (el, vars) => (G && !skipped ? G.to(el, vars).then(() => {}) : Promise.resolve());
+    const set = (el, vars) => G?.set(el, vars);
+
+    // The caption ticket: the old words fade off, the new ones type on letter by letter.
+    let saying = 0;
+    async function say(text) {
+      const turn = ++saying;
+      if (caption.textContent && !skipped) {
+        await caption.animate([{ opacity: 1 }, { opacity: 0, translate: '-50% 5px' }], { duration: 140, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+      }
+      if (turn !== saying) return;
+      caption.getAnimations().forEach(a => a.cancel());
+      caption.textContent = text;
+      if (!text || skipped) return;
+      caption.animate([{ opacity: 0, translate: '-50% -5px' }, { opacity: 1, translate: '-50% 0' }], { duration: 220, easing: SETTLE });
+      caption.animate([{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: Math.min(520, 40 * text.length), easing: `steps(${text.length}, end)` });
+    }
+
     function finish() {
       if (finished) return;
       finished = true;
       timers.forEach(clearTimeout);
+      G?.killTweensOf(room.querySelectorAll('*'));
       slot.querySelector('.cut-path')?.remove();
       slot.classList.add('is-cut');
       statusEl.textContent = 'Your entry has been mailed. Your reply has arrived.';
@@ -116,17 +139,15 @@
       const back = make('div', 'fold-face fold-back', p);
       back.style.transform = axis === 'y' ? 'rotateY(180deg)' : 'rotateX(180deg)';
       const backShade = make('i', 'fold-shade', back);
-      return { el: p, shades: [frontShade, backShade] };
+      return { el: p, front, back, shades: [frontShade, backShade] };
     }
 
     // Wide forms fold in half twice. Tall forms get the classic letter fold in three.
-    let folds, boxes;
-    const turn = (axis, sign, z) => [
-      { transform: `translateZ(0px) rotate${axis}(0deg)` },
-      { transform: `translateZ(${z + 16}px) rotate${axis}(${sign * 90}deg)`, offset: 0.5 },
-      { transform: `translateZ(${z}px) rotate${axis}(${sign * 183}deg)`, offset: 0.88 },
-      { transform: `translateZ(${z}px) rotate${axis}(${sign * 180}deg)` },
-    ];
+    // Each fold: what turns (axis, direction, how high it lands), which shades light it,
+    // and which faces it comes to rest on. Those faces are hidden as it lands, so the print
+    // underneath can never flicker through the fold. topFace is the blank side left on top.
+    let folds, boxes, topFace;
+    const turn = (el, axis, sign, z) => ({ el, axis, sign, z });
     if (wide) {
       const qw = W / 2, qh = H / 2;
       const tl = panel(root, 0, 0, qw, qh, 0, 0, 'x');
@@ -137,9 +158,10 @@
       const bl = panel(hinge, 0, qh, qw, qh, 0, 0, 'x');
       const br = panel(hinge, qw, qh, qw, qh, qw, 0, 'y', '0 50%');
       folds = [
-        { moving: [[tr.el, turn('Y', -1, 1)], [br.el, turn('Y', -1, 1)]], shades: [...tr.shades, ...br.shades], cast: [tl.shades[0], bl.shades[0]] },
-        { moving: [[hinge, turn('X', 1, 3)]], shades: bl.shades, cast: [tr.shades[1]] },
+        { moving: [turn(tr.el, 'Y', -1, 2), turn(br.el, 'Y', -1, 2)], lit: [tr.shades, br.shades], cast: [tl.shades[0], bl.shades[0]], cover: [tl.front, bl.front] },
+        { moving: [turn(hinge, 'X', 1, 6)], lit: [bl.shades], cast: [tr.shades[1]], cover: [tr.back] },
       ];
+      topFace = bl.back;
       boxes = [{ x: 0, y: 0, w: W, h: H }, { x: 0, y: 0, w: qw, h: H }, { x: 0, y: 0, w: qw, h: qh }];
     } else {
       const third = H / 3;
@@ -147,9 +169,10 @@
       const mid = panel(root, 0, third, W, third, 0, third, 'x');
       const bot = panel(root, 0, third * 2, W, third, 0, third * 2, 'x', '50% 0');
       folds = [
-        { moving: [[bot.el, turn('X', 1, 1)]], shades: bot.shades, cast: [mid.shades[0]] },
-        { moving: [[top.el, turn('X', -1, 3)]], shades: top.shades, cast: [bot.shades[1]] },
+        { moving: [turn(bot.el, 'X', 1, 2)], lit: [bot.shades], cast: [mid.shades[0]], cover: [mid.front] },
+        { moving: [turn(top.el, 'X', -1, 6)], lit: [top.shades], cast: [bot.shades[1]], cover: [bot.back] },
       ];
+      topFace = top.back;
       boxes = [{ x: 0, y: 0, w: W, h: H }, { x: 0, y: 0, w: W, h: third * 2 }, { x: 0, y: third, w: W, h: third }];
     }
 
@@ -197,13 +220,14 @@
       const stripes = [0, 1, 2, 3, 4, 5, 6, 7].map(i => `<rect x="${17 + i * 17}" y="58" width="17" height="190" fill="${i % 2 ? '#e9e0c8' : '#b3261e'}"/>`).join('');
       const scallops = [0, 1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${17 + i * 17} 58a8.5 9 0 0 0 17 0z" fill="${i % 2 ? '#e9e0c8' : '#b3261e'}" stroke="#1b1b1b" stroke-width="1.4"/>`).join('');
       const box = make('div', 'mailbox', room, `<svg viewBox="0 0 170 300" aria-hidden="true">
-        <path d="M85 4v22" stroke="#1b1b1b" stroke-width="3"/><path d="M85 5l26 8-26 8z" fill="#b3261e" stroke="#1b1b1b" stroke-width="1.4"/>
+        <path d="M85 4v22" stroke="#1b1b1b" stroke-width="3"/><path class="mb-pennant" d="M85 5l26 8-26 8z" fill="#b3261e" stroke="#1b1b1b" stroke-width="1.4"/>
         ${stripes}
         <path d="M17 58C20 36 56 24 85 24s65 12 68 34z" fill="#b3261e" stroke="#1b1b1b" stroke-width="2"/>
         <path d="M58 58C60 42 72 28 85 24c13 4 25 18 27 34z" fill="#e9e0c8" stroke="#1b1b1b" stroke-width="1.4"/>
         ${scallops}
         <rect x="17" y="58" width="136" height="190" fill="none" stroke="#1b1b1b" stroke-width="2.4"/>
         <rect x="32" y="84" width="106" height="13" rx="2" fill="#17110b" stroke="#e9e0c8" stroke-width="2"/>
+        <g class="mb-flap"><rect x="33" y="85" width="104" height="11" rx="1.5" fill="#8f1d17" stroke="#1b1b1b" stroke-width="1.2"/><path d="M40 89.5h90" stroke="#e9e0c8" stroke-width="0.8" opacity="0.6"/></g>
         <rect x="42" y="124" width="86" height="62" fill="#e9e0c8" stroke="#1b1b1b" stroke-width="2"/>
         <rect x="46" y="128" width="78" height="54" fill="none" stroke="#1b1b1b" stroke-width="0.8"/>
         <text x="85" y="147" text-anchor="middle" font-family="Rye, Georgia, serif" font-size="12.5" fill="#1b1b1b">Big Top</text>
@@ -215,11 +239,141 @@
       return box;
     }
 
+    /* ---- One fold: quick and smooth, lit as it turns ---- */
+
+    const FOLD = 0.44; // seconds per fold
+    async function foldOnce(fold, prev, next) {
+      paperSound(0.22, 0.2);
+      if (!G || skipped) {
+        fold.moving.forEach(({ el, axis, sign, z }) => { el.style.transform = `translateZ(${z}px) rotate${axis}(${sign * 180}deg)`; });
+        fold.cover.forEach(face => { face.style.visibility = 'hidden'; });
+        root.style.transform = poseFor(next, foldScale, midX, midY);
+        return finished;
+      }
+      let covered = false;
+      const cover = () => { if (!covered) { covered = true; fold.cover.forEach(face => { face.style.visibility = 'hidden'; }); } };
+      const turns = fold.moving.map(({ el, axis, sign, z }) => {
+        const origin = el.style.transformOrigin || '50% 50%';
+        // It lifts as it turns and lands flat; the faces it lands on go once it is nearly down.
+        G.timeline().to(el, { z: z + 22, duration: FOLD / 2, ease: 'sine.out', transformOrigin: origin }).to(el, { z, duration: FOLD / 2, ease: 'sine.in' });
+        return G.to(el, {
+          [axis === 'Y' ? 'rotationY' : 'rotationX']: sign * 180, duration: FOLD, ease: 'power2.inOut', transformOrigin: origin,
+          onUpdate() { if (this.progress() > 0.88) cover(); },
+        }).then(cover);
+      });
+      // Light: the printed side dims as it turns away; the blank side starts in shadow and brightens as it lands.
+      fold.lit.forEach(([front, back]) => {
+        G.fromTo(front, { opacity: 0 }, { opacity: 0.38, duration: FOLD / 2, ease: 'power1.in' });
+        G.fromTo(back, { opacity: 0.42 }, { opacity: 0, duration: FOLD / 2, delay: FOLD / 2, ease: 'power2.out' });
+      });
+      // The turning panel casts a shadow on the half it is about to cover.
+      fold.cast.forEach(shade => G.timeline().fromTo(shade, { opacity: 0 }, { opacity: 0.24, duration: FOLD * 0.7, ease: 'power1.in' }).to(shade, { opacity: 0, duration: FOLD * 0.3 }));
+      animate(shadow, [shadowFor(prev, foldScale, midX, midY), shadowFor(next, foldScale, midX, midY)], FOLD * 1000, { easing: 'cubic-bezier(.2, .7, .3, 1)' });
+      await Promise.all([...turns, animate(root, [{ transform: poseFor(prev, foldScale, midX, midY) }, { transform: poseFor(next, foldScale, midX, midY) }], FOLD * 1000)]);
+      if (finished) return true;
+      await pause(30);
+      return finished;
+    }
+
+    /* ---- The signature: an 80s four-colour clicky pen signs the blank side ---- */
+
+    // One continuous stroke of a loose cursive signature, and an underline, drawn in a 300 x 100 box.
+    const SIGNATURE = 'M8 66C14 40 30 18 36 30C42 44 26 72 34 74C44 76 50 44 58 46C66 48 56 70 64 70C72 70 76 50 84 50C92 50 84 70 92 70C100 70 104 38 112 22C118 12 122 24 116 44C110 64 108 76 118 70C128 64 132 48 140 50C148 52 140 70 150 68C160 66 164 50 172 52C180 54 172 72 182 70C192 68 198 54 206 54C214 54 208 70 218 68C232 66 246 40 262 44C276 48 266 66 252 64C240 62 262 52 290 50';
+    const UNDERLINE = 'M20 86C80 80 170 92 284 82';
+    const PEN = `<g class="pen-body">
+        <path d="M0 0 L-2.6 -9 L2.6 -9Z" fill="#c8c8c4" stroke="#1b1b1b" stroke-width="0.5"/>
+        <rect x="-4.6" y="-34" width="9.2" height="25" rx="2" fill="#ecebe4" stroke="#1b1b1b" stroke-width="0.6"/>
+        <rect x="-3.6" y="-31" width="1.6" height="20" fill="#ffffff" opacity="0.7"/>
+        <rect x="-5.4" y="-38" width="10.8" height="5" rx="1" fill="#cfd2d6" stroke="#1b1b1b" stroke-width="0.5"/>
+        <rect x="-5.8" y="-104" width="11.6" height="67" rx="3" fill="#2d5fb5" stroke="#1b1b1b" stroke-width="0.6"/>
+        <rect x="-4.2" y="-100" width="2" height="58" rx="1" fill="#ffffff" opacity="0.28"/>
+        <rect x="-5.2" y="-112" width="2.4" height="10" fill="#c0272d" stroke="#1b1b1b" stroke-width="0.4"/>
+        <rect x="-2.6" y="-110" width="2.4" height="8" fill="#2e8b3e" stroke="#1b1b1b" stroke-width="0.4"/>
+        <rect x="0" y="-110" width="2.4" height="8" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="0.4"/>
+        <rect x="2.6" y="-115" width="2.4" height="13" fill="#2d5fb5" stroke="#1b1b1b" stroke-width="0.4"/>
+        <rect x="5.4" y="-100" width="3.2" height="40" rx="1.6" fill="#d9dbde" stroke="#1b1b1b" stroke-width="0.5"/>
+        <rect x="6" y="-98" width="0.9" height="34" fill="#ffffff" opacity="0.8"/>
+      </g>`;
+
+    async function sign(face, box) {
+      const fs = foldScale, w = box.w, h = box.h;
+      // Drawn on an overlay exactly over the folded packet, then handed to the paper itself.
+      const NS = 'http://www.w3.org/2000/svg';
+      const over = document.createElementNS(NS, 'svg');
+      over.setAttribute('class', 'sign-overlay');
+      over.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      over.setAttribute('aria-hidden', 'true');
+      Object.assign(over.style, { left: midX - (w * fs) / 2 + 'px', top: midY - (h * fs) / 2 + 'px', width: w * fs + 'px', height: h * fs + 'px' });
+      const k = Math.min((w * 0.72) / 300, (h * 0.5) / 100); // the signature box, fitted to the packet
+      const ox = (w - 300 * k) / 2, oy = h * 0.6 - 60 * k;
+      over.innerHTML = `<g class="sign-ink">
+          <line x1="${ox}" y1="${oy + 88 * k}" x2="${ox + 300 * k}" y2="${oy + 88 * k}" stroke="#1b1b1b" stroke-opacity="0.45" stroke-width="${0.9 / fs}" stroke-dasharray="${3 / fs} ${3 / fs}"/>
+          <text x="${ox}" y="${oy + 88 * k + 13 / fs}" font-family="'Special Elite', monospace" font-size="${9 / fs}" fill="#55504a" letter-spacing="${1 / fs}">ENTRANT’S SIGNATURE</text>
+          <g transform="translate(${ox} ${oy}) scale(${k})" fill="none" stroke="#1d3a8a" stroke-linecap="round" stroke-linejoin="round" stroke-width="${1.9 / (fs * k)}">
+            <path class="sig" d="${SIGNATURE}"/><path class="sig-under" d="${UNDERLINE}"/>
+          </g>
+        </g>
+        <g class="pen" opacity="0"><g transform="rotate(26) scale(${(h * 0.9) / 115})">${PEN}</g></g>`;
+      room.appendChild(over);
+      const [sig, under] = over.querySelectorAll('.sig, .sig-under');
+      const pen = over.querySelector('.pen');
+      const lens = [sig.getTotalLength(), under.getTotalLength()];
+      [sig, under].forEach((path, i) => { path.style.strokeDasharray = lens[i]; path.style.strokeDashoffset = lens[i]; });
+      const at = (path, len) => { const pt = path.getPointAtLength(len); return { x: ox + pt.x * k, y: oy + pt.y * k }; };
+      const place = ({ x, y }) => pen.setAttribute('transform', `translate(${x} ${y})`);
+      const handOver = () => {
+        // The ink now belongs to the paper, so it travels into the envelope with it.
+        const ink = document.createElementNS(NS, 'svg');
+        ink.setAttribute('class', 'sign-ink-on-paper');
+        ink.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        ink.appendChild(over.querySelector('.sign-ink'));
+        face.appendChild(ink);
+        over.remove();
+      };
+      if (!G || skipped) {
+        [sig, under].forEach(path => { path.style.strokeDashoffset = 0; });
+        handOver();
+        return finished;
+      }
+      // The pen comes in from the lower right, clicks, signs in one go, underlines, and lifts away.
+      const start = at(sig, 0);
+      const from = { x: start.x + w * 0.5, y: start.y + h * 0.5 };
+      const pos = { ...from };
+      place(pos);
+      await G.to(pos, { x: start.x, y: start.y, duration: 0.2, ease: 'power2.out', onStart: () => pen.setAttribute('opacity', '1'), onUpdate: () => place(pos) }).then(() => {});
+      if (finished) return true;
+      blip(2600, 0.015, 'square', 0.03);
+      timers.push(setTimeout(() => blip(2100, 0.015, 'square', 0.03), 60));
+      const write = (path, len, duration, ease) => {
+        const prog = { t: 0 };
+        for (let i = 0; i < Math.round(duration / 0.07) && !skipped; i++) timers.push(setTimeout(() => paperSound(0.05, 0.05), i * 70));
+        return G.to(prog, {
+          t: 1, duration, ease,
+          onUpdate: () => { path.style.strokeDashoffset = len * (1 - prog.t); place(at(path, len * prog.t)); },
+        }).then(() => {});
+      };
+      await write(sig, lens[0], 0.72, 'power1.inOut');
+      if (finished) return true;
+      const end = at(sig, lens[0]), u0 = at(under, 0);
+      Object.assign(pos, end);
+      await G.to(pos, { x: u0.x, y: u0.y, duration: 0.1, ease: 'power1.inOut', onUpdate: () => place(pos) }).then(() => {});
+      if (finished) return true;
+      await write(under, lens[1], 0.2, 'power2.in');
+      if (finished) return true;
+      const last = at(under, lens[1]);
+      Object.assign(pos, last);
+      await G.to(pos, { x: last.x + w * 0.4, y: last.y - h * 0.7, duration: 0.22, ease: 'power2.in', onUpdate: () => place(pos) }).then(() => {});
+      if (finished) return true;
+      handOver();
+      await pause(80);
+      return finished;
+    }
+
     /* ---- The sequence ---- */
 
     async function play() {
       // Cut along the dashed line. The blades snip while a slit opens behind them.
-      caption.textContent = 'Cut out your entry';
+      say('Cut out your entry');
       const cut = make('div', 'cut-path', slot, `
         <svg class="cut-slit" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path pathLength="100" d="M0 0H${W}V${H}H0Z"/></svg>
         <svg class="cut-blades" viewBox="-30 -18 60 36" aria-hidden="true">
@@ -229,7 +383,7 @@
         </svg>`);
       const blades = cut.querySelector('.cut-blades');
       blades.style.offsetPath = `path("M0 0H${W}V${H}H0Z")`;
-      const SNIP = 1500;
+      const SNIP = 1100;
       for (let i = 0; i < 7 && !skipped; i++) timers.push(setTimeout(() => paperSound(0.05, 0.16), i * (SNIP / 7)));
       animate(cut.querySelector('.cut-slit path'), [{ strokeDashoffset: 100 }, { strokeDashoffset: 0 }], SNIP, { easing: 'linear' });
       await animate(blades, [{ offsetDistance: '0%' }, { offsetDistance: '100%' }], SNIP, { easing: 'linear' });
@@ -245,33 +399,29 @@
       Object.assign(shadow.style, shadowFor({ w: W, h: H }, 1, rect.left + W / 2, rect.top + H / 2));
       slot.classList.add('is-cut');
       paperSound(0.2, 0.18);
-      animate(desk, [{ opacity: 0 }, { opacity: 1 }], 800, { delay: 260, easing: 'ease-in-out' });
+      animate(desk, [{ opacity: 0 }, { opacity: 1 }], 600, { delay: 160, easing: 'ease-in-out' });
       const spot = poseFor(boxes[0], foldScale, midX, midY);
-      animate(shadow, [{ opacity: 0, ...shadowFor(boxes[0], 1, rect.left + W / 2, rect.top + H / 2) }, { opacity: 1, ...shadowFor(boxes[0], foldScale, midX, midY) }], 1000);
+      animate(shadow, [{ opacity: 0, ...shadowFor(boxes[0], 1, rect.left + W / 2, rect.top + H / 2) }, { opacity: 1, ...shadowFor(boxes[0], foldScale, midX, midY) }], 720);
       await animate(root, [
         { transform: at },
-        { transform: `translate(${rect.left - 6}px, ${rect.top - 14}px) rotate(-1.2deg) scale(1.015)`, offset: 0.22 },
+        { transform: `translate(${rect.left - 6}px, ${rect.top - 14}px) rotate(-1.2deg) scale(1.015)`, offset: 0.25 },
         { transform: spot },
-      ], 1000);
+      ], 720);
       if (finished) return;
-      await pause(120);
+      await pause(40);
 
       // Fold it, with the printed side inward, until only the blank reverse shows.
-      caption.textContent = 'Fold it';
+      say('Fold it');
       for (let i = 0; i < folds.length; i++) {
-        const fold = folds[i], next = boxes[i + 1], prev = boxes[i];
-        paperSound(0.32, 0.22);
-        fold.moving.forEach(([el, frames]) => animate(el, frames, 760));
-        fold.shades.forEach(s => animate(s, [{ opacity: 0 }, { opacity: 0.42, offset: 0.46 }, { opacity: 0.2, offset: 0.54 }, { opacity: 0 }], 760, { easing: 'linear' }));
-        fold.cast.forEach(s => animate(s, [{ opacity: 0 }, { opacity: 0.3, offset: 0.7 }, { opacity: 0 }], 760, { easing: 'linear' }));
-        animate(shadow, [shadowFor(prev, foldScale, midX, midY), shadowFor(next, foldScale, midX, midY)], 760);
-        await animate(root, [{ transform: poseFor(prev, foldScale, midX, midY) }, { transform: poseFor(next, foldScale, midX, midY) }], 760);
-        if (finished) return;
-        await pause(110);
+        if (await foldOnce(folds[i], boxes[i], boxes[i + 1])) return;
       }
 
+      // Signed with a four-colour clicky pen, straight onto the blank side.
+      say('Sign it');
+      if (await sign(topFace, packet)) return;
+
       // An envelope slides in with its flap open; the folded paper goes into the pocket.
-      caption.textContent = 'Seal the envelope';
+      say('Seal the envelope');
       const outgoing = envelope(`<span class="env-lines">THE PSYCHIC PLANE<br>CONTEST DESK, THE BIG TOP<br>P.O. BOX 8</span>${STAMP}`);
       const flapOpen = 'translateZ(-2px) rotateX(180deg)', flapShut = 'translateZ(10px) rotateX(0deg)';
       outgoing.flap.style.transform = flapOpen;
@@ -281,84 +431,99 @@
       animate(root, [
         { transform: poseFor(packet, foldScale, midX, midY) },
         { transform: poseFor(packet, packetScale, midX, hold, 'translateZ(2px)') },
-      ], 620);
-      await animate(outgoing.env, [
-        { transform: `translateY(${innerHeight * 0.75}px) rotate(-5deg)` },
-        { transform: 'translateY(0) rotate(0)' },
-      ], 720, { easing: SETTLE });
+      ], 480);
+      set(outgoing.env, { y: innerHeight * 0.75, rotation: -5 });
+      await tween(outgoing.env, { y: 0, rotation: 0, duration: 0.55, ease: 'back.out(1.1)' });
       if (finished) return;
       paperSound(0.14, 0.2);
       await animate(root, [
         { transform: poseFor(packet, packetScale, midX, hold, 'translateZ(2px)') },
         { transform: poseFor(packet, packetScale, midX, inside, 'translateZ(2px)') },
-      ], 560);
+      ], 420);
       if (finished) return;
-      await pause(70);
+      await pause(40);
       paperSound(0.18, 0.2);
       await animate(outgoing.flap, [
         { transform: flapOpen },
         { transform: 'translateZ(26px) rotateX(90deg)', offset: 0.5 },
         { transform: flapShut },
-      ], 560);
+      ], 420);
       if (finished) return;
       root.remove();
       // A wax seal in the Big Top's red.
-      await animate(outgoing.seal, [{ opacity: 0, transform: 'translateZ(11px) scale(2.3) rotate(-14deg)' }, { opacity: 1, transform: 'translateZ(11px) scale(1)' }], 240, { easing: 'ease-in' });
+      set(outgoing.seal, { z: 11, opacity: 0, scale: 2.3, rotation: -14 });
+      await tween(outgoing.seal, { opacity: 1, scale: 1, rotation: 0, duration: 0.26, ease: 'power3.in' });
       if (finished) return;
       thud();
-      await pause(190);
+      tween(outgoing.seal, { keyframes: [{ scaleX: 1.16, scaleY: 0.84, duration: 0.07, ease: 'power1.out' }, { scaleX: 1, scaleY: 1, duration: 0.55, ease: 'elastic.out(1, 0.4)' }] });
+      await pause(180);
 
       // Turn it over to the address side, then stamp it.
-      caption.textContent = 'Stamp it';
+      say('Stamp it');
       paperSound(0.16, 0.14);
       await animate(outgoing.env, [
         { transform: 'rotateY(0deg)' },
         { transform: 'translateZ(60px) rotateY(90deg)', offset: 0.5 },
         { transform: 'rotateY(180deg)' },
-      ], 660);
+      ], 520);
       if (finished) return;
+      const box = mailbox();
+      const offstage = innerWidth - boxX + 30;
+      set(box, { x: offstage, transformOrigin: '50% 100%' });
       const stamp = outgoing.addressSide.querySelector('.env-stamp');
-      await animate(stamp, [{ opacity: 0, transform: 'scale(2.2) rotate(-9deg)' }, { opacity: 1, transform: 'rotate(2deg)' }], 230, { easing: 'ease-in' });
+      set(stamp, { opacity: 0, scale: 2.2, rotation: -9 });
+      await tween(stamp, { opacity: 1, scale: 1, rotation: 2, duration: 0.24, ease: 'power4.in' });
       if (finished) return;
       thud();
+      tween(stamp, { keyframes: [{ scale: 0.93, duration: 0.05 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' }] });
+      const boxIn = tween(box, { x: 0, duration: 0.75, ease: 'back.out(1.2)' });
       const mark = make('span', 'env-postmark', outgoing.addressSide, 'THE BIG TOP<br>CONTEST');
-      await animate(mark, [{ opacity: 0, transform: 'scale(1.5) rotate(-14deg)' }, { opacity: 0.8, transform: 'rotate(-14deg)' }], 150, { easing: 'ease-in' });
+      set(mark, { opacity: 0, scale: 1.5, rotation: -14, filter: 'blur(2px)' });
+      await tween(mark, { opacity: 0.8, scale: 1, filter: 'blur(0px)', duration: 0.18, ease: 'power3.in' });
       if (finished) return;
       thud();
-      await pause(220);
+      await pause(120);
 
-      // Post it: flat in the hand, over to the slot, and down inside.
-      caption.textContent = 'Post it';
+      // Post it: flat in the hand, over to the slot, tipped into it, and down inside.
+      say('Post it');
       const flat = outgoing.addressSide.cloneNode(true);
       flat.classList.add('env-flat');
       place(flat, midX - envW / 2, midY - envH / 2, envW, envH);
       room.appendChild(flat);
       outgoing.env.remove();
-      const box = mailbox();
-      const offstage = `translateX(${innerWidth - boxX + 30}px)`;
-      await animate(box, [{ transform: offstage }, { transform: 'none' }], 520, { easing: SETTLE });
+      await boxIn;
       if (finished) return;
       const slotW = (106 / 170) * boxW, slotX = boxX + (85 / 170) * boxW, slotY = boxY + (90 / 300) * boxH;
       const k = (slotW * 0.92) / envW;
-      const overSlot = `translate(${slotX - midX}px, ${slotY - midY - (envH * k) / 2}px) scale(${k})`;
-      await animate(flat, [{ transform: 'none' }, { transform: `translate(${(slotX - midX) * 0.6}px, ${(slotY - midY) * 0.3 - 30}px) rotate(3deg) scale(${(1 + k) / 2})`, offset: 0.55 }, { transform: overSlot }], 680);
+      const flap = box.querySelector('.mb-flap');
+      const overX = slotX - midX, overY = slotY - midY - (envH * k) / 2;
+      set(flat, { x: 0, y: 0, scale: 1, rotation: 0, rotationX: 0, clipPath: 'inset(0% 0% 0% 0%)' });
+      // It rises in an arc, sways a little in the hand, and tips forward as it lines up with the slot.
+      tween(flat, { keyframes: [{ rotation: 4, duration: 0.4, ease: 'sine.out' }, { rotation: 0, duration: 0.42, ease: 'sine.inOut' }] });
+      await tween(flat, {
+        motionPath: { path: [{ x: overX * 0.45, y: Math.min(overY, 0) - 70 }, { x: overX, y: overY }], curviness: 1.3 },
+        scale: k, rotationX: 28, duration: 0.7, ease: 'power2.inOut',
+      });
+      if (finished) return;
+      // The flap swings in, the envelope slides down through it, and the flap claps shut behind it.
+      await tween(flap, { scaleY: 0.12, transformOrigin: '50% 0%', duration: 0.14, ease: 'power2.out' });
       if (finished) return;
       paperSound(0.2, 0.2);
-      await animate(flat, [
-        { transform: overSlot, clipPath: 'inset(0 0 0 0)' },
-        { transform: `translate(${slotX - midX}px, ${slotY - midY + (envH * k) / 2}px) scale(${k})`, clipPath: 'inset(0 0 100% 0)' },
-      ], 430, { easing: 'ease-in' });
+      await tween(flat, { y: overY + envH * k, clipPath: 'inset(0% 0% 100% 0%)', duration: 0.42, ease: 'power2.in' });
       if (finished) return;
       flat.remove();
       thud();
-      await animate(box, [{ transform: 'rotate(0)' }, { transform: 'rotate(1.4deg)', offset: 0.3 }, { transform: 'rotate(-0.9deg)', offset: 0.65 }, { transform: 'rotate(0)' }], 300, { easing: 'ease-out' });
+      tween(flap, { scaleY: 1, duration: 0.6, ease: 'elastic.out(1.1, 0.35)' });
+      // The box rocks on its legs, and the pennant on top flutters.
+      tween(box.querySelector('.mb-pennant'), { skewY: -14, scaleX: 0.86, transformOrigin: '0% 50%', duration: 0.16, yoyo: true, repeat: 5, ease: 'sine.inOut' });
+      await tween(box, { keyframes: [{ rotation: 1.8, duration: 0.08, ease: 'power1.out' }, { rotation: 0, duration: 0.7, ease: 'elastic.out(1, 0.3)' }] });
       if (finished) return;
-      await animate(box, [{ transform: 'none' }, { transform: offstage }], 400, { easing: 'ease-in' });
+      await tween(box, { x: offstage, duration: 0.42, ease: 'power2.in' });
       if (finished) return;
       box.remove();
 
       // The wait: the whole point of the game.
-      caption.textContent = '';
+      say('');
       const card = make('p', 'day-card', stage);
       card.style.top = midY - 40 + 'px';
       for (const day of ['Day one.', 'Day two.', 'Day three.', 'The mail truck turns the corner.']) {
@@ -368,13 +533,13 @@
           { transform: 'translateX(-50%) rotateX(0deg)', opacity: 1, offset: 0.3 },
           { transform: 'translateX(-50%) rotateX(0deg)', opacity: 1, offset: 0.8 },
           { transform: 'translateX(-50%) rotateX(90deg)', opacity: 0 },
-        ], 520, { easing: 'linear' });
+        ], 420, { easing: 'linear' });
         if (finished) return;
       }
       card.remove();
 
       // The reply lands address up, turns over, breaks its seal and opens.
-      caption.textContent = 'Your reply arrives';
+      say('Your reply arrives');
       const reply = envelope(`<span class="env-lines">TO: YOU<br>YOUR STREET<br>YOUR TOWN</span>${STAMP}<span class="env-postmark" style="opacity:.8;transform:rotate(-14deg)">THE BIG TOP<br>CONTEST</span>`);
       const letterSheet = make('div', 'env-letter', reply.env, '<b>The Psychic Plane</b><i></i><i></i><i></i><i></i>');
       place(letterSheet, envW * 0.07, envH * 0.1, envW * 0.86, envH * 0.84);
@@ -382,20 +547,21 @@
       reply.seal.style.opacity = 1;
       reply.seal.style.transform = 'translateZ(11px)';
       paperSound(0.3, 0.26);
-      await animate(reply.env, [
-        { transform: `translate(${-innerWidth * 0.8}px, ${-envH * 0.7}px) rotateZ(-16deg) rotateY(180deg)` },
-        { transform: 'translate(0, 0) rotateZ(0deg) rotateY(180deg)' },
-      ], 700, { easing: SETTLE });
+      set(reply.env, { x: -innerWidth * 0.8, y: -envH * 0.7, rotation: -16, rotationY: 180 });
+      await tween(reply.env, {
+        motionPath: { path: [{ x: -innerWidth * 0.32, y: -envH * 1.05 }, { x: 0, y: 0 }], curviness: 1.1 },
+        rotation: 0, duration: 0.7, ease: 'power3.out',
+      });
       if (finished) return;
       thud();
-      await pause(420);
-      caption.textContent = 'Open it';
+      await pause(240);
+      say('Open it');
       paperSound(0.16, 0.14);
       await animate(reply.env, [
         { transform: 'rotateY(180deg)' },
         { transform: 'translateZ(60px) rotateY(90deg)', offset: 0.5 },
         { transform: 'rotateY(0deg)' },
-      ], 600);
+      ], 500);
       if (finished) return;
       paperSound(0.08, 0.2);
       animate(reply.seal, [{ opacity: 1, transform: 'translateZ(40px)' }, { opacity: 0, transform: `translate(${envW * 0.1}px, ${envH * 0.7}px) translateZ(40px) rotate(70deg)` }], 340, { easing: 'ease-in' });
@@ -409,7 +575,7 @@
       await animate(letterSheet, [
         { transform: 'translateZ(3px) translateY(0)' },
         { transform: `translateZ(3px) translateY(${-envH * 0.86}px)` },
-      ], 560);
+      ], 450);
       if (finished) return;
       await pause(120);
       finish();
